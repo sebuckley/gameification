@@ -1,0 +1,13 @@
+{
+  "files": {
+    "main.css": "/gamification/static/css/main.ad5aab77.css",
+    "main.js": "/gamification/static/js/main.5d5cfcc3.js",
+    "index.html": "/gamification/index.html",
+    "main.ad5aab77.css.map": "/gamification/static/css/main.ad5aab77.css.map",
+    "main.5d5cfcc3.js.map": "/gamification/static/js/main.5d5cfcc3.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.ad5aab77.css",
+    "static/js/main.5d5cfcc3.js"
+  ]
+}
