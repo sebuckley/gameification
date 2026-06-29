@@ -5,6 +5,7 @@ import {
   Droppable,
   Draggable,
 } from "@hello-pangea/dnd";
+import { nanoid } from "nanoid";
 
 export default function QuizSetup() {
   const {
@@ -16,11 +17,13 @@ export default function QuizSetup() {
     updateQuizSettings
   } = usePeople();
 
-  const [question, setQuestion] = useState("");
   const [answer, setAnswer] = useState("");
+  const [question, setQuestion] = useState("");
   const [bulkText, setBulkText] = useState("");
   const [open, setOpen] = useState(false);
   const [copiedPrompt, setCopiedPrompt] = useState(false);
+  
+
 
   const handleAdd = () => {
     if (!question || !answer) return;
@@ -29,29 +32,55 @@ export default function QuizSetup() {
     setAnswer("");
   };
 
-  const parseBulkQuestions = (text) => {
-    const blocks = text.split(/\n\s*\n/);
+const parseBulkQuestions = (text) => {
+  const lines = text.split("\n").map((l) => l.trim());
+  const questions = [];
 
-    return blocks
-      .map((block) => {
-        const qMatch = block.match(/Q:\s*(.*)/i);
-        const aMatch = block.match(/A:\s*(.*)/i);
-        if (!qMatch || !aMatch) return null;
+  let currentQ = null;
 
-        return {
-          id: crypto.randomUUID(),
-          question: qMatch[1].trim(),
-          answer: aMatch[1].trim()
-        };
-      })
-      .filter(Boolean);
-  };
+  lines.forEach((line) => {
+    if (line.startsWith("Q:")) {
+      if (currentQ) questions.push(currentQ);
 
-  const handleBulkImport = () => {
-    const parsed = parseBulkQuestions(bulkText);
-    importQuestions(parsed);
-    setBulkText("");
-  };
+      currentQ = {
+        id: nanoid(),
+        question: line.substring(2).trim(),
+        options: [],
+        answer: "",
+        type: "single"
+      };
+    }
+
+    else if (line.startsWith("O:") && currentQ) {
+      currentQ.options.push(line.substring(2).trim());
+      currentQ.type = "multi";
+    }
+
+    else if (line.startsWith("A:") && currentQ) {
+      currentQ.answer = line.substring(2).trim();
+    }
+  });
+
+  if (currentQ) questions.push(currentQ);
+
+  return questions;
+};
+
+
+
+const handleBulkImport = () => {
+  const parsed = parseBulkQuestions(bulkText);
+
+  // Ensure parsed is ALWAYS an array
+  if (!Array.isArray(parsed)) {
+    console.error("Parsed questions is not an array:", parsed);
+    return;
+  }
+
+  importQuestions(parsed);
+  setBulkText("");
+};
+
 
   const handleExport = () => {
     const data = exportQuestions();
@@ -137,65 +166,117 @@ export default function QuizSetup() {
                       {...provided.droppableProps}
                       className="space-y-3"
                     >
-                      {questions.map((q, index) => (
-                        <Draggable key={q.id} draggableId={q.id} index={index}>
-                          {(provided, snapshot) => (
-                            <div
-                              ref={provided.innerRef}
-                              {...provided.draggableProps}
-                              {...provided.dragHandleProps}
-                              className={`
-                                p-3 border rounded bg-gray-50 space-y-2 transition-all
-                                ${snapshot.isDragging ? "scale-[1.03] shadow-lg bg-white" : ""}
-                              `}
-                            >
-                              {/* Number + reorder buttons */}
-                              <div className="flex items-center justify-between">
-                                <span className="font-semibold text-gray-700">
-                                  {index + 1}.
-                                </span>
+{questions.map((q, index) => (
+  <Draggable key={q.id} draggableId={q.id} index={index}>
+    {(provided, snapshot) => (
+      <div
+        ref={provided.innerRef}
+        {...provided.draggableProps}
+        {...provided.dragHandleProps}
+        className={`
+          p-3 border rounded bg-gray-50 space-y-3 transition-all
+          ${snapshot.isDragging ? "scale-[1.03] shadow-lg bg-white" : ""}
+        `}
+      >
+        {/* Number + reorder buttons */}
+        <div className="flex items-center justify-between">
+          <span className="font-semibold text-gray-700">
+            {index + 1}.
+          </span>
 
-                                <div className="flex gap-2">
-                                  <button
-                                    onClick={() => moveQuestion(index, -1)}
-                                    className="px-2 py-1 bg-gray-300 rounded hover:bg-gray-400"
-                                  >
-                                    ↑
-                                  </button>
-                                  <button
-                                    onClick={() => moveQuestion(index, 1)}
-                                    className="px-2 py-1 bg-gray-300 rounded hover:bg-gray-400"
-                                  >
-                                    ↓
-                                  </button>
-                                </div>
-                              </div>
+          <div className="flex gap-2">
+            <button
+              onClick={() => moveQuestion(index, -1)}
+              className="px-2 py-1 bg-gray-300 rounded hover:bg-gray-400"
+            >
+              ↑
+            </button>
+            <button
+              onClick={() => moveQuestion(index, 1)}
+              className="px-2 py-1 bg-gray-300 rounded hover:bg-gray-400"
+            >
+              ↓
+            </button>
+          </div>
+        </div>
 
-                              <input
-                                className="border p-2 rounded w-full"
-                                value={q.question}
-                                onChange={(e) =>
-                                  updateSingleQuestion(q.id, "question", e.target.value)
-                                }
-                              />
-                              <input
-                                className="border p-2 rounded w-full"
-                                value={q.answer}
-                                onChange={(e) =>
-                                  updateSingleQuestion(q.id, "answer", e.target.value)
-                                }
-                              />
+        {/* Question */}
+        <input
+          className="border p-2 rounded w-full"
+          value={q.question}
+          onChange={(e) =>
+            updateSingleQuestion(q.id, "question", e.target.value)
+          }
+        />
 
-                              <button
-                                onClick={() => removeQuestion(q.id)}
-                                className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700"
-                              >
-                                Remove
-                              </button>
-                            </div>
-                          )}
-                        </Draggable>
-                      ))}
+        {/* Answer */}
+        <input
+          className="border p-2 rounded w-full"
+          value={q.answer}
+          onChange={(e) =>
+            updateSingleQuestion(q.id, "answer", e.target.value)
+          }
+        />
+
+        {/* Multi‑choice options */}
+        {q.type === "multi" && (
+          <div className="space-y-2">
+            <div className="font-medium text-gray-700">Options</div>
+
+            {q.options.map((opt, optIndex) => (
+              <div key={optIndex} className="flex gap-2">
+                <input
+                  className="border p-2 rounded w-full"
+                  value={opt}
+                  onChange={(e) => {
+                    const updated = [...q.options];
+                    updated[optIndex] = e.target.value;
+                    updateSingleQuestion(q.id, "options", updated);
+                  }}
+                />
+
+                <button
+                  onClick={() => {
+                    const updated = q.options.filter((_, i) => i !== optIndex);
+                    updateSingleQuestion(q.id, "options", updated);
+
+                    // If no options remain, revert to single‑answer
+                    if (updated.length === 0) {
+                      updateSingleQuestion(q.id, "type", "single");
+                    }
+                  }}
+                  className="px-2 py-1 bg-red-600 text-white rounded hover:bg-red-700"
+                >
+                  ✕
+                </button>
+              </div>
+            ))}
+
+            <button
+              onClick={() => {
+                const updated = [...q.options, ""];
+                updateSingleQuestion(q.id, "options", updated);
+                updateSingleQuestion(q.id, "type", "multi");
+              }}
+              className="px-3 py-1 bg-gray-300 rounded hover:bg-gray-400 text-sm"
+            >
+              Add Option
+            </button>
+          </div>
+        )}
+
+        {/* Remove Question */}
+        <button
+          onClick={() => removeQuestion(q.id)}
+          className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700"
+        >
+          Remove
+        </button>
+      </div>
+    )}
+  </Draggable>
+))}
+
 
                       {provided.placeholder}
                     </div>
@@ -247,29 +328,80 @@ export default function QuizSetup() {
 
 <div className="space-y-2">
 
-  {/* Suggested AI Prompt */}
-  <div className="bg-indigo-50 border border-indigo-200 rounded p-3">
-    <div className="font-semibold text-indigo-700 mb-1">
-      Suggested AI Prompt
-    </div>
+{/* Suggested AI Prompts */}
+<div className="bg-indigo-50 border border-indigo-200 rounded p-3 space-y-4">
 
+  <div className="font-semibold text-indigo-700 mb-1">
+    Suggested AI Prompts
+  </div>
+
+  {/* Standard Q/A Prompt */}
+  <div className="bg-white border border-indigo-100 rounded p-3">
     <p className="text-sm text-gray-700">
-      Create 10 quiz questions for my topic: <strong>YOUR TOPIC HERE</strong>.
+      <strong>Standard Format:</strong><br />
+      Create 10 quiz questions for my topic. Format each question exactly as:<br />
+      <code>Q: [question text]</code><br />
+      <code>A: [answer text]</code><br />
+      The topic I want questions on is <strong>&lt;TOPIC HERE&gt;</strong>.
     </p>
 
     <button
       onClick={() => {
         navigator.clipboard.writeText(
-          "Create 10 quiz questions for my topic: YOUR TOPIC HERE."
+`Create 10 quiz questions for my topic. Format each question exactly as:
+Q: [question text]
+A: [answer text]
+The topic I want questions on is <TOPIC HERE>.`
         );
-        setCopiedPrompt(true);
+        setCopiedPrompt("qa");
         setTimeout(() => setCopiedPrompt(false), 1500);
       }}
       className="mt-2 px-3 py-1 bg-indigo-600 text-white rounded hover:bg-indigo-700 text-sm"
     >
-      {copiedPrompt ? "Prompt Copied!" : "Copy Prompt"}
+      {copiedPrompt === "qa" ? "Prompt Copied!" : "Copy Q/A Prompt"}
     </button>
   </div>
+
+  {/* Multi‑Choice Prompt */}
+  <div className="bg-white border border-indigo-100 rounded p-3">
+    <p className="text-sm text-gray-700">
+      <strong>Multi‑Choice Format:</strong><br />
+      Create 10 multi‑choice quiz questions for my topic. Format each question exactly as:<br />
+      <code>Q: [question text]</code><br />
+      <code>O: [option 1]</code><br />
+      <code>O: [option 2]</code><br />
+      <code>O: [option 3]</code><br />
+      <code>O: [option 4]</code><br />
+      <code>A: [correct option]</code><br />
+      Ensure the AI includes 3–5 options and only one correct answer.<br />
+      The topic I want questions on is <strong>&lt;TOPIC HERE&gt;</strong>.
+    </p>
+
+    <button
+      onClick={() => {
+        navigator.clipboard.writeText(
+`Create 10 multi-choice quiz questions for my topic. Format each question exactly as:
+Q: [question text]
+O: [option 1]
+O: [option 2]
+O: [option 3]
+O: [option 4]
+A: [correct option]
+Ensure there are 3–5 options and only one correct answer.
+The topic I want questions on is <TOPIC HERE>.`
+        );
+        setCopiedPrompt("multi");
+        setTimeout(() => setCopiedPrompt(false), 1500);
+      }}
+      className="mt-2 px-3 py-1 bg-indigo-600 text-white rounded hover:bg-indigo-700 text-sm"
+    >
+      {copiedPrompt === "multi" ? "Prompt Copied!" : "Copy Multi‑Choice Prompt"}
+    </button>
+  </div>
+
+</div>
+
+
 
   {/* Bulk Import */}
   <textarea

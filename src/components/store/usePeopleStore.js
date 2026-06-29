@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { agendaTemplates } from "../../data/AgendaTemplates";
 import { agendaTypes, getAgendaDefaultMinutes } from "../../data/AgendaTypes";
+import { nanoid } from "nanoid";
 
 console.log(agendaTemplates)
 
@@ -10,53 +11,19 @@ const STORAGE_KEY = "people-app";
    QUESTION NORMALISER
 --------------------------------------------------------- */
 const normalizeImportedQuestions = (rawList) => {
-  return rawList
-    .map((item) => {
-      if (!item) return null;
+  if (!Array.isArray(rawList)) {
+    console.error("normalizeImportedQuestions expected an array but got:", rawList);
+    return [];
+  }
 
-      // Already normalized object with id
-      if (item.id && item.question && item.answer) {
-        return {
-          id: item.id,
-          question: item.question.trim(),
-          answer: item.answer.trim()
-        };
-      }
-
-      // Format: "Q: ... A: ..."
-      if (typeof item === "string") {
-        const parts = item.split("A:");
-        if (parts.length === 2) {
-          return {
-            id: crypto.randomUUID(),
-            question: parts[0].replace("Q:", "").trim(),
-            answer: parts[1].trim()
-          };
-        }
-      }
-
-      // Format: { q: "...", a: "..." }
-      if (item.q && item.a) {
-        return {
-          id: crypto.randomUUID(),
-          question: item.q.trim(),
-          answer: item.a.trim()
-        };
-      }
-
-      // Format: { question: "...", answer: "..." }
-      if (item.question && item.answer) {
-        return {
-          id: crypto.randomUUID(),
-          question: item.question.trim(),
-          answer: item.answer.trim()
-        };
-      }
-
-      return null;
-    })
-    .filter(Boolean);
+  return rawList.map(q => ({
+    ...q,
+    id: q.id || nanoid(),
+    options: q.options || [],
+    type: q.type || (q.options?.length ? "multi" : "single")
+  }));
 };
+
 
 
 
@@ -88,6 +55,8 @@ const loadInitial = () => {
     };
   }
 };
+
+
 
 /* ---------------------------------------------------------
    Safe autosave (always writes FINAL state)
@@ -351,6 +320,7 @@ const usePeople = create((set, get) => ({
       return updated;
     }),
 
+
   /* ---------------------------------------------------------
      AGENDA
   --------------------------------------------------------- */
@@ -446,17 +416,6 @@ applyAgendaTemplate: (templateId, startTime) =>
   }),
 
 
-  /* ---------------------------------------------------------
-   AGENDA EXPORTS
---------------------------------------------------------- */
-
-/* ---------------------------------------------------------
-   AGENDA EXPORTS
---------------------------------------------------------- */
-
-/* ---------------------------------------------------------
-   AGENDA EXPORTS
---------------------------------------------------------- */
 
 /* ---------------------------------------------------------
    AGENDA EXPORTS
