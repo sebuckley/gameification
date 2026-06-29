@@ -20,6 +20,7 @@ export default function QuizSetup() {
   const [answer, setAnswer] = useState("");
   const [bulkText, setBulkText] = useState("");
   const [open, setOpen] = useState(false);
+  const [copiedPrompt, setCopiedPrompt] = useState(false);
 
   const handleAdd = () => {
     if (!question || !answer) return;
