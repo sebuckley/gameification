@@ -58,6 +58,8 @@ const normalizeImportedQuestions = (rawList) => {
     .filter(Boolean);
 };
 
+
+
 /* ---------------------------------------------------------
    Load initial state
 --------------------------------------------------------- */
@@ -204,6 +206,20 @@ const usePeople = create((set, get) => ({
     return updated;
   }),
 
+  resetAnswers: () =>
+  set((state) => {
+    const updated = {
+      ...state,
+      people: state.people.map((p) => ({
+        ...p,
+        answers: 0
+      }))
+    };
+    save(get);
+    return updated;
+  }),
+
+
   /* ---------------------------------------------------------
      GROUPS
   --------------------------------------------------------- */
@@ -223,6 +239,29 @@ const usePeople = create((set, get) => ({
       save(get);
       return updated;
     }),
+
+    removeGroupHistory: (index) =>
+    set((state) => {
+      const updated = {
+        ...state,
+        groupsHistory: state.groupsHistory.filter((_, i) => i !== index)
+      };
+      save(get);
+      return updated;
+    }),
+
+  updateGroupHistory: (index, updatedEntry) =>
+    set((state) => {
+      const updated = {
+        ...state,
+        groupsHistory: state.groupsHistory.map((entry, i) =>
+          i === index ? { ...entry, ...updatedEntry } : entry
+        )
+      };
+      save(get);
+      return updated;
+    }),
+
 
   /* ---------------------------------------------------------
      QUIZ
@@ -405,6 +444,258 @@ applyAgendaTemplate: (templateId, startTime) =>
     save(get);
     return updated;
   }),
+
+
+  /* ---------------------------------------------------------
+   AGENDA EXPORTS
+--------------------------------------------------------- */
+
+/* ---------------------------------------------------------
+   AGENDA EXPORTS
+--------------------------------------------------------- */
+
+/* ---------------------------------------------------------
+   AGENDA EXPORTS
+--------------------------------------------------------- */
+
+/* ---------------------------------------------------------
+   AGENDA EXPORTS
+--------------------------------------------------------- */
+
+// Markdown (already conceptually there, keeping name)
+exportAgendaMarkdown: () => {
+  const state = get();
+  const lines = [];
+
+  lines.push(`# Agenda Summary`);
+  lines.push(`Start Time: **${state.agendaStartTime}**`);
+  lines.push("");
+
+  state.agendaItems.forEach((item, index) => {
+    const presenter =
+      item.presenterId
+        ? state.people.find((p) => p.id === item.presenterId)?.fullName
+        : item.guestPresenter || "None";
+
+    lines.push(`## ${index + 1}. ${item.label}`);
+    lines.push(`- **Time:** ${item.startTime} → ${item.endTime}`);
+    lines.push(`- **Duration:** ${item.minutes} minutes`);
+    lines.push(`- **Presenter:** ${presenter}`);
+    if (item.notes) lines.push(`- **Notes:** ${item.notes}`);
+    if (item.artefactUrl) lines.push(`- **Artefact:** ${item.artefactUrl}`);
+    lines.push("");
+  });
+
+  return lines.join("\n");
+},
+
+
+// CSV
+exportAgendaCSV: () => {
+  const state = get();
+
+  const rows = [
+    ["#", "Session", "Start", "End", "Minutes", "Presenter", "Notes", "Artefact"]
+  ];
+
+  state.agendaItems.forEach((item, index) => {
+    const presenter =
+      item.presenterId
+        ? state.people.find((p) => p.id === item.presenterId)?.fullName
+        : item.guestPresenter || "None";
+
+    rows.push([
+      index + 1,
+      item.label,
+      item.startTime,
+      item.endTime,
+      item.minutes,
+      presenter,
+      item.notes || "",
+      item.artefactUrl || ""
+    ]);
+  });
+
+  return rows
+    .map((r) =>
+      r
+        .map((v) => `"${String(v).replace(/"/g, '""')}"`)
+        .join(",")
+    )
+    .join("\n");
+},
+
+
+// HTML table
+exportAgendaHtmlTable: () => {
+  const state = get();
+
+  const esc = (v) =>
+    String(v || "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;");
+
+  const header = `
+<table border="1" cellspacing="0" cellpadding="6" style="border-collapse:collapse; font-family:Arial; width:100%;">
+  <thead>
+    <tr style="background:#4F46E5; color:#FFFFFF; font-weight:bold;">
+      <th style="width:40px; text-align:center; color:#FFFFFF; font-weight:bold;">#</th>
+      <th style="text-align:left; color:#FFFFFF; font-weight:bold; ">Session</th>
+      <th style="text-align:center; color:#FFFFFF; font-weight:bold; ">Start</th>
+      <th style="text-align:center; color:#FFFFFF; font-weight:bold; ">End</th>
+      <th style="text-align:center; color:#FFFFFF; font-weight:bold;">Minutes</th>
+      <th style="text-align:left; color:#FFFFFF; font-weight:bold; ">Presenter</th>
+    </tr>
+  </thead>
+  <tbody>
+`;
+
+  const rows = state.agendaItems
+    .map((item, index) => {
+      const presenter =
+        item.presenterId
+          ? state.people.find((p) => p.id === item.presenterId)?.fullName
+          : item.guestPresenter || "None";
+
+      // Even lighter banding (PowerPoint-friendly)
+      const band = index % 2 === 0 ? "#FFFFFF" : "#F8F9FF";
+
+      return `
+    <tr style="background:${band};">
+      <td style="width:40px; text-align:center;">${index + 1}</td>
+      <td style="text-align:left;">${esc(item.label)}</td>
+      <td style="text-align:center;">${esc(item.startTime)}</td>
+      <td style="text-align:center;">${esc(item.endTime)}</td>
+      <td style="text-align:center;">${esc(item.minutes)}</td>
+      <td style="text-align:left;">${esc(presenter)}</td>
+    </tr>
+`;
+    })
+    .join("");
+
+  return header + rows + "</tbody></table>";
+},
+
+
+
+
+
+// PDF-friendly text (simple, linear)
+exportAgendaPdfText: () => {
+  const state = get();
+  const lines = [];
+
+  lines.push("Agenda Summary");
+  lines.push(`Start Time: ${state.agendaStartTime}`);
+  lines.push("");
+
+  state.agendaItems.forEach((item, index) => {
+    const presenter =
+      item.presenterId
+        ? state.people.find((p) => p.id === item.presenterId)?.fullName
+        : item.guestPresenter || "None";
+
+    lines.push(`${index + 1}. ${item.label}`);
+    lines.push(`   Time: ${item.startTime} → ${item.endTime}`);
+    lines.push(`   Duration: ${item.minutes} minutes`);
+    lines.push(`   Presenter: ${presenter}`);
+    if (item.notes) lines.push(`   Notes: ${item.notes}`);
+    if (item.artefactUrl) lines.push(`   Artefact: ${item.artefactUrl}`);
+    lines.push("");
+  });
+
+  return lines.join("\n");
+},
+
+
+// PowerPoint XML table (basic PPTX-compatible table markup)
+exportAgendaPowerPointXml: () => {
+  const state = get();
+
+  const rows = [
+    ["#", "Session", "Start", "End", "Minutes", "Presenter", "Notes", "Artefact"]
+  ];
+
+  state.agendaItems.forEach((item, index) => {
+    const presenter =
+      item.presenterId
+        ? state.people.find((p) => p.id === item.presenterId)?.fullName
+        : item.guestPresenter || "None";
+
+    rows.push([
+      index + 1,
+      item.label,
+      item.startTime,
+      item.endTime,
+      item.minutes,
+      presenter,
+      item.notes || "",
+      item.artefactUrl || ""
+    ]);
+  });
+
+  // Very simple DrawingML table fragment (for advanced use)
+  const esc = (v) =>
+    String(v || "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;");
+
+  const xmlRows = rows
+    .map(
+      (r) =>
+        "<a:tr>" +
+        r
+          .map(
+            (cell) =>
+              "<a:tc><a:txBody><a:p><a:r><a:t>" +
+              esc(cell) +
+              "</a:t></a:r></a:p></a:txBody></a:tc>"
+          )
+          .join("") +
+        "</a:tr>"
+    )
+    .join("");
+
+  return (
+    "<a:tbl>" +
+    "<a:tblGrid>" +
+    rows[0].map(() => "<a:gridCol w=\"3000000\"/>").join("") +
+    "</a:tblGrid>" +
+    xmlRows +
+    "</a:tbl>"
+  );
+},
+
+exportAgendaPowerPointTable: () => {
+  const state = get();
+
+  const rows = [
+    ["#", "Session", "Start", "End", "Minutes", "Presenter", "Notes", "Artefact"]
+  ];
+
+  state.agendaItems.forEach((item, index) => {
+    const presenter =
+      item.presenterId
+        ? state.people.find((p) => p.id === item.presenterId)?.fullName
+        : item.guestPresenter || "None";
+
+    rows.push([
+      index + 1,
+      item.label,
+      item.startTime,
+      item.endTime,
+      item.minutes,
+      presenter,
+      item.notes || "",
+      item.artefactUrl || ""
+    ]);
+  });
+
+  // Add trailing tab to force PowerPoint to treat it as a table
+  return rows.map((r) => r.join("\t") + "\t").join("\n");
+},
 
 
   clearAgenda: () =>
