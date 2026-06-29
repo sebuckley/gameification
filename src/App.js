@@ -15,7 +15,7 @@ export default function App() {
     <div className="min-h-screen flex flex-col">
 <header className="bg-indigo-600 shadow">
   <nav className="max-w-4xl mx-auto flex gap-4 p-4">
-    <NavItem to="/" label="People" />
+    <NavItem to="/gameification" label="People" />
     <NavItem to="/agenda" label="Agenda" />
     <NavItem to="/spinner" label="Spinner" />
     <NavItem to="/groups" label="Groups" />
