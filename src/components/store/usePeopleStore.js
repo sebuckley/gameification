@@ -157,6 +157,32 @@ const usePeople = create((set, get) => ({
       return updated;
     }),
 
+    setPeople: (list) =>
+    set((state) => {
+      const updated = { ...state, people: list };
+      save(get);
+      return updated;
+    }),
+
+    addHistory: (personId, message) =>
+  set((state) => {
+    const updatedPeople = state.people.map((p) =>
+      p.id === personId
+        ? {
+            ...p,
+            history: [
+              ...p.history,
+              `${message} at ${new Date().toLocaleString()}`
+            ]
+          }
+        : p
+    );
+
+    const updated = { ...state, people: updatedPeople };
+    save(get);
+    return updated;
+  }),
+
   /* ---------------------------------------------------------
      GROUPS
   --------------------------------------------------------- */
@@ -210,6 +236,27 @@ const usePeople = create((set, get) => ({
       save(get);
       return updated;
     }),
+
+  incrementAnswers: (personId) =>
+  set((state) => {
+    const updatedPeople = state.people.map((p) =>
+      p.id === personId
+        ? {
+            ...p,
+            answers: p.answers + 1,
+            history: [
+              ...p.history,
+              `Answered at ${new Date().toLocaleString()}`
+            ]
+          }
+        : p
+    );
+
+    const updated = { ...state, people: updatedPeople };
+    save(get);
+    return updated;
+  }),
+
 
   resetQuizScores: () =>
     set((state) => {
