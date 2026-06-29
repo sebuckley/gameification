@@ -25,7 +25,7 @@ export default function App() {
 
       <main className="flex-1">
         <Routes>
-          <Route path="/" element={<PeoplePage />} />
+          <Route path="/gameification" element={<PeoplePage />} />
           <Route path="/agenda" element={<AgendaPage />} />
           <Route path="/spinner" element={<SpinnerPage />} />
           <Route path="/groups" element={<GroupsPage />} />
