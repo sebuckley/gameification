@@ -309,6 +309,12 @@ export default function QuizPlay() {
         </button>
       )}
 
+      {questions.length === 0 && (
+        <p className="text-gray-600 text-sm italic">
+          Please set up the quiz. The start button will appear once questions are added.
+        </p>
+      )}
+
       {running && (
         <button
           onClick={closeQuiz}
