@@ -244,21 +244,47 @@ export default function QuizSetup() {
                 </button>
               </div>
 
-              <div className="space-y-2">
-                <textarea
-                  className="border p-2 rounded w-full h-32"
-                  placeholder="Paste questions here in format: Q: ... A: ..."
-                  value={bulkText}
-                  onChange={(e) => setBulkText(e.target.value)}
-                />
+<div className="space-y-2">
 
-                <button
-                  onClick={handleBulkImport}
-                  className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
-                >
-                  Import Questions
-                </button>
-              </div>
+  {/* Suggested AI Prompt */}
+  <div className="bg-indigo-50 border border-indigo-200 rounded p-3">
+    <div className="font-semibold text-indigo-700 mb-1">
+      Suggested AI Prompt
+    </div>
+
+    <p className="text-sm text-gray-700">
+      Create 10 quiz questions for my topic: <strong>YOUR TOPIC HERE</strong>.
+    </p>
+
+    <button
+      onClick={() => {
+        navigator.clipboard.writeText(
+          "Create 10 quiz questions for my topic: YOUR TOPIC HERE."
+        );
+        setCopiedPrompt(true);
+        setTimeout(() => setCopiedPrompt(false), 1500);
+      }}
+      className="mt-2 px-3 py-1 bg-indigo-600 text-white rounded hover:bg-indigo-700 text-sm"
+    >
+      {copiedPrompt ? "Prompt Copied!" : "Copy Prompt"}
+    </button>
+  </div>
+
+  {/* Bulk Import */}
+  <textarea
+    className="border p-2 rounded w-full h-32"
+    placeholder="Paste questions here in format: Q: ... A: ..."
+    value={bulkText}
+    onChange={(e) => setBulkText(e.target.value)}
+  />
+
+  <button
+    onClick={handleBulkImport}
+    className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+  >
+    Import Questions
+  </button>
+</div>
 
               <div className="space-y-2">
                 <label className="font-medium">Correct Answer Points</label>
