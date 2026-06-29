@@ -14,11 +14,21 @@ const normalizeImportedQuestions = (rawList) => {
     .map((item) => {
       if (!item) return null;
 
+      // Already normalized object with id
+      if (item.id && item.question && item.answer) {
+        return {
+          id: item.id,
+          question: item.question.trim(),
+          answer: item.answer.trim()
+        };
+      }
+
       // Format: "Q: ... A: ..."
       if (typeof item === "string") {
         const parts = item.split("A:");
         if (parts.length === 2) {
           return {
+            id: crypto.randomUUID(),
             question: parts[0].replace("Q:", "").trim(),
             answer: parts[1].trim()
           };
@@ -28,6 +38,7 @@ const normalizeImportedQuestions = (rawList) => {
       // Format: { q: "...", a: "..." }
       if (item.q && item.a) {
         return {
+          id: crypto.randomUUID(),
           question: item.q.trim(),
           answer: item.a.trim()
         };
@@ -36,6 +47,7 @@ const normalizeImportedQuestions = (rawList) => {
       // Format: { question: "...", answer: "..." }
       if (item.question && item.answer) {
         return {
+          id: crypto.randomUUID(),
           question: item.question.trim(),
           answer: item.answer.trim()
         };
@@ -45,7 +57,6 @@ const normalizeImportedQuestions = (rawList) => {
     })
     .filter(Boolean);
 };
-
 
 /* ---------------------------------------------------------
    Load initial state
@@ -179,6 +190,16 @@ const usePeople = create((set, get) => ({
     );
 
     const updated = { ...state, people: updatedPeople };
+    save(get);
+    return updated;
+  }),
+
+  removePerson: (id) =>
+  set((state) => {
+    const updated = {
+      ...state,
+      people: state.people.filter((p) => p.id !== id)
+    };
     save(get);
     return updated;
   }),

@@ -1,21 +1,17 @@
 import usePeople from "../store/usePeopleStore";
 
-
-
-
 export default function PersonCard({ person }) {
   const { updatePerson, people, removePerson } = usePeople();
 
+  /* ---------------------------------------------------------
+     UNIQUE COLOUR LOGIC
+  --------------------------------------------------------- */
   const ensureUniqueColor = (hex) => {
-  const lower = hex.toLowerCase();
+    const lower = hex.toLowerCase();
+    const used = people.map((p) => p.color?.toLowerCase()).filter(Boolean);
 
-  // All colours currently used
-  const used = people.map((p) => p.color?.toLowerCase()).filter(Boolean);
-
-    // If unique → return immediately
     if (!used.includes(lower)) return hex;
 
-    // Otherwise shift hue until unique
     let shifted = hex;
     let attempts = 0;
 
@@ -27,13 +23,11 @@ export default function PersonCard({ person }) {
     return shifted;
   };
 
-  // Chic palette
   const chicColors = [
     "#D16C7A", "#6CA8D1", "#E3C26F", "#D18F6C",
     "#9B7ED1", "#6CD1A8", "#D16C6C", "#6CD1D1"
   ];
 
-  // Lighten colour for header background
   const lighten = (hex, amount = 0.55) => {
     if (!hex) return "#f3f4f6";
     const c = hex.replace("#", "");
@@ -53,7 +47,6 @@ export default function PersonCard({ person }) {
     );
   };
 
-  // Hue shift fallback
   const shiftHue = (hex) => {
     const c = hex.replace("#", "");
     const r = parseInt(c.substring(0, 2), 16);
@@ -72,32 +65,27 @@ export default function PersonCard({ person }) {
     );
   };
 
-  // All colours currently used by other people
   const usedColors = people
     .filter((p) => p.id !== person.id)
     .map((p) => p.color?.toLowerCase())
     .filter(Boolean);
 
-  // Filter chic palette to only unused colours AND not this person's current colour
   const availableColors = chicColors.filter((c) => {
     const lower = c.toLowerCase();
     const personColorLower = person.color?.toLowerCase();
     return !usedColors.includes(lower) && lower !== personColorLower;
   });
 
-  // Global fallback colour
   const fallbackColor =
     availableColors.length > 0
       ? availableColors[0]
       : shiftHue(person.color || "#6CA8D1");
 
-  // Handle colour change
   const handleColorChange = (newColor) => {
     const unique = ensureUniqueColor(newColor);
     updatePerson(person.id, { color: unique });
   };
 
-  // Presenter auto‑logic
   const handlePresenterToggle = (v) => {
     updatePerson(person.id, {
       isPresenter: v,
@@ -106,7 +94,6 @@ export default function PersonCard({ person }) {
     });
   };
 
-  // Initials from FULL NAME
   const initials = (name) =>
     name
       .split(" ")
@@ -116,17 +103,24 @@ export default function PersonCard({ person }) {
 
   const headerBg = lighten(person.color, 0.55);
 
-  return (
-    <div
-      className="bg-white rounded-xl shadow overflow-hidden border border-gray-300"
-    >
+  /* ---------------------------------------------------------
+     DELETE CONFIRMATION
+  --------------------------------------------------------- */
+  const confirmDelete = () => {
+    const ok = window.confirm(
+      `Are you sure you want to delete ${person.preferredName || person.fullName}?`
+    );
+    if (ok) removePerson(person.id);
+  };
 
-      {/* ⭐ Header uses LIGHTER version of person's colour */}
+  return (
+    <div className="bg-white rounded-xl shadow overflow-hidden border border-gray-300 flex flex-col">
+
+      {/* HEADER */}
       <div
         className="px-4 py-3 flex items-center gap-3"
         style={{ backgroundColor: headerBg }}
       >
-        {/* Circle avatar with FULL colour + initials */}
         <div
           className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-white shadow"
           style={{
@@ -137,16 +131,15 @@ export default function PersonCard({ person }) {
           {initials(person.fullName)}
         </div>
 
-        {/* Name */}
         <div className="text-lg font-semibold text-gray-900">
           {person.preferredName || person.fullName}
         </div>
       </div>
 
-      {/* Body */}
-      <div className="p-5 space-y-4">
+      {/* BODY */}
+      <div className="p-5 space-y-4 flex-1">
 
-        {/* Editable Full Name */}
+        {/* Full Name */}
         <label className="flex flex-col gap-1">
           <span className="text-sm font-medium text-gray-700">Full Name</span>
           <input
@@ -158,7 +151,7 @@ export default function PersonCard({ person }) {
           />
         </label>
 
-        {/* Editable Preferred Name */}
+        {/* Preferred Name */}
         <label className="flex flex-col gap-1">
           <span className="text-sm font-medium text-gray-700">Preferred Name</span>
           <input
@@ -191,114 +184,96 @@ export default function PersonCard({ person }) {
           />
         </div>
 
+        {/* COLOUR PICKER */}
+        <div>
+          <label className="text-sm font-medium text-gray-700">Colour</label>
 
-{/* Colour Picker */}
-<div>
-  <label className="text-sm font-medium text-gray-700">Colour</label>
+          <div className="mt-3 space-y-4">
 
-  <div className="mt-3 space-y-4">
+            {/* Current Colour */}
+            <div>
+              <div className="text-xs font-medium text-gray-600 mb-1">
+                Current Colour
+              </div>
 
-    {/* Current Colour */}
-    <div>
-      <div className="text-xs font-medium text-gray-600 mb-1">
-        Current Colour
-      </div>
+              <button
+                type="button"
+                onClick={() =>
+                  document.querySelector(`#picker-${person.id}`).click()
+                }
+                className={`
+                  w-8 h-8 rounded-full border shadow transition-transform
+                  ${
+                    !availableColors.includes(person.color) &&
+                    person.color !== fallbackColor
+                      ? "ring-2 ring-blue-600 scale-110"
+                      : ""
+                  }
+                `}
+                style={{ backgroundColor: person.color }}
+              />
+            </div>
 
-      <button
-        type="button"
-        onClick={() =>
-          document.querySelector(`#picker-${person.id}`).click()
-        }
-        className={`
-          w-8 h-8 rounded-full border shadow transition-transform
-          ${
-            !availableColors.includes(person.color) &&
-            person.color !== fallbackColor
-              ? "ring-2 ring-blue-600 scale-110"
-              : ""
-          }
-        `}
-        style={{ backgroundColor: person.color }}
-      />
-    </div>
+            {/* Available Colours */}
+            {availableColors.length > 0 && (
+              <div>
+                <div className="text-xs font-medium text-gray-600 mb-1">
+                  Available Colours
+                </div>
 
-    {/* Available Colours — ONLY IF ANY EXIST */}
-    {availableColors.length > 0 && (
-      <div>
-        <div className="text-xs font-medium text-gray-600 mb-1">
-          Available Colours
-        </div>
+                <div className="flex gap-2 flex-wrap">
+                  {availableColors.map((c) => (
+                    <button
+                      key={c}
+                      type="button"
+                      onClick={() => handleColorChange(c)}
+                      className={`
+                        w-8 h-8 rounded-full border shadow transition-transform
+                        ${person.color === c ? "ring-2 ring-blue-600 scale-110" : ""}
+                      `}
+                      style={{ backgroundColor: c }}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
 
-        <div className="flex gap-2 flex-wrap">
-          {availableColors.map((c) => (
-            <button
-              key={c}
-              type="button"
-              onClick={() => handleColorChange(c)}
-              className={`
-                w-8 h-8 rounded-full border shadow transition-transform
-                ${person.color === c ? "ring-2 ring-blue-600 scale-110" : ""}
-              `}
-              style={{ backgroundColor: c }}
+            {/* Custom Colour Button */}
+            <div>
+              <div className="text-xs font-medium text-gray-600 mb-1">
+                Custom Colour
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  const unique = ensureUniqueColor(fallbackColor);
+                  updatePerson(person.id, { color: unique });
+                  document.querySelector(`#picker-${person.id}`).click();
+                }}
+                className="
+                  px-3 py-2 rounded-md border shadow text-sm font-medium
+                  bg-white hover:bg-gray-100 flex items-center gap-2
+                "
+              >
+                <div
+                  className="w-5 h-5 rounded-full border"
+                  style={{ backgroundColor: fallbackColor }}
+                />
+                Choose Custom Colour
+              </button>
+            </div>
+
+            {/* Hidden colour picker */}
+            <input
+              id={`picker-${person.id}`}
+              type="color"
+              value={person.color}
+              onChange={(e) => handleColorChange(e.target.value)}
+              className="hidden"
             />
-          ))}
+          </div>
         </div>
-      </div>
-    )}
-
- {/* Custom Colour Button */}
-<div>
-  <div className="text-xs font-medium text-gray-600 mb-1">
-    Custom Colour
-  </div>
-
-  <button
-    type="button"
-    onClick={() => {
-      // Ensure fallback is unique before applying
-      const unique = ensureUniqueColor(fallbackColor);
-      updatePerson(person.id, { color: unique });
-
-      // Open native colour picker
-      document.querySelector(`#picker-${person.id}`).click();
-    }}
-    className="
-      px-3 py-2 rounded-md border shadow text-sm font-medium
-      bg-white hover:bg-gray-100 flex items-center gap-2
-    "
-  >
-    <div
-      className="w-5 h-5 rounded-full border"
-      style={{ backgroundColor: fallbackColor }}
-    />
-    Choose Custom Colour
-  </button>
-</div>
-
-{/* Hidden colour picker */}
-<input
-  id={`picker-${person.id}`}
-  type="color"
-  value={person.color}
-  onChange={(e) => handleColorChange(e.target.value)}
-  className="hidden"
-/>
-
-
-  </div>
-
-  {/* ⭐ FIXED: picker opens with fallbackColor */}
-<input
-  id={`picker-${person.id}`}
-  type="color"
-  value={person.color}
-  onChange={(e) => handleColorChange(e.target.value)}
-  className="hidden"
-/>
-</div>
-
-
-
 
         {/* History */}
         <div className="text-sm text-gray-600 bg-gray-50 p-3 rounded-lg border border-gray-200">
@@ -311,15 +286,16 @@ export default function PersonCard({ person }) {
         </div>
       </div>
 
-      {/* ⭐ Footer with centered delete button */}
-      <div className="px-4 py-3 border-t flex justify-center">
+      {/* ⭐ Unified Footer */}
+      <div className="px-4 py-3 border-t bg-gray-50 flex justify-center">
         <button
-          onClick={() => removePerson(person.id)}
+          onClick={confirmDelete}
           className="
-            px-4 py-2 rounded 
-            bg-red-600 text-white 
-            hover:bg-red-700 
+            px-4 py-2 rounded-md
+            bg-red-600 text-white
+            hover:bg-red-700
             text-sm font-medium
+            shadow-sm
           "
         >
           Delete Person

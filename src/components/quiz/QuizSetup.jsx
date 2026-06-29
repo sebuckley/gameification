@@ -1,5 +1,10 @@
 import { useState } from "react";
 import usePeople from "../store/usePeopleStore";
+import {
+  DragDropContext,
+  Droppable,
+  Draggable,
+} from "@hello-pangea/dnd";
 
 export default function QuizSetup() {
   const {
@@ -11,12 +16,10 @@ export default function QuizSetup() {
     updateQuizSettings
   } = usePeople();
 
-  console.log(questions);
-
   const [question, setQuestion] = useState("");
   const [answer, setAnswer] = useState("");
   const [bulkText, setBulkText] = useState("");
-  const [open, setOpen] = useState(false); // ⭐ collapsible
+  const [open, setOpen] = useState(false);
 
   const handleAdd = () => {
     if (!question || !answer) return;
@@ -59,7 +62,7 @@ export default function QuizSetup() {
     const updated = questions.map((q) =>
       q.id === id ? { ...q, [field]: value } : q
     );
-    importQuestions(updated); // reuse import to overwrite list
+    importQuestions(updated);
   };
 
   const removeQuestion = (id) => {
@@ -67,73 +70,158 @@ export default function QuizSetup() {
     importQuestions(updated);
   };
 
+  const deleteAllQuestions = () => {
+    importQuestions([]);
+  };
+
+  const moveQuestion = (index, direction) => {
+    const newIndex = index + direction;
+    if (newIndex < 0 || newIndex >= questions.length) return;
+
+    const reordered = [...questions];
+    const temp = reordered[index];
+    reordered[index] = reordered[newIndex];
+    reordered[newIndex] = temp;
+
+    importQuestions(reordered);
+  };
+
+  /* ---------------------------------------------------------
+     DRAG & DROP (hello-pangea/dnd)
+  --------------------------------------------------------- */
+  const onDragEnd = (result) => {
+    if (!result.destination) return;
+
+    const reordered = [...questions];
+    const [removed] = reordered.splice(result.source.index, 1);
+    reordered.splice(result.destination.index, 0, removed);
+
+    importQuestions(reordered);
+  };
+
   const hasQuestions = questions.length > 0;
 
   return (
-    <div className="bg-white rounded-xl shadow border border-gray-300">
+    <div className="border rounded shadow bg-white">
 
       {/* Header */}
-      <button
-        onClick={() => setOpen(!open)}
-        className="w-full flex justify-between items-center px-4 py-3 bg-indigo-600 text-white font-semibold text-lg"
+      <div
+        className="flex items-center justify-between px-4 py-3 border-b cursor-pointer select-none bg-white rounded-t"
+        onClick={() => setOpen(o => !o)}
       >
-        <span>Quiz Setup</span>
-        <span>{open ? "▼" : "◀"}</span>
-      </button>
+        <div className="text-gray-500 mr-2">⋮⋮</div>
 
-      {/* Collapsible Body */}
+        <div className="font-medium text-gray-800 flex-1">
+          Quiz Setup
+        </div>
+
+        <span className="text-gray-700 text-lg">
+          {open ? "▼" : "◀"}
+        </span>
+      </div>
+
+      {/* Body */}
       {open && (
         <div className="p-5 space-y-6">
 
-          {/* ⭐ If questions exist → show editable list + export only */}
           {hasQuestions && (
             <>
-              <div className="space-y-3">
-                <h3 className="font-bold text-gray-700">Questions Loaded</h3>
+              <h3 className="font-bold text-gray-700">Questions Loaded</h3>
 
-                {questions.map((q) => (
-                  <div
-                    key={q.id}
-                    className="p-3 border rounded bg-gray-50 space-y-2"
-                  >
-                    <input
-                      className="border p-2 rounded w-full"
-                      value={q.question}
-                      onChange={(e) =>
-                        updateSingleQuestion(q.id, "question", e.target.value)
-                      }
-                    />
-                    <input
-                      className="border p-2 rounded w-full"
-                      value={q.answer}
-                      onChange={(e) =>
-                        updateSingleQuestion(q.id, "answer", e.target.value)
-                      }
-                    />
-
-                    <button
-                      onClick={() => removeQuestion(q.id)}
-                      className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700"
+              <DragDropContext onDragEnd={onDragEnd}>
+                <Droppable droppableId="questions">
+                  {(provided) => (
+                    <div
+                      ref={provided.innerRef}
+                      {...provided.droppableProps}
+                      className="space-y-3"
                     >
-                      Remove
-                    </button>
-                  </div>
-                ))}
-              </div>
+                      {questions.map((q, index) => (
+                        <Draggable key={q.id} draggableId={q.id} index={index}>
+                          {(provided, snapshot) => (
+                            <div
+                              ref={provided.innerRef}
+                              {...provided.draggableProps}
+                              {...provided.dragHandleProps}
+                              className={`
+                                p-3 border rounded bg-gray-50 space-y-2 transition-all
+                                ${snapshot.isDragging ? "scale-[1.03] shadow-lg bg-white" : ""}
+                              `}
+                            >
+                              {/* Number + reorder buttons */}
+                              <div className="flex items-center justify-between">
+                                <span className="font-semibold text-gray-700">
+                                  {index + 1}.
+                                </span>
 
-              <button
-                onClick={handleExport}
-                className="px-4 py-2 bg-gray-700 text-white rounded hover:bg-gray-800"
-              >
-                Export Questions
-              </button>
+                                <div className="flex gap-2">
+                                  <button
+                                    onClick={() => moveQuestion(index, -1)}
+                                    className="px-2 py-1 bg-gray-300 rounded hover:bg-gray-400"
+                                  >
+                                    ↑
+                                  </button>
+                                  <button
+                                    onClick={() => moveQuestion(index, 1)}
+                                    className="px-2 py-1 bg-gray-300 rounded hover:bg-gray-400"
+                                  >
+                                    ↓
+                                  </button>
+                                </div>
+                              </div>
+
+                              <input
+                                className="border p-2 rounded w-full"
+                                value={q.question}
+                                onChange={(e) =>
+                                  updateSingleQuestion(q.id, "question", e.target.value)
+                                }
+                              />
+                              <input
+                                className="border p-2 rounded w-full"
+                                value={q.answer}
+                                onChange={(e) =>
+                                  updateSingleQuestion(q.id, "answer", e.target.value)
+                                }
+                              />
+
+                              <button
+                                onClick={() => removeQuestion(q.id)}
+                                className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700"
+                              >
+                                Remove
+                              </button>
+                            </div>
+                          )}
+                        </Draggable>
+                      ))}
+
+                      {provided.placeholder}
+                    </div>
+                  )}
+                </Droppable>
+              </DragDropContext>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={handleExport}
+                  className="px-4 py-2 bg-gray-700 text-white rounded hover:bg-gray-800"
+                >
+                  Export Questions
+                </button>
+
+                <button
+                  onClick={deleteAllQuestions}
+                  className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+                >
+                  Delete All
+                </button>
+              </div>
             </>
           )}
 
-          {/* ⭐ If NO questions → show add/import/settings */}
           {!hasQuestions && (
             <>
-              {/* Add Single Question */}
               <div className="space-y-2">
                 <input
                   className="border p-2 rounded w-full"
@@ -156,7 +244,6 @@ export default function QuizSetup() {
                 </button>
               </div>
 
-              {/* Bulk Import */}
               <div className="space-y-2">
                 <textarea
                   className="border p-2 rounded w-full h-32"
@@ -173,7 +260,6 @@ export default function QuizSetup() {
                 </button>
               </div>
 
-              {/* Scoring Settings */}
               <div className="space-y-2">
                 <label className="font-medium">Correct Answer Points</label>
                 <input

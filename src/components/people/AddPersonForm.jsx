@@ -16,6 +16,8 @@ export default function AddPersonForm() {
     "#6CD1D1"
   ];
 
+  const [isOpen, setIsOpen] = useState(false);
+
   const [color, setColor] = useState(() => {
     const used = usePeople.getState().people.map(p => p.color?.toLowerCase());
     const available = chicColors.filter(c => !used.includes(c.toLowerCase()));
@@ -44,11 +46,6 @@ export default function AddPersonForm() {
       ((g + 25) % 255).toString(16).padStart(2, "0") +
       ((b + 25) % 255).toString(16).padStart(2, "0")
     );
-  };
-
-  const getDefaultColor = () => {
-    if (availableColors.length > 0) return availableColors[0];
-    return shiftHue("#6CA8D1");
   };
 
   const handleColorSelect = (newColor) => {
@@ -99,114 +96,134 @@ export default function AddPersonForm() {
     setMessage("");
   };
 
-  // ⭐ FIX: do NOT override random or custom colours
   useEffect(() => {
-    // If user picked custom → do not override
     if (customColor) return;
-
-    // If user picked random → do not override
     if (color && !availableColors.includes(color)) return;
 
-    // Otherwise auto-select next chic colour
     const used = people.map(p => p.color?.toLowerCase());
     const available = chicColors.filter(c => !used.includes(c.toLowerCase()));
     setColor(available[0] || shiftHue("#6CA8D1"));
   }, [people]);
 
   return (
-    <form
-      onSubmit={onSubmit}
-      className="flex flex-col gap-4 p-4 bg-white rounded shadow"
-    >
-      {/* Full Name */}
-      <label className="flex flex-col gap-1">
-        <span className="text-sm font-medium text-gray-700">Full Name</span>
-        <input
-          className="border p-2 rounded w-full"
-          value={fullName}
-          onChange={(e) => setFullName(e.target.value)}
-          placeholder="e.g. Stephen Johnson"
-        />
-      </label>
-
-      {/* Preferred Name */}
-      <label className="flex flex-col gap-1">
-        <span className="text-sm font-medium text-gray-700">Preferred Name</span>
-        <input
-          className="border p-2 rounded w-full"
-          value={preferredName}
-          onChange={(e) => setPreferredName(e.target.value)}
-          placeholder="e.g. Steve"
-        />
-      </label>
-
-      {/* Colour Picker */}
-      <label className="flex flex-col gap-2">
-        <span className="text-sm font-medium text-gray-700">Colour</span>
-
-        <div className="flex flex-wrap gap-2">
-          {availableColors.map((c) => {
-            const isSelected = !customColor && color === c;
-            return (
-              <button
-                key={c}
-                type="button"
-                onClick={() => handleColorSelect(c)}
-                className={`
-                  w-8 h-8 rounded-full border shadow transition-transform
-                  ${isSelected ? "ring-2 ring-blue-600 scale-110" : ""}
-                `}
-                style={{ backgroundColor: c }}
-              />
-            );
-          })}
-
-          <button
-            type="button"
-            onClick={() => document.querySelector("#hiddenColorPicker").click()}
-            className={`
-              w-8 h-8 rounded-full border shadow transition-transform
-              ${customColor ? "ring-2 ring-blue-600 scale-110" : ""}
-            `}
-            style={{ backgroundColor: customColor || color }}
-          />
-        </div>
-
-        <input
-          id="hiddenColorPicker"
-          type="color"
-          value={customColor || color}
-          onChange={(e) => handleCustomColor(e.target.value)}
-          className="hidden"
-        />
-
-        <button
-          type="button"
-          onClick={randomColor}
-          className="text-sm text-blue-600 underline"
-        >
-          Random chic colour
-        </button>
-
-        {message && (
-          <p className="text-xs text-orange-600">{message}</p>
-        )}
-      </label>
-
-      {/* Preview */}
+    <div className="border rounded shadow bg-white">
+      
+      {/* HEADER */}
       <div
-        className="p-3 rounded shadow border flex items-center gap-3"
-        style={{ backgroundColor: customColor || color }}
+        className="flex items-center justify-between px-4 py-3 border-b cursor-pointer select-none"
+        onClick={() => setIsOpen(o => !o)}
       >
-        <div className="w-10 h-10 rounded-full border bg-white/40"></div>
-        <div className="text-white font-medium drop-shadow">
-          {preferredName || "Preview Name"}
+        {/* Move handle (visual only) */}
+        <div className="text-gray-500 mr-2">⋮⋮</div>
+
+        {/* Title */}
+        <div className="font-medium text-gray-800 flex-1">
+          Add Person
         </div>
+
+        {/* Collapse icon */}
+        <span className="text-gray-700 text-lg">
+          {isOpen ? "▼" : "◀"}
+        </span>
       </div>
 
-      <button className="bg-indigo-600 text-white px-4 py-2 rounded">
-        Add Person
-      </button>
-    </form>
+      {/* BODY */}
+      {isOpen && (
+        <form
+          onSubmit={onSubmit}
+          className="flex flex-col gap-4 p-4"
+        >
+          {/* Full Name */}
+          <label className="flex flex-col gap-1">
+            <span className="text-sm font-medium text-gray-700">Full Name</span>
+            <input
+              className="border p-2 rounded w-full"
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
+              placeholder="e.g. Stephen Johnson"
+            />
+          </label>
+
+          {/* Preferred Name */}
+          <label className="flex flex-col gap-1">
+            <span className="text-sm font-medium text-gray-700">Preferred Name</span>
+            <input
+              className="border p-2 rounded w-full"
+              value={preferredName}
+              onChange={(e) => setPreferredName(e.target.value)}
+              placeholder="e.g. Steve"
+            />
+          </label>
+
+          {/* Colour Picker */}
+          <label className="flex flex-col gap-2">
+            <span className="text-sm font-medium text-gray-700">Colour</span>
+
+            <div className="flex flex-wrap gap-2">
+              {availableColors.map((c) => {
+                const isSelected = !customColor && color === c;
+                return (
+                  <button
+                    key={c}
+                    type="button"
+                    onClick={() => handleColorSelect(c)}
+                    className={`
+                      w-8 h-8 rounded-full border shadow transition-transform
+                      ${isSelected ? "ring-2 ring-blue-600 scale-110" : ""}
+                    `}
+                    style={{ backgroundColor: c }}
+                  />
+                );
+              })}
+
+              <button
+                type="button"
+                onClick={() => document.querySelector("#hiddenColorPicker").click()}
+                className={`
+                  w-8 h-8 rounded-full border shadow transition-transform
+                  ${customColor ? "ring-2 ring-blue-600 scale-110" : ""}
+                `}
+                style={{ backgroundColor: customColor || color }}
+              />
+            </div>
+
+            <input
+              id="hiddenColorPicker"
+              type="color"
+              value={customColor || color}
+              onChange={(e) => handleCustomColor(e.target.value)}
+              className="hidden"
+            />
+
+            <button
+              type="button"
+              onClick={randomColor}
+              className="text-sm text-blue-600 underline"
+            >
+              Random chic colour
+            </button>
+
+            {message && (
+              <p className="text-xs text-orange-600">{message}</p>
+            )}
+          </label>
+
+          {/* Preview */}
+          <div
+            className="p-3 rounded shadow border flex items-center gap-3"
+            style={{ backgroundColor: customColor || color }}
+          >
+            <div className="w-10 h-10 rounded-full border bg-white/40"></div>
+            <div className="text-white font-medium drop-shadow">
+              {preferredName || "Preview Name"}
+            </div>
+          </div>
+
+          <button className="bg-indigo-600 text-white px-4 py-2 rounded">
+            Add Person
+          </button>
+        </form>
+      )}
+    </div>
   );
 }
