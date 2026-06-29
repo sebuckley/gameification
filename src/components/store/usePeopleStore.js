@@ -1,30 +1,14 @@
 import { create } from "zustand";
+import { agendaTemplates } from "../../data/AgendaTemplates";
+import { agendaTypes, getAgendaDefaultMinutes } from "../../data/AgendaTypes";
+
+console.log(agendaTemplates)
 
 const STORAGE_KEY = "people-app";
 
-const chicColors = [
-  "#D16C7A", "#6CA8D1", "#E3C26F", "#D18F6C",
-  "#9B7ED1", "#6CD1A8", "#D16C6C", "#6CD1D1"
-];
-
-const shiftHue = (hex) => {
-  const c = hex.replace("#", "");
-  const r = parseInt(c.substring(0, 2), 16);
-  const g = parseInt(c.substring(2, 4), 16);
-  const b = parseInt(c.substring(4, 6), 16);
-
-  const newR = (r + 25) % 255;
-  const newG = (g + 25) % 255;
-  const newB = (b + 25) % 255;
-
-  return (
-    "#" +
-    newR.toString(16).padStart(2, "0") +
-    newG.toString(16).padStart(2, "0") +
-    newB.toString(16).padStart(2, "0")
-  );
-};
-
+/* ---------------------------------------------------------
+   QUESTION NORMALISER
+--------------------------------------------------------- */
 const normalizeImportedQuestions = (rawList) => {
   return rawList
     .map((item) => {
@@ -63,235 +47,151 @@ const normalizeImportedQuestions = (rawList) => {
 };
 
 
+/* ---------------------------------------------------------
+   Load initial state
+--------------------------------------------------------- */
 const loadInitial = () => {
   try {
     const saved = localStorage.getItem(STORAGE_KEY);
-    const parsed = saved
-      ? JSON.parse(saved)
-      : { people: [], groupsHistory: [], questions: [] };
-
-    let used = [];
-
-    const patchedPeople = parsed.people.map((p) => {
-      const preferredName = p.preferredName || p.fullName || p.name || "";
-      const fullName = p.fullName || p.name || preferredName;
-
-      let color = p.color;
-      if (!color) {
-        const available = chicColors.filter(
-          (c) => !used.includes(c.toLowerCase())
-        );
-        color = available.length > 0 ? available[0] : shiftHue("#6CA8D1");
-      }
-
-      used.push(color.toLowerCase());
-
+    if (!saved) {
       return {
-        ...p,
-        fullName,
-        preferredName,
-        color,
-        quizScore: p.quizScore ?? 0
+        people: [],
+        groupsHistory: [],
+        questions: [],
+        agendaItems: [],
+        agendaStartTime: "09:00",
+        quizSettings: { correctPoints: 1, wrongPoints: -1 }
       };
-    });
-
-    return {
-      people: patchedPeople,
-      groupsHistory: parsed.groupsHistory ?? [],
-      questions: parsed.questions ?? []
-    };
+    }
+    return JSON.parse(saved);
   } catch {
-    return { people: [], groupsHistory: [], questions: [] };
+    return {
+      people: [],
+      groupsHistory: [],
+      questions: [],
+      agendaItems: [],
+      agendaStartTime: "09:00",
+      quizSettings: { correctPoints: 1, wrongPoints: -1 }
+    };
   }
 };
 
+/* ---------------------------------------------------------
+   Safe autosave (always writes FINAL state)
+--------------------------------------------------------- */
+const save = (get) => {
+  const finalState = get();
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(finalState));
+};
+
+/* ---------------------------------------------------------
+   Time helpers
+--------------------------------------------------------- */
+const timeToMinutes = (t) => {
+  const [h, m] = t.split(":").map(Number);
+  return h * 60 + m;
+};
+
+const minutesToTime = (mins) => {
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+};
+
+const recalcAgendaTimes = (startTime, items) => {
+  let cursor = timeToMinutes(startTime);
+  return items.map((item) => {
+    const start = cursor;
+    const end = start + item.minutes;
+    cursor = end;
+    return {
+      ...item,
+      startTime: minutesToTime(start),
+      endTime: minutesToTime(end)
+    };
+  });
+};
+
+/* ---------------------------------------------------------
+   STORE (safe version)
+--------------------------------------------------------- */
 const usePeople = create((set, get) => ({
   ...loadInitial(),
 
-  // ⭐ Hydration flag
-  hydrated: false,
-
-  // Called once from App.jsx
-  initHydration: () =>
-    set((state) => ({ ...state, hydrated: true })),
-
-  // ---------------------------------------------------------
-  // PEOPLE
-  // ---------------------------------------------------------
-
+  /* ---------------------------------------------------------
+     PEOPLE
+  --------------------------------------------------------- */
   addPerson: (data) =>
     set((state) => {
-      if (!state.hydrated) return state;
-
-      const newPerson = {
-        id: crypto.randomUUID(),
-        fullName: data.fullName.trim(),
-        preferredName: data.preferredName.trim(),
-        color: data.color,
-        isPresenter: false,
-        inSpinner: true,
-        inGroups: true,
-        answers: 0,
-        quizScore: 0,
-        history: []
+      const updated = {
+        ...state,
+        people: [
+          ...state.people,
+          {
+            id: crypto.randomUUID(),
+            fullName: data.fullName.trim(),
+            preferredName: data.preferredName.trim(),
+            color: data.color,
+            isPresenter: false,
+            inSpinner: true,
+            inGroups: true,
+            answers: 0,
+            quizScore: 0,
+            history: []
+          }
+        ]
       };
-
-      const updated = { ...state, people: [...state.people, newPerson] };
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+      save(get);
       return updated;
     }),
 
   updatePerson: (id, updates) =>
     set((state) => {
-      if (!state.hydrated) return state;
-
       const updated = {
         ...state,
         people: state.people.map((p) =>
           p.id === id ? { ...p, ...updates } : p
         )
       };
-
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+      save(get);
       return updated;
     }),
 
-  addHistory: (id, entry) =>
-    set((state) => {
-      if (!state.hydrated) return state;
-
-      const updated = {
-        ...state,
-        people: state.people.map((p) =>
-          p.id === id
-            ? { ...p, history: [entry, ...p.history].slice(0, 3) }
-            : p
-        )
-      };
-
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-      return updated;
-    }),
-
-  incrementAnswers: (id) =>
-    set((state) => {
-      if (!state.hydrated) return state;
-
-      const updated = {
-        ...state,
-        people: state.people.map((p) =>
-          p.id === id ? { ...p, answers: p.answers + 1 } : p
-        )
-      };
-
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-      return updated;
-    }),
-
-  resetAnswers: () =>
-    set((state) => {
-      if (!state.hydrated) return state;
-
-      const updated = {
-        ...state,
-        people: state.people.map((p) => ({ ...p, answers: 0 }))
-      };
-
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-      return updated;
-    }),
-
-  // ---------------------------------------------------------
-  // GROUPS
-  // ---------------------------------------------------------
-
+  /* ---------------------------------------------------------
+     GROUPS
+  --------------------------------------------------------- */
   saveGroups: (groups, sessionName = null) =>
     set((state) => {
-      if (!state.hydrated) return state;
-
-      const entry = {
-        timestamp: Date.now(),
-        sessionName,
-        groups
-      };
-
       const updated = {
         ...state,
-        groupsHistory: [entry, ...state.groupsHistory]
+        groupsHistory: [
+          {
+            timestamp: Date.now(),
+            sessionName,
+            groups
+          },
+          ...state.groupsHistory
+        ]
       };
-
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+      save(get);
       return updated;
     }),
 
-  removeGroupHistory: (index) =>
-    set((state) => {
-      if (!state.hydrated) return state;
-
-      const updated = {
-        ...state,
-        groupsHistory: state.groupsHistory.filter((_, i) => i !== index)
-      };
-
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-      return updated;
-    }),
-
-  updateGroupHistoryOrder: (newOrder) =>
-    set((state) => {
-      if (!state.hydrated) return state;
-
-      const updated = {
-        ...state,
-        groupsHistory: newOrder
-      };
-
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-      return updated;
-    }),
-
-  updateGroupHistory: (index, updatedGroups) =>
-    set((state) => {
-      if (!state.hydrated) return state;
-
-      const newHistory = [...state.groupsHistory];
-      newHistory[index] = {
-        ...newHistory[index],
-        groups: updatedGroups,
-        updatedAt: Date.now()
-      };
-
-      const updated = { ...state, groupsHistory: newHistory };
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-      return updated;
-    }),
-
-  // ---------------------------------------------------------
-  // QUIZ SYSTEM
-  // ---------------------------------------------------------
-
-  quizSettings: {
-    correctPoints: 1,
-    wrongPoints: -1
-  },
-
+  /* ---------------------------------------------------------
+     QUIZ
+  --------------------------------------------------------- */
   updateQuizSettings: (settings) =>
     set((state) => {
-      if (!state.hydrated) return state;
-
       const updated = {
         ...state,
         quizSettings: { ...state.quizSettings, ...settings }
       };
-
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+      save(get);
       return updated;
     }),
 
   applyQuizResult: (personId, isCorrect) =>
     set((state) => {
-      if (!state.hydrated) return state;
-
       const updated = {
         ...state,
         people: state.people.map((p) =>
@@ -307,74 +207,145 @@ const usePeople = create((set, get) => ({
             : p
         )
       };
-
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-      return updated;
-    }),
-
-  applyAllWrong: () =>
-    set((state) => {
-      if (!state.hydrated) return state;
-
-      const updated = {
-        ...state,
-        people: state.people.map((p) => ({
-          ...p,
-          quizScore: p.quizScore + state.quizSettings.wrongPoints
-        }))
-      };
-
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+      save(get);
       return updated;
     }),
 
   resetQuizScores: () =>
     set((state) => {
-      if (!state.hydrated) return state;
-
       const updated = {
         ...state,
         people: state.people.map((p) => ({ ...p, quizScore: 0 }))
       };
-
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+      save(get);
       return updated;
     }),
 
-  // ---------------------------------------------------------
-  // QUESTIONS
-  // ---------------------------------------------------------
-
+  /* ---------------------------------------------------------
+     QUESTIONS
+  --------------------------------------------------------- */
   addQuestion: (q) =>
     set((state) => {
-      if (!state.hydrated) return state;
-
       const updated = {
         ...state,
         questions: [...state.questions, q]
       };
-
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+      save(get);
       return updated;
     }),
 
-importQuestions: (list) =>
-  set((state) => {
-    if (!state.hydrated) return state;
+  importQuestions: (list) =>
+    set((state) => {
+      const updated = {
+        ...state,
+        questions: normalizeImportedQuestions(list)
+      };
+      save(get);
+      return updated;
+    }),
 
-    const normalized = normalizeImportedQuestions(list);
+  /* ---------------------------------------------------------
+     AGENDA
+  --------------------------------------------------------- */
+  setAgendaStartTime: (time) =>
+    set((state) => {
+      const updated = {
+        ...state,
+        agendaStartTime: time,
+        agendaItems: recalcAgendaTimes(time, state.agendaItems)
+      };
+      save(get);
+      return updated;
+    }),
+
+  addAgendaItem: (item) =>
+    set((state) => {
+      const updated = {
+        ...state,
+        agendaItems: recalcAgendaTimes(state.agendaStartTime, [
+          ...state.agendaItems,
+          { id: crypto.randomUUID(), ...item }
+        ])
+      };
+      save(get);
+      return updated;
+    }),
+
+  updateAgendaItemsOrder: (newOrder) =>
+    set((state) => {
+      const updated = {
+        ...state,
+        agendaItems: recalcAgendaTimes(state.agendaStartTime, newOrder)
+      };
+      save(get);
+      return updated;
+    }),
+
+  updateAgendaItem: (id, updates) =>
+    set((state) => {
+      const updatedItems = state.agendaItems.map((i) =>
+        i.id === id ? { ...i, ...updates } : i
+      );
+      const updated = {
+        ...state,
+        agendaItems: recalcAgendaTimes(state.agendaStartTime, updatedItems)
+      };
+      save(get);
+      return updated;
+    }),
+
+  removeAgendaItem: (id) =>
+    set((state) => {
+      const updatedItems = state.agendaItems.filter((i) => i.id !== id);
+      const updated = {
+        ...state,
+        agendaItems: recalcAgendaTimes(state.agendaStartTime, updatedItems)
+      };
+      save(get);
+      return updated;
+    }),
+
+applyAgendaTemplate: (templateId, startTime) =>
+  set((state) => {
+    console.log(templateId)
+    const template = agendaTemplates[templateId];
+    console.log(template)
+    if (!template) return state;
+
+    // If UI didn't pass a start time, fall back to template or 09:00
+    const finalStartTime = startTime || template.startTime || "09:00";
+
+    const items = template.items.map((t) => ({
+      id: crypto.randomUUID(),
+      type: t.type,
+      label: agendaTypes.find((x) => x.id === t.type)?.label || "Session",
+      minutes: getAgendaDefaultMinutes(t.type),
+      presenterId: null,
+      guestPresenter: "",
+      notes: "",
+      artefactUrl: ""
+    }));
+
+    const recalced = recalcAgendaTimes(finalStartTime, items);
 
     const updated = {
       ...state,
-      questions: normalized
+      agendaStartTime: finalStartTime,
+      agendaItems: recalced
     };
 
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+    save(get);
     return updated;
   }),
 
 
-  exportQuestions: () => JSON.stringify(get().questions, null, 2)
+  clearAgenda: () =>
+  set((state) => {
+    const updated = { ...state, agendaItems: [] };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+    return updated;
+  }),
+
 }));
 
 export default usePeople;

@@ -2,7 +2,7 @@
   "name": "gameification",
   "version": "0.1.0",
   "private": true,
-  "homepage": "https://sebuckley.github.io/gamification",
+  "homepage": "https://sebuckley.github.io/gameification",
   "dependencies": {
     "@hello-pangea/dnd": "^18.0.1",
     "@testing-library/dom": "^10.4.1",
@@ -10,6 +10,7 @@
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^13.5.0",
     "canvas-confetti": "^1.9.4",
+    "lucide-react": "^1.22.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "react-router-dom": "^7.18.0",
