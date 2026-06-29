@@ -1,13 +1,13 @@
 {
   "files": {
-    "main.css": "/gameification/static/css/main.c8c54136.css",
-    "main.js": "/gameification/static/js/main.120c503d.js",
+    "main.css": "/gameification/static/css/main.167d883b.css",
+    "main.js": "/gameification/static/js/main.188f9eaa.js",
     "index.html": "/gameification/index.html",
-    "main.c8c54136.css.map": "/gameification/static/css/main.c8c54136.css.map",
-    "main.120c503d.js.map": "/gameification/static/js/main.120c503d.js.map"
+    "main.167d883b.css.map": "/gameification/static/css/main.167d883b.css.map",
+    "main.188f9eaa.js.map": "/gameification/static/js/main.188f9eaa.js.map"
   },
   "entrypoints": [
-    "static/css/main.c8c54136.css",
-    "static/js/main.120c503d.js"
+    "static/css/main.167d883b.css",
+    "static/js/main.188f9eaa.js"
   ]
 }
