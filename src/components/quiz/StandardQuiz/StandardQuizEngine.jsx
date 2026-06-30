@@ -15,6 +15,7 @@ export default function StandardQuizEngine({
 
   const [timer, setTimer] = useState(0);
   const [attempted, setAttempted] = useState([]);
+
   const [showAnswerModal, setShowAnswerModal] = useState(false);
   const [modalCorrectPerson, setModalCorrectPerson] = useState(null);
 
@@ -26,6 +27,7 @@ export default function StandardQuizEngine({
   /* TIMER */
   useEffect(() => {
     setTimer(0);
+    setAttempted([]); // reset attempts for new question
     const interval = setInterval(() => setTimer((t) => t + 1), 1000);
     return () => clearInterval(interval);
   }, [index]);
@@ -40,9 +42,7 @@ export default function StandardQuizEngine({
         if (t <= 1) {
           clearInterval(interval);
           penaliseRemaining();
-          setWrongCountdownActive(false);
-          setShowWrongModal(false);
-          nextQuestion();
+          finishQuestion();
           return 0;
         }
         return t - 1;
@@ -64,6 +64,18 @@ export default function StandardQuizEngine({
     });
   };
 
+  const finishQuestion = () => {
+    // close all modals
+    setShowWrongModal(false);
+    setWrongCountdownActive(false);
+    setWrongPerson(null);
+
+    setShowAnswerModal(false);
+    setModalCorrectPerson(null);
+
+    nextQuestion();
+  };
+
   const handleCorrect = (personId) => {
     if (attempted.includes(personId)) return;
 
@@ -74,10 +86,17 @@ export default function StandardQuizEngine({
     triggerConfetti();
 
     setAttempted((prev) => [...prev, personId]);
+
+    // show correct modal
     setShowWrongModal(false);
     setWrongCountdownActive(false);
     setWrongPerson(null);
     setShowAnswerModal(true);
+
+    // auto‑advance after modal closes
+    setTimeout(() => {
+      finishQuestion();
+    }, 1500);
   };
 
   const handleWrong = (personId) => {
@@ -91,23 +110,28 @@ export default function StandardQuizEngine({
     const newAttempted = [...attempted, personId];
     setAttempted(newAttempted);
 
+    // everyone has attempted → finish question
     if (newAttempted.length === quizPeople.length) {
+      penaliseRemaining();
       setModalCorrectPerson(null);
       setShowWrongModal(false);
       setWrongCountdownActive(false);
       setShowAnswerModal(true);
+
+      setTimeout(() => {
+        finishQuestion();
+      }, 1500);
       return;
     }
 
+    // otherwise show wrong modal + countdown
     setShowWrongModal(true);
     setWrongCountdownActive(true);
   };
 
   const handleNoOneAnswered = () => {
     penaliseRemaining();
-    setShowWrongModal(false);
-    setWrongCountdownActive(false);
-    nextQuestion();
+    finishQuestion();
   };
 
   const handleClearWrongModal = () => {

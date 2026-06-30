@@ -6,6 +6,7 @@ import {
   Draggable,
 } from "@hello-pangea/dnd";
 import { nanoid } from "nanoid";
+import { QuestionItem } from "./setup/QuestionItem";
 
 export default function QuizSetup() {
   const {
@@ -169,113 +170,19 @@ const handleBulkImport = () => {
 {questions.map((q, index) => (
   <Draggable key={q.id} draggableId={q.id} index={index}>
     {(provided, snapshot) => (
-      <div
-        ref={provided.innerRef}
-        {...provided.draggableProps}
-        {...provided.dragHandleProps}
-        className={`
-          p-3 border rounded bg-gray-50 space-y-3 transition-all
-          ${snapshot.isDragging ? "scale-[1.03] shadow-lg bg-white" : ""}
-        `}
-      >
-        {/* Number + reorder buttons */}
-        <div className="flex items-center justify-between">
-          <span className="font-semibold text-gray-700">
-            {index + 1}.
-          </span>
-
-          <div className="flex gap-2">
-            <button
-              onClick={() => moveQuestion(index, -1)}
-              className="px-2 py-1 bg-gray-300 rounded hover:bg-gray-400"
-            >
-              ↑
-            </button>
-            <button
-              onClick={() => moveQuestion(index, 1)}
-              className="px-2 py-1 bg-gray-300 rounded hover:bg-gray-400"
-            >
-              ↓
-            </button>
-          </div>
-        </div>
-
-        {/* Question */}
-        <input
-          className="border p-2 rounded w-full"
-          value={q.question}
-          onChange={(e) =>
-            updateSingleQuestion(q.id, "question", e.target.value)
-          }
-        />
-
-        {/* Answer */}
-        <input
-          className="border p-2 rounded w-full"
-          value={q.answer}
-          onChange={(e) =>
-            updateSingleQuestion(q.id, "answer", e.target.value)
-          }
-        />
-
-        {/* Multi‑choice options */}
-        {q.type === "multi" && (
-          <div className="space-y-2">
-            <div className="font-medium text-gray-700">Options</div>
-
-            {q.options.map((opt, optIndex) => (
-              <div key={optIndex} className="flex gap-2">
-                <input
-                  className="border p-2 rounded w-full"
-                  value={opt}
-                  onChange={(e) => {
-                    const updated = [...q.options];
-                    updated[optIndex] = e.target.value;
-                    updateSingleQuestion(q.id, "options", updated);
-                  }}
-                />
-
-                <button
-                  onClick={() => {
-                    const updated = q.options.filter((_, i) => i !== optIndex);
-                    updateSingleQuestion(q.id, "options", updated);
-
-                    // If no options remain, revert to single‑answer
-                    if (updated.length === 0) {
-                      updateSingleQuestion(q.id, "type", "single");
-                    }
-                  }}
-                  className="px-2 py-1 bg-red-600 text-white rounded hover:bg-red-700"
-                >
-                  ✕
-                </button>
-              </div>
-            ))}
-
-            <button
-              onClick={() => {
-                const updated = [...q.options, ""];
-                updateSingleQuestion(q.id, "options", updated);
-                updateSingleQuestion(q.id, "type", "multi");
-              }}
-              className="px-3 py-1 bg-gray-300 rounded hover:bg-gray-400 text-sm"
-            >
-              Add Option
-            </button>
-          </div>
-        )}
-
-        {/* Remove Question */}
-        <button
-          onClick={() => removeQuestion(q.id)}
-          className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700"
-        >
-          Remove
-        </button>
-      </div>
+      <QuestionItem
+        q={q}
+        index={index}
+        provided={provided}
+        snapshot={snapshot}
+        moveQuestion={moveQuestion}
+        updateSingleQuestion={updateSingleQuestion}
+        removeQuestion={removeQuestion}
+      />
     )}
   </Draggable>
 ))}
+
 
 
                       {provided.placeholder}

@@ -15,8 +15,6 @@ export default function AgendaPage() {
   const applyTemplate = usePeople((s) => s.applyAgendaTemplate);
   const clearAgenda = usePeople((s) => s.clearAgenda);
 
-
-
   const isEmpty = !Array.isArray(agendaItems) || agendaItems.length === 0;
 
   return (

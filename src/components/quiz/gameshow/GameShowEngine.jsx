@@ -1,17 +1,22 @@
 import React, { useState } from "react";
 import GameShowQuestion from "./GameShowQuestion";
+import usePeople from "../../store/usePeopleStore";
+
 
 export default function GameShowEngine({
   currentQuestion,
   index,
   questions,
-  nextQuestion
+  nextQuestion,
+  quizPeople,
+  
 }) {
-  const [lastAnswer, setLastAnswer] = useState(null);
 
-  const handleAnswer = (option) => {
-    setLastAnswer(option);
-    // you can add scoring or logging here if you want
+  const [lastAnswer, setLastAnswer] = useState(null);
+  const { applyQuizResult } = usePeople();
+
+  const handleAnswer = (option, personId, correct) => {
+    applyQuizResult(personId, correct);
   };
 
   return (
@@ -19,8 +24,9 @@ export default function GameShowEngine({
       index={index}
       total={questions.length}
       currentQuestion={currentQuestion}
+      quizPeople={quizPeople}
       onAnswer={handleAnswer}
-      onNext={nextQuestion}  
+      onNext={nextQuestion}
     />
   );
 }
