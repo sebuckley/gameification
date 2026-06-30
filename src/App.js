@@ -26,11 +26,12 @@ export default function App() {
 
     {/* MOBILE: Hamburger */}
     <div className="flex items-center justify-between md:hidden">
-      <span className="text-white font-bold text-lg">Menu</span>
+      <span className="text-white font-bold text-lg">Gameification</span>
 
       <button
         onClick={() => setMenuOpen((prev) => !prev)}
         className="text-white focus:outline-none"
+        t
       >
         <svg
           className="w-7 h-7"

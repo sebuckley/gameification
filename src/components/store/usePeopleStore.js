@@ -175,6 +175,15 @@ const usePeople = create((set, get) => ({
     return updated;
   }),
 
+  reorderPeople: (startIndex, endIndex) =>
+  set((state) => {
+    const updated = Array.from(state.people);
+    const [removed] = updated.splice(startIndex, 1);
+    updated.splice(endIndex, 0, removed);
+    return { people: updated };
+  }),
+
+
   resetAnswers: () =>
   set((state) => {
     const updated = {

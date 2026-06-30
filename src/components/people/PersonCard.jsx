@@ -1,11 +1,93 @@
+import { useState } from "react";
 import usePeople from "../store/usePeopleStore";
+import ColourPicker from "./PersonCard/ColorPicker";
+import ListField from "./PersonCard/ListField";
+import DropdownSection from "./PersonCard/DropdownSection";
+import InputField from "./PersonCard/InputField";
+import SelectField from "./PersonCard/SelectField";
 
-export default function PersonCard({ person }) {
+import { DIETARY_OPTIONS, ACCESSIBILITY_OPTIONS } from "../../data/PersonCardOptions";
+
+import {
+  User,
+  Tag,
+  Mail,
+  Utensils,
+  Accessibility,
+  StickyNote,
+  Plus,
+  Trash2,
+  CheckCircle
+} from "lucide-react";
+
+
+export default function PersonCard({ person, index, dragHandleProps }) {
   const { updatePerson, people, removePerson } = usePeople();
+    const [open, setOpen] = useState(false);
+  const [dietOpen, setDietOpen] = useState(false);
+  const [accessOpen, setAccessOpen] = useState(false);
+  const [noteDraft, setNoteDraft] = useState("");
+  const [olderNotesOpen, setOlderNotesOpen] = useState(false);
+
+  /* ---------------------------------------------------------
+     SAFETY: Prevent crash if person is undefined
+  --------------------------------------------------------- */
+  if (!person) {
+    return (
+      <div className="p-4 bg-red-50 border border-red-300 rounded text-red-700">
+        Person data missing
+      </div>
+    );
+  }
+
+  /* ---------------------------------------------------------
+     NORMALISE PERSON OBJECT
+  --------------------------------------------------------- */
+  const safePerson = {
+    id: person.id,
+    fullName: "",
+    preferredName: "",
+    email: "",
+    dietaryRequirements: [],
+    accessibilityRequirements: [],
+    notesHistory: [],
+    color: "#6CA8D1",
+    history: [],
+    isPresenter: false,
+    inSpinner: true,
+    inGroups: true,
+    ...person
+  };
+
+
+
+  /* ---------------------------------------------------------
+     COMPLETION LOGIC
+  --------------------------------------------------------- */
+  const fields = [
+    safePerson.fullName,
+    safePerson.preferredName,
+    safePerson.email,
+    safePerson.dietaryRequirements?.length,
+    safePerson.accessibilityRequirements?.length,
+    safePerson.notesHistory?.length
+  ];
+
+  const completion = Math.round(
+    (fields.filter(Boolean).length / fields.length) * 100
+  );
+
+  const isComplete = completion === 100;
+
+  /* ---------------------------------------------------------
+     EMAIL VALIDATION
+  --------------------------------------------------------- */
+  const validateEmail = (email) =>
+    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
   /* ---------------------------------------------------------
      UNIQUE COLOUR LOGIC
-  --------------------------------------------------------- */
+--------------------------------------------------------- */
   const ensureUniqueColor = (hex) => {
     const lower = hex.toLowerCase();
     const used = people.map((p) => p.color?.toLowerCase()).filter(Boolean);
@@ -66,28 +148,28 @@ export default function PersonCard({ person }) {
   };
 
   const usedColors = people
-    .filter((p) => p.id !== person.id)
+    .filter((p) => p.id !== safePerson.id)
     .map((p) => p.color?.toLowerCase())
     .filter(Boolean);
 
   const availableColors = chicColors.filter((c) => {
     const lower = c.toLowerCase();
-    const personColorLower = person.color?.toLowerCase();
+    const personColorLower = safePerson.color?.toLowerCase();
     return !usedColors.includes(lower) && lower !== personColorLower;
   });
 
   const fallbackColor =
     availableColors.length > 0
       ? availableColors[0]
-      : shiftHue(person.color || "#6CA8D1");
+      : shiftHue(safePerson.color || "#6CA8D1");
 
   const handleColorChange = (newColor) => {
     const unique = ensureUniqueColor(newColor);
-    updatePerson(person.id, { color: unique });
+    updatePerson(safePerson.id, { color: unique });
   };
 
   const handlePresenterToggle = (v) => {
-    updatePerson(person.id, {
+    updatePerson(safePerson.id, {
       isPresenter: v,
       inSpinner: !v,
       inGroups: !v
@@ -101,211 +183,42 @@ export default function PersonCard({ person }) {
       .map((n) => n[0].toUpperCase())
       .join("");
 
-  const headerBg = lighten(person.color, 0.55);
+  const headerBg = lighten(safePerson.color, 0.55);
 
   /* ---------------------------------------------------------
      DELETE CONFIRMATION
   --------------------------------------------------------- */
   const confirmDelete = () => {
     const ok = window.confirm(
-      `Are you sure you want to delete ${person.preferredName || person.fullName}?`
+      `Are you sure you want to delete ${safePerson.preferredName || safePerson.fullName}?`
     );
-    if (ok) removePerson(person.id);
+    if (ok) removePerson(safePerson.id);
   };
 
-  return (
-    <div className="bg-white rounded-xl shadow overflow-hidden border border-gray-300 flex flex-col">
+  /* ---------------------------------------------------------
+     NOTES HANDLING
+  --------------------------------------------------------- */
+  const addNote = () => {
+    if (!noteDraft.trim()) return;
 
-      {/* HEADER */}
-      <div
-        className="px-4 py-3 flex items-center gap-3"
-        style={{ backgroundColor: headerBg }}
-      >
-        <div
-          className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-white shadow"
-          style={{
-            backgroundColor: person.color,
-            border: `2px solid ${person.color}`
-          }}
-        >
-          {initials(person.fullName)}
-        </div>
+    const timestamp = new Date().toLocaleString("en-GB", {
+      hour: "2-digit",
+      minute: "2-digit",
+      day: "numeric",
+      month: "short"
+    });
 
-        <div className="text-lg font-semibold text-gray-900">
-          {person.preferredName || person.fullName}
-        </div>
-      </div>
+    updatePerson(safePerson.id, {
+      notesHistory: [
+        ...(safePerson.notesHistory || []),
+        `${noteDraft} — ${timestamp}`
+      ]
+    });
 
-      {/* BODY */}
-      <div className="p-5 space-y-4 flex-1">
+    setNoteDraft("");
+  };
 
-        {/* Full Name */}
-        <label className="flex flex-col gap-1">
-          <span className="text-sm font-medium text-gray-700">Full Name</span>
-          <input
-            className="border p-2 rounded w-full"
-            value={person.fullName}
-            onChange={(e) =>
-              updatePerson(person.id, { fullName: e.target.value })
-            }
-          />
-        </label>
-
-        {/* Preferred Name */}
-        <label className="flex flex-col gap-1">
-          <span className="text-sm font-medium text-gray-700">Preferred Name</span>
-          <input
-            className="border p-2 rounded w-full"
-            value={person.preferredName}
-            onChange={(e) =>
-              updatePerson(person.id, { preferredName: e.target.value })
-            }
-          />
-        </label>
-
-        {/* Toggles */}
-        <div className="space-y-2">
-          <Toggle
-            label="Presenter"
-            value={person.isPresenter}
-            onChange={handlePresenterToggle}
-          />
-
-          <Toggle
-            label="Include in Spinner"
-            value={person.inSpinner}
-            onChange={(v) => updatePerson(person.id, { inSpinner: v })}
-          />
-
-          <Toggle
-            label="Include in Groups"
-            value={person.inGroups}
-            onChange={(v) => updatePerson(person.id, { inGroups: v })}
-          />
-        </div>
-
-        {/* COLOUR PICKER */}
-        <div>
-          <label className="text-sm font-medium text-gray-700">Colour</label>
-
-          <div className="mt-3 space-y-4">
-
-            {/* Current Colour */}
-            <div>
-              <div className="text-xs font-medium text-gray-600 mb-1">
-                Current Colour
-              </div>
-
-              <button
-                type="button"
-                onClick={() =>
-                  document.querySelector(`#picker-${person.id}`).click()
-                }
-                className={`
-                  w-8 h-8 rounded-full border shadow transition-transform
-                  ${
-                    !availableColors.includes(person.color) &&
-                    person.color !== fallbackColor
-                      ? "ring-2 ring-blue-600 scale-110"
-                      : ""
-                  }
-                `}
-                style={{ backgroundColor: person.color }}
-              />
-            </div>
-
-            {/* Available Colours */}
-            {availableColors.length > 0 && (
-              <div>
-                <div className="text-xs font-medium text-gray-600 mb-1">
-                  Available Colours
-                </div>
-
-                <div className="flex gap-2 flex-wrap">
-                  {availableColors.map((c) => (
-                    <button
-                      key={c}
-                      type="button"
-                      onClick={() => handleColorChange(c)}
-                      className={`
-                        w-8 h-8 rounded-full border shadow transition-transform
-                        ${person.color === c ? "ring-2 ring-blue-600 scale-110" : ""}
-                      `}
-                      style={{ backgroundColor: c }}
-                    />
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Custom Colour Button */}
-            <div>
-              <div className="text-xs font-medium text-gray-600 mb-1">
-                Custom Colour
-              </div>
-
-              <button
-                type="button"
-                onClick={() => {
-                  const unique = ensureUniqueColor(fallbackColor);
-                  updatePerson(person.id, { color: unique });
-                  document.querySelector(`#picker-${person.id}`).click();
-                }}
-                className="
-                  px-3 py-2 rounded-md border shadow text-sm font-medium
-                  bg-white hover:bg-gray-100 flex items-center gap-2
-                "
-              >
-                <div
-                  className="w-5 h-5 rounded-full border"
-                  style={{ backgroundColor: fallbackColor }}
-                />
-                Choose Custom Colour
-              </button>
-            </div>
-
-            {/* Hidden colour picker */}
-            <input
-              id={`picker-${person.id}`}
-              type="color"
-              value={person.color}
-              onChange={(e) => handleColorChange(e.target.value)}
-              className="hidden"
-            />
-          </div>
-        </div>
-
-        {/* History */}
-        <div className="text-sm text-gray-600 bg-gray-50 p-3 rounded-lg border border-gray-200">
-          <div className="font-medium text-gray-700 mb-1">History (last 3)</div>
-          <ul className="list-disc ml-5 space-y-1">
-            {person.history.map((h, i) => (
-              <li key={i}>{h}</li>
-            ))}
-          </ul>
-        </div>
-      </div>
-
-      {/* ⭐ Unified Footer */}
-      <div className="px-4 py-3 border-t bg-gray-50 flex justify-center">
-        <button
-          onClick={confirmDelete}
-          className="
-            px-4 py-2 rounded-md
-            bg-red-600 text-white
-            hover:bg-red-700
-            text-sm font-medium
-            shadow-sm
-          "
-        >
-          Delete Person
-        </button>
-      </div>
-    </div>
-  );
-}
-
-function Toggle({ label, value, onChange }) {
+  function Toggle({ label, value, onChange }) {
   return (
     <label className="flex items-center gap-3 py-1">
       <input
@@ -314,7 +227,306 @@ function Toggle({ label, value, onChange }) {
         onChange={(e) => onChange(e.target.checked)}
         className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
       />
-      <span className="text-gray-700">{label}</span>
+      <span className="text-gray-700 text-sm">{label}</span>
     </label>
   );
 }
+
+  return (
+
+    <div className="bg-white rounded-xl shadow overflow-hidden border border-gray-300 flex flex-col self-start">
+
+      {/* HEADER */}
+{/* HEADER */}
+<div
+  className="px-4 py-3 flex items-center justify-between w-full cursor-pointer"
+  style={{ backgroundColor: headerBg }}
+  onClick={() => setOpen(!open)}
+>
+  <div className="flex items-center gap-3">
+
+    {/* DRAG HANDLE — MUST BE OUTSIDE THE BUTTON */}
+    <div
+      {...dragHandleProps}
+      className="text-gray-400 hover:text-gray-600 cursor-grab select-none pr-1"
+      onClick={(e) => e.stopPropagation()}
+    >
+      ⋮⋮
+    </div>
+
+    {/* CIRCLE AVATAR */}
+    <div
+      className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-white shadow"
+      style={{
+        backgroundColor: safePerson.color,
+        border: `2px solid ${safePerson.color}`
+      }}
+    >
+      {initials(safePerson.fullName)}
+    </div>
+
+    {/* NAME + NUMBER */}
+    <div className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+      {safePerson.preferredName || safePerson.fullName}
+      <span className="text-sm text-gray-600 font-medium">#{index + 1}</span>
+      {isComplete && <CheckCircle size={18} className="text-green-600" />}
+    </div>
+  </div>
+
+  <span className="text-gray-700 text-xl">
+    {open ? "▼" : "◀"}
+  </span>
+</div>
+
+
+
+      {/* COMPLETION BAR */}
+      <div className="w-full bg-gray-200 h-2">
+        <div
+          className="h-2 bg-green-600 transition-all"
+          style={{ width: `${completion}%` }}
+        />
+      </div>
+
+      {/* BODY */}
+      <div
+        className={`
+          transition-all duration-300
+          ${open ? "opacity-100 p-5" : "opacity-0 p-0 pointer-events-none"}
+        `}
+        style={{
+          height: open ? "auto" : 0,
+          overflow: "hidden"
+        }}
+      >
+        <div className="space-y-4">
+
+          {/* Full Name */}
+          <InputField
+            label="Full Name"
+            icon={<User size={16} />}
+            value={safePerson.fullName}
+            onChange={(v) =>
+              updatePerson(safePerson.id, {
+                fullName: v,
+                preferredName: safePerson.preferredName || v.split(" ")[0]
+              })
+            }
+          />
+
+          {/* Preferred Name */}
+          <InputField
+            label="Preferred Name"
+            icon={<Tag size={16} />}
+            value={safePerson.preferredName}
+            onChange={(v) => updatePerson(safePerson.id, { preferredName: v })}
+          />
+
+          {/* Email */}
+          <InputField
+            label="Email Address"
+            icon={<Mail size={16} />}
+            value={safePerson.email || ""}
+            error={safePerson.email && !validateEmail(safePerson.email)}
+            onChange={(v) => {
+              const auto = v.includes("@") ? v : `${v}@gmail.com`;
+              updatePerson(safePerson.id, { email: auto });
+            }}
+          />
+
+          {/* Dietary Requirements */}
+          <DropdownSection
+            label="Dietary Requirements"
+            icon={<Utensils size={16} />}
+            open={dietOpen}
+            setOpen={setDietOpen}
+          >
+            <SelectField
+              label="Select Dietary Requirement"
+              options={DIETARY_OPTIONS}
+              onSelect={(item) =>
+                updatePerson(safePerson.id, {
+                  dietaryRequirements: [
+                    ...(safePerson.dietaryRequirements || []),
+                    item
+                  ]
+                })
+              }
+            />
+
+            <ListField
+              items={safePerson.dietaryRequirements || []}
+              onRemove={(i) =>
+                updatePerson(safePerson.id, {
+                  dietaryRequirements: safePerson.dietaryRequirements.filter(
+                    (_, idx) => idx !== i
+                  )
+                })
+              }
+            />
+          </DropdownSection>
+
+          {/* Accessibility Requirements */}
+          <DropdownSection
+            label="Accessibility Requirements"
+            icon={<Accessibility size={16} />}
+            open={accessOpen}
+            setOpen={setAccessOpen}
+          >
+            <SelectField
+              label="Select Accessibility Requirement"
+              options={ACCESSIBILITY_OPTIONS}
+              onSelect={(item) =>
+                updatePerson(safePerson.id, {
+                  accessibilityRequirements: [
+                    ...(safePerson.accessibilityRequirements || []),
+                    item
+                  ]
+                })
+              }
+            />
+
+            <ListField
+              items={safePerson.accessibilityRequirements || []}
+              onRemove={(i) =>
+                updatePerson(safePerson.id, {
+                  accessibilityRequirements:
+                    safePerson.accessibilityRequirements.filter(
+                      (_, idx) => idx !== i
+                    )
+                })
+              }
+            />
+          </DropdownSection>
+
+          {/* Notes */}
+          <div className="flex flex-col gap-3">
+            <span className="text-sm font-medium text-gray-700 flex items-center gap-2">
+              <StickyNote size={16} />
+              Notes
+            </span>
+
+            {/* Add Note */}
+            <textarea
+              className="border p-2 rounded w-full resize-none border-gray-300"
+              rows={3}
+              value={noteDraft}
+              onChange={(e) => setNoteDraft(e.target.value)}
+            />
+
+            <button
+              className="px-3 py-2 bg-gray-100 rounded border text-sm flex items-center gap-2"
+              onClick={addNote}
+            >
+              <Plus size={16} /> Add Note
+            </button>
+
+            {/* Display Notes */}
+            {safePerson.notesHistory.length > 0 && (
+              <div className="mt-2">
+
+                {/* Most Recent Note */}
+                <div className="p-3 bg-gray-50 border rounded-lg mb-2">
+                  <div className="text-xs text-gray-500 font-medium">
+                    {safePerson.notesHistory[0].split(" — ")[1]}
+                  </div>
+                  <div className="text-sm text-gray-800">
+                    {safePerson.notesHistory[0].split(" — ")[0]}
+                  </div>
+                </div>
+
+                {/* Older Notes Dropdown */}
+                {safePerson.notesHistory.length > 1 && (
+                  <DropdownSection
+                    label="Older Notes"
+                    icon={<StickyNote size={14} />}
+                    open={olderNotesOpen}
+                    setOpen={setOlderNotesOpen}
+                  >
+                    <ul className="ml-4 list-disc text-sm text-gray-700 space-y-2">
+                      {safePerson.notesHistory.slice(1).map((note, i) => {
+                        const [text, timestamp] = note.split(" — ");
+                        return (
+                          <li key={i}>
+                            <div className="text-xs text-gray-500">{timestamp}</div>
+                            <div>{text}</div>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </DropdownSection>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Toggles */}
+          <div className="space-y-2">
+            <Toggle
+              label="Presenter"
+              value={safePerson.isPresenter}
+              onChange={handlePresenterToggle}
+            />
+
+            <Toggle
+              label="Include in Spinner"
+              value={safePerson.inSpinner}
+              onChange={(v) => updatePerson(safePerson.id, { inSpinner: v })}
+            />
+
+            <Toggle
+              label="Include in Groups"
+              value={safePerson.inGroups}
+              onChange={(v) => updatePerson(safePerson.id, { inGroups: v })}
+            />
+          </div>
+
+          {/* Colour Picker */}
+          <ColourPicker
+            person={safePerson}
+            availableColors={availableColors}
+            fallbackColor={fallbackColor}
+            handleColorChange={handleColorChange}
+          />
+
+          {/* History */}
+          <div className="text-sm text-gray-600 bg-gray-50 p-3 rounded-lg border border-gray-200">
+            <div className="font-medium text-gray-700 mb-1">History (last 3)</div>
+            <ul className="list-disc ml-5 space-y-1">
+              {safePerson.history.map((h, i) => (
+                <li key={i}>{h}</li>
+              ))}
+            </ul>
+          </div>
+
+        </div>
+      </div>
+
+      {/* FOOTER */}
+      <div
+        className={`
+          transition-all duration-300 border-t bg-white
+          ${open ? "opacity-100 p-4" : "opacity-0 p-0 pointer-events-none"}
+        `}
+        style={{
+          height: open ? "auto" : 0,
+          overflow: "hidden"
+        }}
+      >
+        <div className="flex justify-center">
+          <button
+            onClick={confirmDelete}
+            className="px-4 py-2 bg-red-100 text-red-700 rounded border border-red-300 text-sm"
+          >
+            Delete Person
+          </button>
+        </div>
+      </div>
+
+    </div>
+
+  );
+
+}
+
+
