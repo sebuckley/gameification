@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from "react";
+import CorrectAnswerModal from "../shared/CorrectAnswerModal";
+import WrongAnswerModal from "../shared/WrongAnswerModal";
 
 export default function GameShowQuestion({
   index,
@@ -11,14 +13,34 @@ export default function GameShowQuestion({
   const [selectedPerson, setSelectedPerson] = useState(null);
   const [selectedOption, setSelectedOption] = useState(null);
   const [locked, setLocked] = useState(false);
+  const [shuffledOptions, setShuffledOptions] = useState([]);
 
-  console.log(quizPeople)
+  // NEW — modal states
+  const [showCorrectModal, setShowCorrectModal] = useState(false);
+  const [showWrongModal, setShowWrongModal] = useState(false);
+  const [modalCorrectPerson, setModalCorrectPerson] = useState(null);
+  const [modalWrongPerson, setModalWrongPerson] = useState(null);
+
   // Reset state when question changes
   useEffect(() => {
     setSelectedPerson(null);
     setSelectedOption(null);
     setLocked(false);
+    setShowCorrectModal(false);
+    setShowWrongModal(false);
   }, [index, currentQuestion]);
+
+  // Shuffle options
+  useEffect(() => {
+    if (!currentQuestion) return;
+
+    const shuffled = [...currentQuestion.options]
+      .map((value) => ({ value, sort: Math.random() }))
+      .sort((a, b) => a.sort - b.sort)
+      .map(({ value }) => value);
+
+    setShuffledOptions(shuffled);
+  }, [currentQuestion, index]);
 
   if (!currentQuestion) return null;
 
@@ -28,14 +50,18 @@ export default function GameShowQuestion({
     setSelectedOption(option);
     setLocked(true);
 
-    // Pass both the option and the person answering
     const correct = option === currentQuestion.answer;
+    const personObj = quizPeople.find((p) => p.id === selectedPerson);
+
     onAnswer(option, selectedPerson, correct);
 
-    // Auto‑advance after reveal
-    setTimeout(() => {
-      onNext();
-    }, 1200);
+    if (correct) {
+      setModalCorrectPerson(personObj);
+      setShowCorrectModal(true);
+    } else {
+      setModalWrongPerson(personObj);
+      setShowWrongModal(true);
+    }
   };
 
   const getButtonStyle = (option) => {
@@ -47,17 +73,35 @@ export default function GameShowQuestion({
   };
 
   return (
-    <div className="space-y-6 text-center">
+    <div className="space-y-8 text-center">
 
       {/* Question Count */}
       <div className="text-sm font-medium text-gray-600">
         Question {index + 1} of {total}
       </div>
 
-      {/* Question */}
-      <h2 className="text-3xl font-bold text-gray-800 animate-fade-in">
-        {currentQuestion.question}
-      </h2>
+      {/* FIXED SIZE QUESTION BOX */}
+      <div
+        className="
+          bg-indigo-600 
+          text-white 
+          rounded-xl 
+          shadow-xl 
+          p-6 
+          mx-auto 
+          overflow-y-auto
+          flex
+          items-center
+          justify-center
+          w-full
+          max-w-4xl
+          h-10 sm:h-28 md:h-32 lg:h-36
+        "
+      >
+        <h2 className="text-3xl font-bold leading-snug text-center w-full">
+          {currentQuestion.question}
+        </h2>
+      </div>
 
       {/* PLAYER SELECTOR */}
       <div className="max-w-xl mx-auto grid grid-cols-2 sm:grid-cols-3 gap-3 mb-6">
@@ -78,7 +122,7 @@ export default function GameShowQuestion({
 
       {/* OPTIONS */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-xl mx-auto">
-        {currentQuestion.options.map((option, i) => (
+        {shuffledOptions.map((option, i) => (
           <button
             key={i}
             disabled={!selectedPerson}
@@ -104,16 +148,31 @@ export default function GameShowQuestion({
         Next Question Now
       </button>
 
-      {/* Reveal */}
-      {locked && (
-        <div className="text-2xl font-bold mt-4 animate-fade-in">
-          {selectedOption === currentQuestion.answer ? (
-            <span className="text-green-600">Correct!</span>
-          ) : (
-            <span className="text-red-600">Wrong!</span>
-          )}
-        </div>
-      )}
+      {/* CORRECT MODAL */}
+      <CorrectAnswerModal
+        show={showCorrectModal}
+        answer={currentQuestion.answer}
+        modalCorrectPerson={modalCorrectPerson}
+        onNext={() => {
+          setShowCorrectModal(false);
+          onNext();
+        }}
+      />
+
+      {/* WRONG MODAL */}
+      <WrongAnswerModal
+        show={showWrongModal}
+        wrongPerson={modalWrongPerson}
+        wrongTimer={3}
+        onClear={() => {
+          setShowWrongModal(false);
+          onNext();
+        }}
+        onNoOneAnswered={() => {
+          setShowWrongModal(false);
+          onNext();
+        }}
+      />
     </div>
   );
 }

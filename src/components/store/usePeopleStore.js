@@ -244,6 +244,10 @@ const usePeople = create((set, get) => ({
   /* ---------------------------------------------------------
      QUIZ
   --------------------------------------------------------- */
+  quizMode: "standard",
+
+  setQuizMode: (mode) => set({ quizMode: mode }),
+
   updateQuizSettings: (settings) =>
     set((state) => {
       const updated = {

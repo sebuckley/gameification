@@ -1,5 +1,6 @@
-import React from "react";
+import React, { useEffect } from "react";
 import PersonBadge from "./PersonBadge";
+import confetti from "canvas-confetti";
 
 export default function CorrectAnswerModal({
   show,
@@ -7,6 +8,17 @@ export default function CorrectAnswerModal({
   modalCorrectPerson,
   onNext
 }) {
+  // ⭐ Fire confetti when modal becomes visible
+  useEffect(() => {
+    if (show) {
+      confetti({
+        particleCount: 120,
+        spread: 80,
+        origin: { y: 0.6 }
+      });
+    }
+  }, [show]);
+
   if (!show) return null;
 
   const isStandardMode = modalCorrectPerson !== null;
@@ -32,7 +44,7 @@ export default function CorrectAnswerModal({
           </div>
         )}
 
-        {/* GAMESHOW MODE: simple correct message */}
+        {/* GAMESHOW MODE */}
         {!isStandardMode && (
           <div className="text-center text-green-700 font-medium">
             Correct!

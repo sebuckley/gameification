@@ -1,163 +1,47 @@
-import { useState, useEffect } from "react";
-import usePeople from "../../store/usePeopleStore";
-import confetti from "canvas-confetti";
-
+import { useEffect } from "react";
 import StandardQuizQuestion from "./StandardQuestionQuiz";
 
 export default function StandardQuizEngine({
   currentQuestion,
   index,
   questions,
-  quizPeople,
-  nextQuestion
+  nextQuestion,
+  cycle        // 1 = question cycle, 2 = reveal cycle
 }) {
-  const { applyQuizResult } = usePeople();
 
-  const [timer, setTimer] = useState(0);
-  const [attempted, setAttempted] = useState([]);
+  const isRevealMode = cycle === 2;
 
-  const [showAnswerModal, setShowAnswerModal] = useState(false);
-  const [modalCorrectPerson, setModalCorrectPerson] = useState(null);
-
-  const [showWrongModal, setShowWrongModal] = useState(false);
-  const [wrongTimer, setWrongTimer] = useState(60);
-  const [wrongCountdownActive, setWrongCountdownActive] = useState(false);
-  const [wrongPerson, setWrongPerson] = useState(null);
-
-  /* TIMER */
+  // ⭐ Reset any per-question UI state when question changes
   useEffect(() => {
-    setTimer(0);
-    setAttempted([]); // reset attempts for new question
-    const interval = setInterval(() => setTimer((t) => t + 1), 1000);
-    return () => clearInterval(interval);
-  }, [index]);
+    // Nothing needed now, but keep the hook for future expansion
+  }, [index, cycle]);
 
-  /* WRONG COUNTDOWN */
-  useEffect(() => {
-    if (!wrongCountdownActive) return;
-    setWrongTimer(60);
+  // ⭐ Cycle + finish logic only
+  const advanceQuestion = () => {
+    const isLast = index === questions.length - 1;
 
-    const interval = setInterval(() => {
-      setWrongTimer((t) => {
-        if (t <= 1) {
-          clearInterval(interval);
-          penaliseRemaining();
-          finishQuestion();
-          return 0;
-        }
-        return t - 1;
-      });
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [wrongCountdownActive]);
-
-  const triggerConfetti = () => {
-    confetti({ particleCount: 120, spread: 70, origin: { y: 0.6 } });
-  };
-
-  const penaliseRemaining = () => {
-    quizPeople.forEach((p) => {
-      if (!attempted.includes(p.id)) {
-        applyQuizResult(p.id, false);
-      }
-    });
-  };
-
-  const finishQuestion = () => {
-    // close all modals
-    setShowWrongModal(false);
-    setWrongCountdownActive(false);
-    setWrongPerson(null);
-
-    setShowAnswerModal(false);
-    setModalCorrectPerson(null);
-
-    nextQuestion();
-  };
-
-  const handleCorrect = (personId) => {
-    if (attempted.includes(personId)) return;
-
-    const person = quizPeople.find((p) => p.id === personId);
-    setModalCorrectPerson(person);
-
-    applyQuizResult(personId, true);
-    triggerConfetti();
-
-    setAttempted((prev) => [...prev, personId]);
-
-    // show correct modal
-    setShowWrongModal(false);
-    setWrongCountdownActive(false);
-    setWrongPerson(null);
-    setShowAnswerModal(true);
-
-    // auto‑advance after modal closes
-    setTimeout(() => {
-      finishQuestion();
-    }, 1500);
-  };
-
-  const handleWrong = (personId) => {
-    if (attempted.includes(personId)) return;
-
-    const person = quizPeople.find((p) => p.id === personId);
-    setWrongPerson(person);
-
-    applyQuizResult(personId, false);
-
-    const newAttempted = [...attempted, personId];
-    setAttempted(newAttempted);
-
-    // everyone has attempted → finish question
-    if (newAttempted.length === quizPeople.length) {
-      penaliseRemaining();
-      setModalCorrectPerson(null);
-      setShowWrongModal(false);
-      setWrongCountdownActive(false);
-      setShowAnswerModal(true);
-
-      setTimeout(() => {
-        finishQuestion();
-      }, 1500);
+    // Last question → move from cycle 1 → cycle 2
+    if (isLast && cycle === 1) {
+      nextQuestion("cycle2");
       return;
     }
 
-    // otherwise show wrong modal + countdown
-    setShowWrongModal(true);
-    setWrongCountdownActive(true);
-  };
+    // Last question → cycle 2 → finish
+    if (isLast && cycle === 2) {
+      nextQuestion("finish");
+      return;
+    }
 
-  const handleNoOneAnswered = () => {
-    penaliseRemaining();
-    finishQuestion();
-  };
-
-  const handleClearWrongModal = () => {
-    setShowWrongModal(false);
-    setWrongCountdownActive(false);
-    setWrongPerson(null);
+    // Normal next question
+    nextQuestion();
   };
 
   return (
     <StandardQuizQuestion
-      timer={timer}
       index={index}
-      total={questions.length}
       currentQuestion={currentQuestion}
-      quizPeople={quizPeople}
-      attempted={attempted}
-      showAnswerModal={showAnswerModal}
-      showWrongModal={showWrongModal}
-      wrongTimer={wrongTimer}
-      wrongPerson={wrongPerson}
-      modalCorrectPerson={modalCorrectPerson}
-      handleCorrect={handleCorrect}
-      handleWrong={handleWrong}
-      handleNoOneAnswered={handleNoOneAnswered}
-      handleClearWrongModal={handleClearWrongModal}
-      nextQuestion={nextQuestion}
+      isRevealMode={isRevealMode}
+      nextQuestion={advanceQuestion}
     />
   );
 }
