@@ -177,8 +177,19 @@ export default function IceBreakerPlay({ running, setRunning }) {
             <div className="text-sm font-semibold text-slate-700">Selected Prompt</div>
             <div className="mt-2 text-lg font-semibold text-slate-900">{selectedIceBreaker.label}</div>
             <div className="mt-1 text-sm text-slate-600">{selectedIceBreaker.prompt}</div>
-            <div className="mt-3 inline-flex items-center rounded-full bg-indigo-100 px-3 py-1 text-xs font-semibold text-indigo-700">
-              {selectedIceBreaker.type === "random" ? "Random" : selectedIceBreaker.type === "performance" ? "Performance" : selectedIceBreaker.type === "choice" ? "Choice" : selectedIceBreaker.type === "reveal" ? "Reveal" : "Simple"}
+            <div className="mt-4 inline-flex items-center gap-2">
+              <span className="inline-flex items-center rounded-full bg-indigo-100 px-3 py-1 text-xs font-semibold text-indigo-700">
+                {selectedIceBreaker.type === "random"
+                  ? "Random"
+                  : selectedIceBreaker.type === "performance"
+                  ? "Performance"
+                  : selectedIceBreaker.type === "choice"
+                  ? "Choice"
+                  : selectedIceBreaker.type === "reveal"
+                  ? "Reveal"
+                  : "Simple"}
+              </span>
+              <span className="text-xs text-slate-500">Choose another prompt from setup to change it.</span>
             </div>
           </div>
         ) : (
