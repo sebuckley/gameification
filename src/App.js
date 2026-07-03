@@ -1,6 +1,5 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { NavLink, Route, Routes } from "react-router-dom";
-import usePeople from "./components/store/usePeopleStore";
 
 import LandingPage from "./components/pages/LandingPage";
 import PeoplePage from "./components/pages/PeoplePage";
@@ -53,25 +52,25 @@ export default function App() {
     {/* MOBILE COLLAPSIBLE MENU */}
     {menuOpen && (
       <nav className="flex flex-col gap-2 mt-4 md:hidden">
-        <NavItem to="/gameification" label="Home" end />
-        <NavItem to="/gameification/people" label="People" />
-        <NavItem to="/gameification/agenda" label="Agenda" />
-        <NavItem to="/gameification/icebreaker" label="Icebreaker" />
-        <NavItem to="/gameification/spinner" label="Spinner" />
-        <NavItem to="/gameification/groups" label="Groups" />
-        <NavItem to="/gameification/quiz" label="Quiz" />
+        <NavItem to="/" label="Home" end />
+        <NavItem to="/people" label="People" />
+        <NavItem to="/agenda" label="Agenda" />
+        <NavItem to="/icebreaker" label="Icebreaker" />
+        <NavItem to="/spinner" label="Spinner" />
+        <NavItem to="/groups" label="Groups" />
+        <NavItem to="/quiz" label="Quiz" />
       </nav>
     )}
 
     {/* DESKTOP MENU */}
     <nav className="hidden md:flex gap-4">
-      <NavItem to="/gameification" label="Home" end />
-      <NavItem to="/gameification/people" label="People" />
-      <NavItem to="/gameification/agenda" label="Agenda" />
-      <NavItem to="/gameification/icebreaker" label="Icebreaker" />
-      <NavItem to="/gameification/spinner" label="Spinner" />
-      <NavItem to="/gameification/groups" label="Groups" />
-      <NavItem to="/gameification/quiz" label="Quiz" />
+      <NavItem to="/" label="Home" end />
+      <NavItem to="/people" label="People" />
+      <NavItem to="/agenda" label="Agenda" />
+      <NavItem to="/icebreaker" label="Icebreaker" />
+      <NavItem to="/spinner" label="Spinner" />
+      <NavItem to="/groups" label="Groups" />
+      <NavItem to="/quiz" label="Quiz" />
     </nav>
   </div>
 </header>
@@ -81,13 +80,13 @@ export default function App() {
 
       <main className="flex-1">
         <Routes>
-          <Route path="/gameification/" element={<LandingPage />} />
-          <Route path="/gameification/people" element={<PeoplePage />} />
-          <Route path="/gameification/agenda" element={<AgendaPage />} />
-          <Route path="/gameification/icebreaker" element={<IceBreakerPage running={ running } setRunning={ setRunning } />} />
-          <Route path="/gameification/spinner" element={<SpinnerPage />} />
-          <Route path="/gameification/groups" element={<GroupsPage />} />
-          <Route path="/gameification/quiz" element={<QuizPage running={ running } setRunning={ setRunning } />} />
+          <Route path="/" element={<LandingPage />} />
+          <Route path="/people" element={<PeoplePage />} />
+          <Route path="/agenda" element={<AgendaPage />} />
+          <Route path="/icebreaker" element={<IceBreakerPage running={ running } setRunning={ setRunning } />} />
+          <Route path="/spinner" element={<SpinnerPage />} />
+          <Route path="/groups" element={<GroupsPage />} />
+          <Route path="/quiz" element={<QuizPage running={ running } setRunning={ setRunning } />} />
         </Routes>
       </main>
     </div>

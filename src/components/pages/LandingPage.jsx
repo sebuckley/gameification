@@ -28,7 +28,7 @@ export default function LandingPage() {
 
         {/* People Manager */}
         <NavLink
-          to="/gameification/people"
+          to="/people"
           className="border rounded-xl shadow p-6 bg-white space-y-3 hover:shadow-lg transition-shadow block"
         >
           <div className="flex items-center gap-3">
@@ -43,7 +43,7 @@ export default function LandingPage() {
 
         {/* Spinner Wheel */}
         <NavLink
-          to="/gameification/spinner"
+          to="/spinner"
           className="border rounded-xl shadow p-6 bg-white space-y-3 hover:shadow-lg transition-shadow block"
         >
           <div className="flex items-center gap-3">
@@ -58,7 +58,7 @@ export default function LandingPage() {
 
         {/* Groups Generator */}
         <NavLink
-          to="/gameification/groups"
+          to="/groups"
           className="border rounded-xl shadow p-6 bg-white space-y-3 hover:shadow-lg transition-shadow block"
         >
           <div className="flex items-center gap-3">
@@ -73,7 +73,7 @@ export default function LandingPage() {
 
         {/* Quiz System */}
         <NavLink
-          to="/gameification/quiz"
+          to="/quiz"
           className="border rounded-xl shadow p-6 bg-white space-y-3 hover:shadow-lg transition-shadow block"
         >
           <div className="flex items-center gap-3">
@@ -88,7 +88,7 @@ export default function LandingPage() {
 
         {/* Agenda Planner */}
         <NavLink
-          to="/gameification/agenda"
+          to="/agenda"
           className="border rounded-xl shadow p-6 bg-white space-y-3 hover:shadow-lg transition-shadow block"
         >
           <div className="flex items-center gap-3">
@@ -103,7 +103,7 @@ export default function LandingPage() {
 
         {/* Gamification Tools */}
         <NavLink
-          to="/gameification/spinner" 
+          to="/spinner"
           className="border rounded-xl shadow p-6 bg-white space-y-3 hover:shadow-lg transition-shadow block"
         >
           <div className="flex items-center gap-3">
@@ -120,7 +120,7 @@ export default function LandingPage() {
       {/* CTA */}
       <div className="text-center">
         <NavLink
-          to="/gameification/people"
+          to="/people"
           className="px-6 py-3 bg-indigo-600 text-white rounded-lg shadow hover:bg-indigo-700 text-lg inline-block"
         >
           Enter the App
