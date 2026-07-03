@@ -4,6 +4,7 @@ import usePeople from "./components/store/usePeopleStore";
 
 import LandingPage from "./components/pages/LandingPage";
 import PeoplePage from "./components/pages/PeoplePage";
+import IceBreakerPage from "./components/pages/IceBreakerPage";
 import SpinnerPage from "./components/pages/SpinnerPage";
 import GroupsPage from "./components/pages/GroupsPage";
 import QuizPage from "./components/pages/QuizPage";
@@ -55,6 +56,7 @@ export default function App() {
         <NavItem to="/gameification" label="Home" end />
         <NavItem to="/gameification/people" label="People" />
         <NavItem to="/gameification/agenda" label="Agenda" />
+        <NavItem to="/gameification/icebreaker" label="Icebreaker" />
         <NavItem to="/gameification/spinner" label="Spinner" />
         <NavItem to="/gameification/groups" label="Groups" />
         <NavItem to="/gameification/quiz" label="Quiz" />
@@ -66,6 +68,7 @@ export default function App() {
       <NavItem to="/gameification" label="Home" end />
       <NavItem to="/gameification/people" label="People" />
       <NavItem to="/gameification/agenda" label="Agenda" />
+      <NavItem to="/gameification/icebreaker" label="Icebreaker" />
       <NavItem to="/gameification/spinner" label="Spinner" />
       <NavItem to="/gameification/groups" label="Groups" />
       <NavItem to="/gameification/quiz" label="Quiz" />
@@ -81,6 +84,7 @@ export default function App() {
           <Route path="/gameification/" element={<LandingPage />} />
           <Route path="/gameification/people" element={<PeoplePage />} />
           <Route path="/gameification/agenda" element={<AgendaPage />} />
+          <Route path="/gameification/icebreaker" element={<IceBreakerPage running={ running } setRunning={ setRunning } />} />
           <Route path="/gameification/spinner" element={<SpinnerPage />} />
           <Route path="/gameification/groups" element={<GroupsPage />} />
           <Route path="/gameification/quiz" element={<QuizPage running={ running } setRunning={ setRunning } />} />

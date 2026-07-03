@@ -25,7 +25,7 @@ export default function SpinnerPage() {
 
       <SpinnerWheel people={people} onResult={handleResult} autoRemove={autoRemove} setAutoRemove={setAutoRemove}/>
 
-      { !autoRemove ? <Leaderboard people={people} /> : null }
+      { !autoRemove ? <Leaderboard people={people} running={ false }/> : null }
 
       <ResultModal
         winner={winner}

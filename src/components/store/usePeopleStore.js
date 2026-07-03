@@ -679,6 +679,42 @@ exportAgendaPowerPointTable: () => {
     return updated;
   }),
 
+// -------------------------------------
+// ICE BREAKER (CLEAN VERSION)
+// -------------------------------------
+
+selectedIceBreaker: null,
+participants: [],
+// Whether to collect free-text answers for non-choice prompts
+collectFreeTextAnswers: false,
+
+// SELECT ICE BREAKER
+selectIceBreaker: (iceBreaker) => {
+  set({ selectedIceBreaker: iceBreaker });
+},
+
+// SET PARTICIPANTS
+setParticipants: (people) => {
+  set({ participants: people });
+},
+
+// CLEAR SELECTION (called when ending)
+clearIceBreaker: () => {
+  set({
+    selectedIceBreaker: null,
+    participants: []
+  });
+}
+
+  ,
+  // Toggle collecting free-text answers for simple/random prompts
+  setCollectFreeTextAnswers: (val) =>
+    set((state) => {
+      const updated = { ...state, collectFreeTextAnswers: !!val };
+      save(get);
+      return updated;
+    }),
+
 }));
 
 export default usePeople;
