@@ -201,22 +201,24 @@ const usePeople = create((set, get) => ({
   /* ---------------------------------------------------------
      GROUPS
   --------------------------------------------------------- */
-  saveGroups: (groups, sessionName = null) =>
-    set((state) => {
-      const updated = {
-        ...state,
-        groupsHistory: [
-          {
-            timestamp: Date.now(),
-            sessionName,
-            groups
-          },
-          ...state.groupsHistory
-        ]
-      };
-      save(get);
-      return updated;
-    }),
+ saveGroups: (groups, sessionName = null) =>
+  set((state) => {
+    const updated = {
+      ...state,
+      groupsHistory: [
+        {
+          timestamp: Date.now(),
+          sessionName,
+          groups
+        },
+        ...state.groupsHistory
+      ]
+    };
+
+    localStorage.setItem("people-app", JSON.stringify(updated));
+    return updated;
+  }),
+
 
     removeGroupHistory: (index) =>
     set((state) => {

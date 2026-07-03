@@ -40,13 +40,23 @@ export default function GroupEditor({ index, onClose }) {
 
   const session = groupsHistory[index];
 
-  // ⭐ Add stable IDs to groups
   const [groups, setGroups] = useState(
     session.groups.map((g) => ({
       id: crypto.randomUUID(),
       members: g,
     }))
   );
+
+  if (!session) {
+    return (
+      <div className="text-red-600 font-semibold">
+        Error: Group session not found.
+      </div>
+    );
+  }
+
+
+
 
   const onDragEnd = (result) => {
     const { source, destination, type } = result;

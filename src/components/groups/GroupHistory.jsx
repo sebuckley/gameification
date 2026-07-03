@@ -10,6 +10,8 @@ export default function GroupHistory({ onEdit }) {
   const removeGroupHistory = usePeople((s) => s.removeGroupHistory);
   const updateOrder = usePeople((s) => s.updateGroupHistoryOrder);
 
+  console.log(groupsHistory)
+
   // Add stable IDs to each history entry
   const historyWithIds = groupsHistory.map((entry) => ({
     ...entry,

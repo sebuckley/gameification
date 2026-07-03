@@ -12,12 +12,13 @@ export default function AgendaItemCard({
   removeAgendaItem,
   allArtefacts = []
 }) {
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [newArtefactName, setNewArtefactName] = useState("");
   const [newArtefactUrl, setNewArtefactUrl] = useState("");
   const [newNote, setNewNote] = useState("");
   const [showNotes, setShowNotes] = useState(false);
+
 
   const Icon = getAgendaIcon(item.type);
 
