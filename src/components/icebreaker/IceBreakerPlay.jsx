@@ -30,17 +30,20 @@ export default function IceBreakerPlay({ running, setRunning }) {
     startSession
   } = engine;
 
+  const hasParticipants = participants && participants.length > 0;
+  const canStart = !!selectedIceBreaker && hasParticipants;
+
   const promptText = useMemo(() => {
     if (isRandom) return randomPrompt;
     return selectedIceBreaker?.prompt ?? "Choose a prompt to begin";
   }, [isRandom, randomPrompt, selectedIceBreaker]);
 
   useEffect(() => {
-    if (!running || !selectedIceBreaker || hasStartedRef.current) return;
+    if (!running || !selectedIceBreaker || !hasParticipants || hasStartedRef.current) return;
     hasStartedRef.current = true;
     startSession();
     setStartTime(Date.now());
-  }, [running, selectedIceBreaker, startSession]);
+  }, [running, selectedIceBreaker, hasParticipants, startSession]);
 
   useEffect(() => {
     if (!running) {
@@ -169,10 +172,30 @@ export default function IceBreakerPlay({ running, setRunning }) {
         <p className="text-sm text-gray-600">
           Start the session to enter fullscreen and guide one person at a time through the chosen prompt.
         </p>
+        {selectedIceBreaker ? (
+          <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+            <div className="text-sm font-semibold text-slate-700">Selected Prompt</div>
+            <div className="mt-2 text-lg font-semibold text-slate-900">{selectedIceBreaker.label}</div>
+            <div className="mt-1 text-sm text-slate-600">{selectedIceBreaker.prompt}</div>
+            <div className="mt-3 inline-flex items-center rounded-full bg-indigo-100 px-3 py-1 text-xs font-semibold text-indigo-700">
+              {selectedIceBreaker.type === "random" ? "Random" : selectedIceBreaker.type === "performance" ? "Performance" : selectedIceBreaker.type === "choice" ? "Choice" : selectedIceBreaker.type === "reveal" ? "Reveal" : "Simple"}
+            </div>
+          </div>
+        ) : (
+          <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
+            No prompt selected yet.
+          </div>
+        )}
+        {!hasParticipants && (
+          <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+            Add at least one participant before starting the icebreaker.
+          </div>
+        )}
         <button
+          type="button"
           onClick={handleStart}
-          disabled={!selectedIceBreaker}
-          className={`px-4 py-2 rounded-md text-white text-sm font-semibold ${selectedIceBreaker ? "bg-indigo-600 hover:bg-indigo-700" : "bg-gray-400 cursor-not-allowed"}`}
+          disabled={!canStart}
+          className={`px-4 py-2 rounded-md text-white text-sm font-semibold ${canStart ? "bg-indigo-600 hover:bg-indigo-700" : "bg-gray-400 cursor-not-allowed"}`}
         >
           Start Ice Breaker
         </button>

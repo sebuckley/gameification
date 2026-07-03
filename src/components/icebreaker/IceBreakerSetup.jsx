@@ -4,7 +4,7 @@ import { iceBreakers } from "../../data/icebreakers";
 
 export default function IceBreakerSetup({ setRunning }) {
   const { selectedIceBreaker, selectIceBreaker } = usePeopleStore();
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(false);
   const { collectFreeTextAnswers, setCollectFreeTextAnswers } = usePeopleStore();
 
   const grouped = {
@@ -22,7 +22,14 @@ export default function IceBreakerSetup({ setRunning }) {
         onClick={() => setOpen((value) => !value)}
       >
         <div className="text-gray-500 mr-2">⋮⋮</div>
-        <div className="font-medium text-gray-800 flex-1">Ice Breaker Setup</div>
+        <div className="flex-1">
+          <div className="font-medium text-gray-800">Ice Breaker Setup</div>
+          {selectedIceBreaker && (
+            <div className="mt-1 text-sm text-gray-500">
+              {selectedIceBreaker.label} • {selectedIceBreaker.type === "random" ? "Random" : selectedIceBreaker.type === "performance" ? "Performance" : selectedIceBreaker.type === "choice" ? "Choice" : selectedIceBreaker.type === "reveal" ? "Reveal" : "Simple"}
+            </div>
+          )}
+        </div>
         <span className="text-gray-700 text-lg">{open ? "▼" : "◀"}</span>
       </div>
 
