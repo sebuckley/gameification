@@ -247,6 +247,29 @@ export default function IceBreakerPlay({ running, setRunning }) {
             )}
           </div>
 
+          {phase === "selecting" && currentParticipant && (
+            <div className="flex flex-col items-center space-y-6">
+              <div className="rounded-2xl border border-slate-200 bg-white p-6 text-center shadow-sm w-full max-w-2xl">
+                <div className="text-sm uppercase tracking-[0.2em] text-slate-400">Ready for</div>
+                <div className="mt-3 text-xl font-semibold text-slate-900">{currentParticipant.preferredName || currentParticipant.fullName}</div>
+                <div className="mt-2 text-sm text-slate-600">Press the button below to display the question and continue.</div>
+              </div>
+              <button
+                onClick={beginAnswer}
+                className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 rounded-md text-lg font-semibold text-white"
+              >
+                Show Question
+              </button>
+            </div>
+          )}
+
+          {phase === "selecting" && !currentParticipant && (
+            <div className="rounded-2xl border border-amber-200 bg-amber-50 p-6 text-center shadow-sm w-full max-w-2xl">
+              <div className="text-sm font-semibold text-amber-900">No participant available</div>
+              <div className="mt-2 text-sm text-amber-700">Load participants and restart the session to continue.</div>
+            </div>
+          )}
+
           {phase === "answering" && (
             <div className="flex flex-col items-center space-y-6">
               {(isSimple || isRandom) && collectFreeTextAnswers && <TextAnswerInput onSubmit={handleTextSubmit} />}

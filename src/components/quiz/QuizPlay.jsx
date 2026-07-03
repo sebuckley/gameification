@@ -12,6 +12,7 @@ export default function QuizPlay({ running, setRunning }) {
   const { people, questions, resetQuizScores, quizMode, setQuizMode } = usePeople();
 
   const quizPeople = people.filter((p) => p.inSpinner);
+  const hasPeople = quizPeople.length > 0;
 
   const [index, setIndex] = useState(0);
   const [cycle, setCycle] = useState(1);
@@ -81,14 +82,22 @@ const finishQuiz = () => {
 
         {/* LEFT: Close / Start */}
         {!running ? (
-          questions.length > 0 && (
-            <button
-              onClick={startQuiz}
-              className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700"
-            >
-              Start Quiz
-            </button>
-          )
+          <div className="flex flex-col gap-3">
+            {questions.length > 0 && (
+              <button
+                onClick={startQuiz}
+                disabled={!hasPeople}
+                className={`px-4 py-2 rounded text-white ${hasPeople ? "bg-indigo-600 hover:bg-indigo-700" : "bg-gray-400 cursor-not-allowed"}`}
+              >
+                Start Quiz
+              </button>
+            )}
+            {!hasPeople && (
+              <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+                No people loaded. Add participants in the People Manager before starting the quiz.
+              </div>
+            )}
+          </div>
         ) : (
           <button
             onClick={closeQuiz}
