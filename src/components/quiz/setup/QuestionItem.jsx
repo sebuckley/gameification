@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { GripVertical } from "lucide-react";
+
 
 export function QuestionItem({
   q,
@@ -20,40 +22,58 @@ export function QuestionItem({
         ${snapshot.isDragging ? "scale-[1.03] shadow-lg" : ""}
       `}
     >
-      {/* HEADER */}
-      <div
-        {...provided.dragHandleProps}
-        className="flex items-center justify-between p-3 bg-gray-100 border-b rounded-t"
-      >
-        <div className="flex items-center gap-3">
-          <span className="font-semibold text-gray-700">{index + 1}.</span>
-          <span className="text-gray-800 font-medium truncate max-w-[300px]">
-            {q.question || "Untitled Question"}
-          </span>
-        </div>
+{/* HEADER */}
+<div
+  {...provided.dragHandleProps}
+  className="flex flex-wrap md:flex-nowrap items-center justify-between p-3 bg-indigo-600 border-b rounded-t gap-3"
+>
+  {/* Left side */}
+  <div className="flex items-center gap-3 min-w-0">
+    {/* Move icon */}
+    <div
+      {...provided.dragHandleProps}
+      className="text-indigo-200 hover:text-white cursor-grab select-none pr-1 transition-colors"
+      onClick={(e) => e.stopPropagation()}
+    >
+      ⋮⋮
+    </div>
 
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setOpen(!open)}
-            className="px-2 py-1 bg-gray-300 rounded hover:bg-gray-400"
-          >
-            {open ? "Hide" : "Show"}
-          </button>
+    {/* Number */}
+    <span className="font-semibold text-white">{index + 1}.</span>
 
-          <button
-            onClick={() => moveQuestion(index, -1)}
-            className="px-2 py-1 bg-gray-300 rounded hover:bg-gray-400"
-          >
-            ↑
-          </button>
-          <button
-            onClick={() => moveQuestion(index, 1)}
-            className="px-2 py-1 bg-gray-300 rounded hover:bg-gray-400"
-          >
-            ↓
-          </button>
-        </div>
-      </div>
+    {/* Responsive truncation */}
+    <span className="text-white font-medium truncate max-w-[150px] sm:max-w-[250px] md:max-w-[300px]">
+      {q.question || "Untitled Question"}
+    </span>
+  </div>
+
+  {/* Right side buttons */}
+  <div className="flex items-center gap-2 flex-wrap">
+    <button
+      onClick={() => setOpen(!open)}
+      className="flex-1 md:flex-none px-3 py-2 bg-gray-200 text-gray-700 rounded text-xs hover:bg-gray-300"
+    >
+      {open ? "Close Edit" : "Edit"}
+    </button>
+
+    <button
+      onClick={() => moveQuestion(index, -1)}
+      className="flex-1 md:flex-none px-3 py-2 bg-gray-200 text-gray-700 rounded text-xs hover:bg-gray-300"
+    >
+      ↑
+    </button>
+
+    <button
+      onClick={() => moveQuestion(index, 1)}
+      className="flex-1 md:flex-none px-3 py-2 bg-gray-200 text-gray-700 rounded text-xs hover:bg-gray-300"
+    >
+      ↓
+    </button>
+  </div>
+</div>
+
+
+
 
       {open && (
         <div className="p-4 space-y-4">
@@ -87,7 +107,7 @@ export function QuestionItem({
               <label className="text-sm font-medium text-gray-700">Options</label>
 
               {q.options.map((opt, optIndex) => (
-                <div key={optIndex} className="flex gap-2">
+                <div key={optIndex} className="flex flex-col sm:flex-row gap-2">
                   <input
                     className="border p-2 rounded w-full"
                     value={opt}
@@ -107,7 +127,7 @@ export function QuestionItem({
                         updateSingleQuestion(q.id, "type", "single");
                       }
                     }}
-                    className="px-2 py-1 bg-red-600 text-white rounded hover:bg-red-700"
+                    className="px-2 py-1 bg-red-600 text-white rounded hover:bg-red-700 sm:w-auto w-full"
                   >
                     ✕
                   </button>
@@ -120,7 +140,7 @@ export function QuestionItem({
                   updateSingleQuestion(q.id, "options", updated);
                   updateSingleQuestion(q.id, "type", "multi");
                 }}
-                className="px-3 py-1 bg-gray-300 rounded hover:bg-gray-400 text-sm"
+                className="px-3 py-1 bg-gray-300 rounded hover:bg-gray-400 text-sm w-full sm:w-auto"
               >
                 Add Option
               </button>

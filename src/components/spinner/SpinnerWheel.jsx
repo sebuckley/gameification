@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import ToggleButton from "../shared/Toggle";
 
 export default function SpinnerWheel({ people, onResult, autoRemove, setAutoRemove }) {
   const isInSpinner = (person) => person?.inSpinner !== false;
@@ -116,37 +117,41 @@ export default function SpinnerWheel({ people, onResult, autoRemove, setAutoRemo
   return (
     <div className="flex flex-col items-center gap-4 mt-6">
 
-      {/* Toggle */}
-      <div className="flex flex-col items-center text-sm mb-2">
-        <div className="flex items-center gap-3">
-          <span className="font-medium">Remove winner from next spin:</span>
+{/* Toggle */}
+<div className="flex flex-col items-center text-sm mb-2">
 
-          <button
-            type="button"
-            onClick={() => setAutoRemove((v) => !v)}
-            className={`flex items-center px-3 py-1 rounded-full border ${
-              autoRemove
-                ? "bg-indigo-600 hover:bg-indigo-700 border-indigo-600"
-                : "bg-gray-600 border-gray-500"
-            }`}
-          >
-            <span
-              className={`text-xs font-bold ${
-                autoRemove ? "text-white" : "text-gray-200"
-              }`}
-            >
-              {autoRemove ? "ON" : "OFF"}
-            </span>
-          </button>
-        </div>
+  <div className="flex items-center gap-3">
+    <span className="font-medium">Remove winner from next spin:</span>
 
-        {autoRemove && (
-          <div className="mt-1">
-            Remaining before reset:{" "}
-            <span className="font-bold">{activePeople.length}</span>
-          </div>
-        )}
-      </div>
+    <ToggleButton
+      value={autoRemove}
+      onChange={setAutoRemove}
+      onLabel="ON"
+      offLabel="OFF"
+      onBg="bg-green-600"
+      onHoverBg="hover:bg-green-700"
+      onBorder="border-green-600"
+      offBg="bg-gray-600"
+      offBorder="border-gray-500"
+    />
+  </div>
+
+  {/* Stable height container */}
+  <div className="mt-1 min-h-[20px] flex items-center">
+    {autoRemove ? (
+      <span>
+        Remaining before reset: <span className="font-bold">{activePeople.length}</span>
+      </span>
+    ) : (
+      // Invisible placeholder to keep height stable
+      <span className="invisible">
+        Remaining before reset: <span className="font-bold">0</span>
+      </span>
+    )}
+  </div>
+
+</div>
+
 
       <div className="relative w-80 h-80">
         <div

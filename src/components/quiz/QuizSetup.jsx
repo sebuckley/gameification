@@ -317,13 +317,13 @@ export default function QuizSetup() {
               <div className="flex gap-3">
                 <button
                   onClick={handleExport}
-                  className="px-4 py-2 bg-gray-700 text-white rounded hover:bg-gray-800"
+                  className="px-4 py-2 bg-green-600 text-white rounded-lg shadow hover:bg-green-700"
                 >
                   Export Questions
                 </button>
                 <button
                   onClick={deleteAllQuestions}
-                  className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+                  className="px-4 py-2 bg-red-600 text-white rounded-lg shadow hover:bg-red-700"
                 >
                   Delete All
                 </button>
@@ -541,7 +541,7 @@ export default function QuizSetup() {
                 }
                 deleteQuestionSet(activeSet.id);
               }}
-              className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 text-sm"
+              className="px-4 py-2 bg-red-600 text-white rounded-lg shadow hover:bg-red-700"
             >
               {questionSets.length <= 1 ? "Clear Set" : "Delete Set"}
             </button>

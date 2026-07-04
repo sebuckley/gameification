@@ -89,7 +89,7 @@ export default function PeoplePage() {
   {isEmpty ? (
     <button
       onClick={() => fileInputRef.current.click()}
-      className="px-4 py-2 bg-indigo-600 text-white rounded shadow hover:bg-indigo-700 text-sm"
+      className="px-4 py-2 bg-indigo-600 text-white rounded-lg shadow hover:bg-indigo-700"
     >
       Import CSV
     </button>
@@ -97,10 +97,9 @@ export default function PeoplePage() {
     <div className="flex gap-3">
       <button
         onClick={exportCSV}
-        className="px-4 py-2 bg-green-600 text-white rounded shadow hover:bg-green-700 text-sm"
+        className="px-4 py-2 bg-green-600 text-white rounded-lg shadow hover:bg-green-700"
       >
-        Export CSV
-      </button>
+        Export People </button>
 
       <button
         onClick={() => {
@@ -108,7 +107,7 @@ export default function PeoplePage() {
             setPeople([]);
           }
         }}
-        className="px-4 py-2 bg-red-600 text-white rounded shadow hover:bg-red-700 text-sm"
+        className="px-4 py-2 bg-red-600 text-white rounded-lg shadow hover:bg-red-700"
       >
         Delete All
       </button>

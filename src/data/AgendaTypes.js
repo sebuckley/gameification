@@ -18,11 +18,12 @@ import {
 } from "lucide-react";
 
 export const agendaTypes = [
-  // ⭐ OPENING
+  // ⭐ OPENING — Indigo family
   {
     id: "welcome",
     label: "Welcome",
-    color: "#6CA8D1",
+    color: "#4F46E5",
+    textColor: "#FFFFFF",
     defaultMinutes: 10,
     icon: Handshake,
     description: "Kick off the workshop, set expectations, outline goals and agenda."
@@ -30,17 +31,19 @@ export const agendaTypes = [
   {
     id: "ice-breaker",
     label: "Ice Breaker",
-    color: "#D16C7A",
+    color: "#EC4899",
+    textColor: "#FFFFFF",
     defaultMinutes: 10,
     icon: Sparkles,
     description: "Warm-up activity to energise participants and build rapport."
   },
 
-  // ⭐ QUIZ TYPES (NEW)
+  // ⭐ QUIZ TYPES — Lime family
   {
     id: "quiz",
     label: "Quiz",
-    color: "#AAB600",
+    color: "#84CC16",
+    textColor: "#FFFFFF",
     defaultMinutes: 10,
     icon: ListChecks,
     description: "A short interactive quiz to engage participants."
@@ -48,7 +51,8 @@ export const agendaTypes = [
   {
     id: "quiz-fun",
     label: "Fun Quiz",
-    color: "#C4C900",
+    color: "#A3E635",
+    textColor: "#111827", // gray-900
     defaultMinutes: 10,
     icon: Sparkles,
     description: "A light-hearted trivia quiz just for fun."
@@ -56,17 +60,19 @@ export const agendaTypes = [
   {
     id: "quiz-knowledge",
     label: "Knowledge Test",
-    color: "#8FA600",
+    color: "#65A30D",
+    textColor: "#FFFFFF",
     defaultMinutes: 10,
     icon: Brain,
     description: "A quiz designed to test understanding or reinforce learning."
   },
 
-  // ⭐ BREAKS & MEALS
+  // ⭐ BREAKS & MEALS — Gray family
   {
     id: "break",
     label: "Break",
-    color: "#000000",
+    color: "#6B7280",
+    textColor: "#FFFFFF",
     defaultMinutes: 15,
     icon: Coffee,
     description: "Short rest period for refreshments and informal discussion."
@@ -74,17 +80,19 @@ export const agendaTypes = [
   {
     id: "lunch",
     label: "Lunch",
-    color: "#000000",
+    color: "#4B5563",
+    textColor: "#FFFFFF",
     defaultMinutes: 45,
     icon: Sandwich,
     description: "Midday meal and informal networking time."
   },
 
-  // ⭐ COLLABORATION & IDEATION
+  // ⭐ COLLABORATION & IDEATION — Amber family
   {
     id: "brainstorming",
     label: "Brainstorming",
-    color: "#E3C26F",
+    color: "#F59E0B",
+    textColor: "#111827",
     defaultMinutes: 30,
     icon: Lightbulb,
     description: "Generate ideas collaboratively using structured or free-form techniques."
@@ -92,7 +100,8 @@ export const agendaTypes = [
   {
     id: "ideation",
     label: "Ideation",
-    color: "#E3C26F",
+    color: "#FBBF24",
+    textColor: "#111827",
     defaultMinutes: 25,
     icon: Brain,
     description: "Creative thinking session to explore innovative solutions."
@@ -100,7 +109,8 @@ export const agendaTypes = [
   {
     id: "storymapping",
     label: "Story Mapping",
-    color: "#D18F6C",
+    color: "#D97706",
+    textColor: "#FFFFFF",
     defaultMinutes: 45,
     icon: Map,
     description: "Visualise user journeys and break down work into meaningful slices."
@@ -108,17 +118,19 @@ export const agendaTypes = [
   {
     id: "painpoints",
     label: "Pain Points",
-    color: "#D16C6C",
+    color: "#B45309",
+    textColor: "#FFFFFF",
     defaultMinutes: 30,
     icon: Bug,
     description: "Identify challenges, blockers, and frustrations in current processes."
   },
 
-  // ⭐ DISCOVERY & ANALYSIS
+  // ⭐ DISCOVERY & ANALYSIS — Cyan family
   {
     id: "requirements-gathering",
     label: "Requirements Gathering",
-    color: "#6CA8D1",
+    color: "#06B6D4",
+    textColor: "#FFFFFF",
     defaultMinutes: 40,
     icon: ClipboardList,
     description: "Capture functional and non-functional requirements from stakeholders."
@@ -126,7 +138,8 @@ export const agendaTypes = [
   {
     id: "stakeholder-interviews",
     label: "Stakeholder Interviews",
-    color: "#6CD1D1",
+    color: "#22D3EE",
+    textColor: "#111827",
     defaultMinutes: 30,
     icon: Users,
     description: "One-on-one or group interviews to understand stakeholder needs."
@@ -134,7 +147,8 @@ export const agendaTypes = [
   {
     id: "visioning",
     label: "Visioning",
-    color: "#E3C26F",
+    color: "#0891B2",
+    textColor: "#FFFFFF",
     defaultMinutes: 30,
     icon: Target,
     description: "Define the future state vision and strategic goals."
@@ -142,17 +156,19 @@ export const agendaTypes = [
   {
     id: "process-mapping",
     label: "Process Mapping",
-    color: "#D18F6C",
+    color: "#0E7490",
+    textColor: "#FFFFFF",
     defaultMinutes: 45,
     icon: Workflow,
     description: "Document current processes and identify opportunities for improvement."
   },
 
-  // ⭐ TRAINING & DISCUSSION
+  // ⭐ TRAINING & DISCUSSION — Teal family
   {
     id: "training",
     label: "Training",
-    color: "#6CA8D1",
+    color: "#14B8A6",
+    textColor: "#FFFFFF",
     defaultMinutes: 30,
     icon: BookOpen,
     description: "Teach participants new tools, processes, or methodologies."
@@ -160,7 +176,8 @@ export const agendaTypes = [
   {
     id: "discussion",
     label: "Group Discussion",
-    color: "#6CD1A8",
+    color: "#2DD4BF",
+    textColor: "#111827",
     defaultMinutes: 20,
     icon: MessageSquare,
     description: "Open conversation to align perspectives and share insights."
@@ -168,32 +185,37 @@ export const agendaTypes = [
   {
     id: "prioritisation",
     label: "Prioritisation",
-    color: "#9B7ED1",
+    color: "#0D9488",
+    textColor: "#FFFFFF",
     defaultMinutes: 30,
     icon: ListChecks,
     description: "Rank ideas or requirements using MoSCoW, voting, or scoring."
   },
 
-  // ⭐ CLOSE
+  // ⭐ CLOSE — Indigo family (dark)
   {
     id: "close",
     label: "Close",
-    color: "#6CA8D1",
+    color: "#4338CA",
+    textColor: "#FFFFFF",
     defaultMinutes: 10,
     icon: DoorClosed,
     description: "Wrap up the workshop, summarise outcomes, confirm next steps."
   },
 
-  // ⭐ CATCH-ALL
+  // ⭐ CATCH-ALL — Cyan (light)
   {
     id: "other",
     label: "Other",
-    color: "#6CD1D1",
+    color: "#E0F2FE",
+    textColor: "#111827",
     defaultMinutes: 30,
     icon: Sparkles,
     description: "Custom activity not covered by predefined workshop types."
   }
 ];
+
+
 
 // ⭐ Helpers
 export const getAgendaType = (id) =>
@@ -201,6 +223,9 @@ export const getAgendaType = (id) =>
 
 export const getAgendaColor = (id) =>
   getAgendaType(id)?.color || "#6CA8D1";
+
+export const getAgendaTextColor = (id) =>
+  getAgendaType(id)?.textColor || "#000000";
 
 export const getAgendaDefaultMinutes = (id) =>
   getAgendaType(id)?.defaultMinutes || 30;

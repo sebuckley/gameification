@@ -248,7 +248,7 @@ export default function PersonCard({ person, index, dragHandleProps }) {
     {/* DRAG HANDLE — MUST BE OUTSIDE THE BUTTON */}
     <div
       {...dragHandleProps}
-      className="text-gray-400 hover:text-gray-600 cursor-grab select-none pr-1"
+      className="text-white hover:text-white-600 cursor-grab select-none pr-1"
       onClick={(e) => e.stopPropagation()}
     >
       ⋮⋮
@@ -516,7 +516,8 @@ export default function PersonCard({ person, index, dragHandleProps }) {
         <div className="flex justify-center">
           <button
             onClick={confirmDelete}
-            className="px-4 py-2 bg-red-100 text-red-700 rounded border border-red-300 text-sm"
+            className="px-4 py-2 bg-red-600 text-white rounded text-xs hover:bg-red-700 text-sm"
+
           >
             Delete Person
           </button>

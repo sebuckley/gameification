@@ -81,50 +81,50 @@ const handleAddItem = (type) => {
 
       {/* Header */}
       <AgendaHeader
-        agendaStartTime={agendaStartTime}
-        finishTime={finishTime}
-        setAgendaStartTime={setAgendaStartTime}
+        agendaStartTime={ agendaStartTime }
+        finishTime={ finishTime }
+        setAgendaStartTime={ setAgendaStartTime }
       />
 
       {/* Add buttons */}
-      <AgendaAddButtons onAdd={handleAddItem} typeList={availableAgendaTypes} />
+      <AgendaAddButtons onAdd={handleAddItem} typeList={ availableAgendaTypes } />
 
       {/* Drag & Drop Agenda */}
- <DragDropContext onDragEnd={onDragEnd}>
-  <Droppable droppableId="agenda">
-    {(dropProvided) => (
-      <div
-        className="space-y-2"
-        ref={dropProvided.innerRef}
-        {...dropProvided.droppableProps}
-      >
-        {agendaItems.map((item, index) => (
-          <Draggable key={item.id} draggableId={item.id} index={index}>
-            {(dragProvided) => (
-              <div
-                ref={dragProvided.innerRef}
-                {...dragProvided.draggableProps}
-                {...dragProvided.dragHandleProps}
-              >
-                <AgendaItemCard
-                  item={item}
-                  presenters={presenters}
-                  agendaTypeOptions={availableAgendaTypes}
-                  questionSets={questionSets}
-                  iceBreakerSets={iceBreakerSets}
-                  updateAgendaItem={updateAgendaItem}
-                  removeAgendaItem={removeAgendaItem}
-                />
-              </div>
-            )}
-          </Draggable>
-        ))}
+      <DragDropContext onDragEnd={onDragEnd}>
+      <Droppable droppableId="agenda">
+        {(dropProvided) => (
+          <div
+            className="space-y-2"
+            ref={dropProvided.innerRef}
+            {...dropProvided.droppableProps}
+          >
+            {agendaItems.map((item, index) => (
+              <Draggable key={item.id} draggableId={item.id} index={index}>
+                {(dragProvided) => (
+                  <div
+                    ref={dragProvided.innerRef}
+                    {...dragProvided.draggableProps}
+                    {...dragProvided.dragHandleProps}
+                  >
+                    <AgendaItemCard
+                      item={item}
+                      presenters={presenters}
+                      agendaTypeOptions={availableAgendaTypes}
+                      questionSets={questionSets}
+                      iceBreakerSets={iceBreakerSets}
+                      updateAgendaItem={updateAgendaItem}
+                      removeAgendaItem={removeAgendaItem}
+                    />
+                  </div>
+                )}
+              </Draggable>
+            ))}
 
-        {dropProvided.placeholder}
-      </div>
-    )}
-  </Droppable>
-</DragDropContext>
+            {dropProvided.placeholder}
+          </div>
+        )}
+      </Droppable>
+      </DragDropContext>
     </div>
   );
 }

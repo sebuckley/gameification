@@ -1,6 +1,8 @@
 import usePeople from "../store/usePeopleStore";
 import {
+  getAgendaType,
   getAgendaColor,
+  getAgendaTextColor,
   getAgendaIcon,
   getAgendaDescription,
   agendaTypes
@@ -17,21 +19,27 @@ export default function AgendaTimeline() {
   const start = timeToMinutes(agendaStartTime);
   const end = start + agendaItems.reduce((sum, i) => sum + i.minutes, 0);
   const totalMinutes = end - start;
+const legend = Array.from(
+  new Map(
+    agendaItems.map((item) => {
 
-  // Build unique legend entries
-  const legend = Array.from(
-    new Map(
-      agendaItems.map((item) => [
-        item.type,
+      console.log("item", item);
+      const type = item.type;
+
+      return [
+        getAgendaType(item.type),
         {
-          type: item.type,
+          type: getAgendaType(item.type),
           label: item.label,
           Icon: getAgendaIcon(item.type),
-          color: getAgendaColor(item.type)
+          backgroundColor: getAgendaColor(item.type),
+          textColor: getAgendaTextColor(item.type)
         }
-      ])
-    ).values()
-  );
+      ];
+    })
+  ).values()
+);
+
 
   return (
     <div className="bg-white rounded-xl shadow border border-gray-300 p-4 space-y-4">
@@ -55,7 +63,8 @@ export default function AgendaTimeline() {
               style={{
                 left: `${leftPct}%`,
                 width: `${widthPct}%`,
-                backgroundColor: getAgendaColor(item.type)
+                backgroundColor: getAgendaColor(item.type),
+                color: getAgendaTextColor(item.type)
               }}
               title={`${item.label} – ${getAgendaDescription(item.type)}`}
             >
@@ -71,55 +80,55 @@ export default function AgendaTimeline() {
         <span>{agendaItems[agendaItems.length - 1]?.endTime || ""}</span>
       </div>
 
-{/* LEGEND */}
-<div className="pt-4">
-  <h4 className="text-sm font-semibold text-gray-700 mb-2">Legend</h4>
+      {/* LEGEND */}
+      <div className="pt-4">
+        <h4 className="text-sm font-semibold text-gray-700 mb-2">Legend</h4>
 
-  <div className="
-    grid 
-    grid-cols-2 
-    sm:grid-cols-3 
-    md:grid-cols-4 
-    gap-3
-  ">
-    {legend.map(({ type, label, Icon, color }) => (
-      <div
-        key={type}
-        className="
-          flex 
-          items-center 
-          gap-3 
-          p-3 
-          rounded-md 
-          border 
-          border-gray-200 
-          bg-gray-50
-          h-14
-        "
-      >
-        {/* ICON BOX — fixed size */}
-        <div
-          className="
-            w-8 
-            h-8 
-            flex 
-            items-center 
-            justify-center 
-            rounded
-          "
-          style={{ backgroundColor: color }}
-        >
-          <Icon size={18} className="text-white" />
+        <div className="
+          grid 
+          grid-cols-2 
+          sm:grid-cols-3 
+          md:grid-cols-4 
+          gap-3
+        ">
+          {legend.map(({ type, label, Icon, backgroundColor, textColor }) => (
+            <div
+              key={type}
+              className="
+                flex 
+                items-center 
+                gap-3 
+                p-3 
+                rounded-md 
+                border 
+                border-gray-200 
+                bg-gray-50
+                h-14
+              "
+            >
+              {/* ICON BOX — fixed size */}
+              <div
+                className="
+                  w-8 
+                  h-8 
+                  flex 
+                  items-center 
+                  justify-center 
+                  rounded
+                "
+                style={{ backgroundColor: backgroundColor, color: textColor }}
+              >
+                <Icon size={18} />
+              </div>
+
+              {/* LABEL — consistent text layout */}
+              <span className="text-sm text-gray-700 truncate">
+                {label}
+              </span>
+            </div>
+          ))}
         </div>
-
-        {/* LABEL — consistent text layout */}
-        <span className="text-sm text-gray-700 truncate">
-          {label}
-        </span>
       </div>
-    ))}
-  </div>
-</div>
 
     </div>
   );

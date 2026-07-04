@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import usePeople from "../store/usePeopleStore";
+import { formatUKDateTime } from "../../utils/formatUKTime";
 
 import AgendaScheduler from "../agenda/AgendaScheduler";
 import AgendaSummaryModal from "../agenda/AgendaSummaryModal";
@@ -98,38 +99,44 @@ export default function AgendaPage() {
       <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
         <h1 className="text-3xl font-bold text-gray-800">Agenda</h1>
 
+
         <div className="flex flex-wrap gap-3">
-          <button
-            onClick={() => {
-              createEvent();
-              setShowEventEditor(true);
-            }}
-            className="px-4 py-2 bg-indigo-100 text-indigo-700 rounded-lg shadow hover:bg-indigo-200"
-          >
-            Add New Event
-          </button>
+        
 
           {!isEmpty && (
             <button
               onClick={clearAgenda}
-              className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg shadow hover:bg-gray-300"
+              className="px-4 py-2 bg-red-600 text-white rounded-lg shadow hover:bg-red-700"
             >
               Clear Agenda
             </button>
           )}
 
-          <button
-            onClick={() => setShowSummary(true)}
-            className="px-4 py-2 bg-indigo-600 text-white rounded-lg shadow hover:bg-indigo-700"
-          >
-            Export Summary
-          </button>
+
+            <button
+              onClick={() => setShowSummary(true)}
+              className="px-4 py-2 bg-green-600 text-white rounded-lg shadow hover:bg-green-700"
+            >
+              Export Agenda
+            </button>
+      
+       
         </div>
       </div>
 
       {events.length > 1 && (
         <div className="bg-white border rounded-xl p-4 shadow space-y-2">
-          <label className="text-sm font-medium text-gray-700">Working Event</label>
+                    <button
+            onClick={() => {
+              createEvent();
+              setShowEventEditor(true);
+            }}
+            className="block mb-5 px-4 py-2 bg-indigo-700 text-white rounded-lg shadow hover:bg-indigo-800"
+
+          >
+            Add New Event
+          </button>
+          <label className="text-sm font-medium text-gray-700">Selected Event</label>
           <select
             className="border rounded p-2 text-sm w-full"
             value={currentEventId || ""}
@@ -152,6 +159,8 @@ export default function AgendaPage() {
               );
             })}
           </select>
+
+
         </div>
       )}
 
@@ -307,20 +316,41 @@ export default function AgendaPage() {
         <div className="bg-white border rounded-xl p-4 shadow space-y-2">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <h2 className="text-lg font-semibold text-gray-800">Linked Event</h2>
-              {agendaEventTitle && <div className="text-sm font-medium text-gray-700">{agendaEventTitle}</div>}
+              <h2 className="text-2xl font-bold text-black-800">{agendaEventTitle}</h2>
+  
             </div>
             <button
               onClick={() => setShowEventEditor(true)}
-              className="px-3 py-1.5 text-sm bg-indigo-100 text-indigo-700 rounded hover:bg-indigo-200"
+              className="px-3 py-1.5 text-sm bg-gray-100 text-black-700 rounded hover:bg-gray-200"
             >
-              Edit Event Details
+              Edit
             </button>
           </div>
           <div className="text-sm text-gray-700">
-            {agendaEventDate || "No date"} · {agendaEventTime || "No time"}
+             {formatUKDateTime(agendaEventDate, agendaEventTime) || "No date · No time"}
           </div>
-          <div className="text-sm text-gray-600">{agendaEventLocation || "No location"}</div>
+<div className="text-sm text-gray-600">
+  {agendaLocationType === "virtual" ? (
+    agendaVirtualJoinLink ? (
+      <a
+        href={agendaVirtualJoinLink}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="inline-block px-2 py-1 bg-indigo-100 text-indigo-700 font-medium rounded hover:bg-indigo-200"
+      >
+        Start meeting
+      </a>
+    ) : (
+      <span className="inline-block px-2 py-1 bg-yellow-100 text-yellow-800 font-medium rounded">
+        Virtual event — no meeting link added
+      </span>
+    )
+  ) : (
+    <span>{agendaEventLocation || "No location"}</span>
+  )}
+</div>
+
+
         </div>
       )}
 

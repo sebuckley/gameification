@@ -9,8 +9,17 @@ import usePeople from "../store/usePeopleStore";
 export default function GroupsPage() {
   const [editingIndex, setEditingIndex] = useState(null);
   const [showExport, setShowExport] = useState(false);
+
   const people = usePeople((s) => s.people);
+  const currentEventId = usePeople((s) => s.currentEventId);
+  const events = usePeople((s) => s.events);
+  const agendaEventTitle = usePeople((s) => s.agendaEventTitle);
+  const agendaEventDate = usePeople((s) => s.agendaEventDate);
   const hasPeople = people.some((p) => p?.inGroups !== false);
+
+  const activeEvent = events.find((event) => event.id === currentEventId);
+  const eventName = activeEvent?.title || agendaEventTitle || "Unnamed Event";
+  const eventDate = activeEvent?.date || agendaEventDate || null;
 
   if (!hasPeople) {
     return (
@@ -36,25 +45,42 @@ export default function GroupsPage() {
 
         <button
           onClick={() => setShowExport(true)}
-          className="px-4 py-2 bg-indigo-600 text-white rounded-lg shadow hover:bg-indigo-700"
+          className="px-4 py-2 bg-green-600 text-white rounded-lg shadow hover:bg-green-700"
         >
-          Export Summary
+          Export Groups
         </button>
       </div>
 
       {/* Always show generator */}
       <GroupGenerator />
 
-      {/* Show history OR editor */}
-{editingIndex === null ? (
-  <GroupHistory onEdit={(i) => setEditingIndex(i)} />
-) : (
-  <GroupEditor
-    index={editingIndex}
-    onClose={() => setEditingIndex(null)}
-  />
-)}
+      {/* ⭐ Event name + date */}
+      <div className="bg-white border rounded p-4 flex flex-col gap-1">
+        <div className="text-lg font-semibold text-gray-800">
+          {eventName}
+        </div>
 
+        {eventDate && (
+          <div className="text-sm text-gray-600">
+            {new Date(eventDate).toLocaleDateString("en-GB", {
+              weekday: "long",
+              year: "numeric",
+              month: "long",
+              day: "numeric",
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* Show history OR editor */}
+      {editingIndex === null ? (
+        <GroupHistory onEdit={(i) => setEditingIndex(i)} />
+      ) : (
+        <GroupEditor
+          index={editingIndex}
+          onClose={() => setEditingIndex(null)}
+        />
+      )}
 
       {showExport && <GroupsExportModal onClose={() => setShowExport(false)} />}
     </div>

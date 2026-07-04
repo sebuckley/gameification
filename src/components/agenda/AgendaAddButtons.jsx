@@ -12,7 +12,8 @@ export default function AgendaAddButtons({ onAdd, typeList = agendaTypes }) {
             onClick={() => onAdd(t.id)}
             className="px-3 py-2 rounded text-white font-semibold text-sm flex items-center gap-2"
             style={{
-              backgroundColor: t.color
+              backgroundColor: t.color,
+              color: t.textColor
             }}
             title={t.description} // tooltip
           >

@@ -1,9 +1,11 @@
 import { useState } from "react";
 import {
   getAgendaColor,
+  getAgendaTextColor,
   getAgendaIcon,
   agendaTypes
 } from "../../data/AgendaTypes";
+import ToggleButton from "../shared/Toggle";
 
 export default function AgendaItemCard({
   item,
@@ -120,9 +122,13 @@ export default function AgendaItemCard({
         <div className="flex flex-col md:flex-row md:items-center gap-3">
 
           {/* MOVE HANDLE */}
-          <div className="text-gray-500 text-xl leading-none select-none cursor-grab md:self-center">
-            ☰
-          </div>
+   <div
+   
+      className="text-gray-800 hover:text-gray-600 cursor-grab select-none pr-1"
+    
+    >
+      ⋮⋮
+    </div>
 
           {/* TIME */}
           <div className="text-sm font-semibold text-gray-700">
@@ -132,7 +138,7 @@ export default function AgendaItemCard({
           {/* NAME BUBBLE */}
           <div
             className="px-3 py-2 text-sm font-semibold rounded-md text-white flex items-center gap-2 w-full md:w-auto"
-            style={{ backgroundColor: getAgendaColor(item.type) }}
+            style={{ backgroundColor: getAgendaColor(item.type), color: getAgendaTextColor(item.type) }}
           >
             <Icon size={16} />
             {item.label}
@@ -300,65 +306,64 @@ export default function AgendaItemCard({
             )}
           </div>
 
-          <div className="space-y-2">
-            <div className="text-sm font-semibold text-gray-700">Group setup</div>
-            <div className="flex flex-wrap items-center gap-3">
-              <label className="inline-flex items-center gap-2 text-sm text-gray-700">
-                <input
-                  type="radio"
-                  name={`group-setup-${item.id}`}
-                  checked={!item.enableGroupSetup}
-                  onChange={() =>
-                    updateAgendaItem(item.id, {
-                      enableGroupSetup: false,
-                      groupCount: Math.max(1, Number(item.groupCount) || 2),
-                    })
-                  }
-                />
-                No
-              </label>
+<div className="space-y-2">
+  <div className="text-sm font-semibold text-gray-700">Group setup</div>
 
-              <label className="inline-flex items-center gap-2 text-sm text-gray-700">
-                <input
-                  type="radio"
-                  name={`group-setup-${item.id}`}
-                  checked={!!item.enableGroupSetup}
-                  onChange={() =>
-                    updateAgendaItem(item.id, {
-                      enableGroupSetup: true,
-                      groupCount: Math.max(1, Number(item.groupCount) || 2),
-                    })
-                  }
-                />
-                Yes
-              </label>
+  <div className="flex flex-wrap items-center gap-3">
 
-              {item.enableGroupSetup && (
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-gray-700">Number of groups</span>
-                  <input
-                    type="number"
-                    min={1}
-                    className={`border rounded p-2 text-sm w-24 ${
-                      isMissingGroupCount ? "border-red-500 bg-red-50" : ""
-                    }`}
-                    value={Math.max(1, Number(item.groupCount) || 1)}
-                    onChange={(e) =>
-                      updateAgendaItem(item.id, {
-                        groupCount: Math.max(1, Number(e.target.value) || 1),
-                      })
-                    }
-                  />
-                </div>
-              )}
-            </div>
+    {/* LEFT: Toggle */}
+    <div className="flex items-center gap-2">
+      <ToggleButton
+        value={!!item.enableGroupSetup}
+        onChange={(newValue) =>
+          updateAgendaItem(item.id, {
+            enableGroupSetup: newValue,
+            groupCount: newValue
+              ? Math.max(1, Number(item.groupCount) || 2)
+              : item.groupCount
+          })
+        }
+        onLabel="Yes"
+        offLabel="No"
+        onBg="bg-green-600"
+        onHoverBg="hover:bg-green-700"
+        onBorder="border-green-600"
+        offBg="bg-gray-600"
+        offBorder="border-gray-500"
+      />
+    </div>
 
-            {item.enableGroupSetup && (
-              <div className="rounded border border-indigo-200 bg-indigo-50 p-3 text-sm text-indigo-800">
-                A group session is created/updated in Group History using this session name and time.
-              </div>
-            )}
-          </div>
+    {/* RIGHT: Always same height, content hidden when OFF */}
+    <div className="flex items-center gap-2 min-h-[40px]">
+
+      {item.enableGroupSetup ? (
+        <>
+          <span className="text-sm text-gray-700">Number of groups</span>
+          <input
+            type="number"
+            min={1}
+            className={`border rounded p-2 text-sm w-24 ${
+              isMissingGroupCount ? "border-red-500 bg-red-50" : ""
+            }`}
+            value={Math.max(1, Number(item.groupCount) || 1)}
+            onChange={(e) =>
+              updateAgendaItem(item.id, {
+                groupCount: Math.max(1, Number(e.target.value) || 1),
+              })
+            }
+          />
+        </>
+      ) : (
+        // Invisible placeholder to keep height stable
+        <div className="invisible flex items-center gap-2">
+          <span className="text-sm">Number of groups</span>
+          <input className="border rounded p-2 text-sm w-24" />
+        </div>
+      )}
+
+    </div>
+  </div>
+</div>
 
           {/* Artefacts */}
           {(isQuizItem || isIceBreakerItem) && (

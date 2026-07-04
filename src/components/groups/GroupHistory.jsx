@@ -10,8 +10,6 @@ export default function GroupHistory({ onEdit }) {
   const removeGroupHistory = usePeople((s) => s.removeGroupHistory);
   const updateOrder = usePeople((s) => s.updateGroupHistoryOrder);
 
-  console.log(groupsHistory)
-
   // Add stable IDs to each history entry
   const historyWithIds = groupsHistory.map((entry) => ({
     ...entry,
@@ -39,29 +37,6 @@ export default function GroupHistory({ onEdit }) {
             {...provided.droppableProps}
           >
             {historyWithIds.map((entry, i) => {
-              const createdDate = new Date(entry.timestamp).toLocaleDateString("en-GB");
-              const createdTime = new Date(entry.timestamp)
-                .toLocaleTimeString("en-GB", {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                  hour12: true,
-                })
-                .toLowerCase();
-
-              const updatedDate = entry.updatedAt
-                ? new Date(entry.updatedAt).toLocaleDateString("en-GB")
-                : null;
-
-              const updatedTime = entry.updatedAt
-                ? new Date(entry.updatedAt)
-                    .toLocaleTimeString("en-GB", {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                      hour12: true,
-                    })
-                    .toLowerCase()
-                : null;
-
               return (
                 <Draggable key={entry._id} draggableId={entry._id} index={i}>
                   {(provided, snapshot) => (
@@ -74,65 +49,63 @@ export default function GroupHistory({ onEdit }) {
                         ${snapshot.isDragging ? "shadow-lg scale-[1.02]" : ""}
                       `}
                     >
-                      {/* ⭐ Purple Header with drag handle */}
-                      <div
-                        className="bg-indigo-600 text-white px-4 py-2 rounded-t font-semibold text-lg cursor-grab"
-                        {...provided.dragHandleProps}
-                      >
-                        {entry.sessionName || "Untitled Session"}
-                      </div>
+                      {/* ⭐ Indigo Header with drag handle, text, circle, buttons */}
+                      <div className="bg-indigo-600 text-white px-4 py-2 rounded-t font-semibold text-lg flex items-center justify-between">
 
-                      {/* Body */}
-                      <div className="p-4 space-y-3">
+                        {/* LEFT SIDE: drag handle + text + circle */}
+                        <div className="flex items-center gap-3 min-w-0">
 
-                        {/* Created */}
-                        <div className="text-sm text-gray-700">
-                          <span className="font-medium">Created:</span>{" "}
-                          {createdDate} at {createdTime}
-                        </div>
-
-                        {/* Updated */}
-                        {updatedDate && (
-                          <div className="text-sm text-gray-700">
-                            <span className="font-medium">Last Updated:</span>{" "}
-                            {updatedDate} at {updatedTime}
+                          {/* Drag handle */}
+                          <div
+                            {...provided.dragHandleProps}
+                            className="text-indigo-200 hover:text-white cursor-grab select-none transition-colors"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            ⋮⋮
                           </div>
-                        )}
 
-                        {/* Group count */}
-                        <div className="text-sm text-gray-700">
-                          <span className="font-medium">Groups:</span>{" "}
-                          {entry.groups.length}
+                          {/* Session name */}
+                          <span className="truncate">
+                            {entry.sessionName || "Untitled Session"}
+                          </span>
+
+                          {/* Circle with group count */}
+                          <div
+                            className="
+                              w-8 h-8 rounded-full 
+                              bg-indigo-500 
+                              flex items-center justify-center 
+                              text-white font-bold shadow
+                            "
+                          >
+                            {entry.groups.length}
+                          </div>
                         </div>
 
-                        {/* Buttons */}
-                        <div className="flex gap-2 pt-2">
+                        {/* RIGHT SIDE: buttons */}
+                        <div className="flex items-center gap-3">
+
+                          {/* Lighter gray Edit button */}
                           <button
                             onClick={() => onEdit(i)}
-                            className="
-                              px-3 py-1 rounded 
-                              bg-indigo-600 text-white 
-                              hover:bg-indigo-700 
-                              text-sm font-medium
-                            "
+                            className="flex-1 md:flex-none px-3 py-2 bg-gray-200 text-gray-700 rounded text-xs hover:bg-gray-300"
                           >
                             Edit
                           </button>
 
+                          {/* Delete button */}
                           <button
                             onClick={() => removeGroupHistory(i)}
-                            className="
-                              px-3 py-1 rounded 
-                              bg-red-600 text-white 
-                              hover:bg-red-700 
-                              text-sm font-medium
-                            "
+                            className="flex-1 md:flex-none px-3 py-2 bg-red-600 text-white rounded text-xs hover:bg-red-700"
+                          
                           >
                             Delete
                           </button>
-                        </div>
 
+                        </div>
                       </div>
+
+                      {/* ⭐ No body — header only */}
                     </div>
                   )}
                 </Draggable>
