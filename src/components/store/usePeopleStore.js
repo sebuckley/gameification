@@ -779,7 +779,17 @@ const usePeople = create((set, get) => ({
 
     setPeople: (list) =>
     set((state) => {
-      const updated = { ...state, people: list };
+      const updated = {
+        ...state,
+        people: Array.isArray(list)
+          ? list.map((person) => ({
+              ...person,
+              history: Array.isArray(person?.history) ? person.history : [],
+              answers: Number.isFinite(person?.answers) ? person.answers : 0,
+              quizScore: Number.isFinite(person?.quizScore) ? person.quizScore : 0
+            }))
+          : []
+      };
       save(get);
       return updated;
     }),
@@ -791,7 +801,7 @@ const usePeople = create((set, get) => ({
         ? {
             ...p,
             history: [
-              ...p.history,
+              ...(Array.isArray(p.history) ? p.history : []),
               `${message} at ${new Date().toLocaleString()}`
             ]
           }
@@ -940,9 +950,9 @@ const usePeople = create((set, get) => ({
       p.id === personId
         ? {
             ...p,
-            answers: p.answers + 1,
+            answers: (Number(p.answers) || 0) + 1,
             history: [
-              ...p.history,
+              ...(Array.isArray(p.history) ? p.history : []),
               `Answered at ${new Date().toLocaleString()}`
             ]
           }

@@ -96,6 +96,7 @@ export default function SpinnerWheel({ people, onResult, autoRemove, setAutoRemo
       onResult(winner);
 
       if (autoRemove) {
+        // Keep the local wheel in sync while the store removal propagates.
         setActivePeople((prev) => {
           const updated = prev.filter((p) => p.id !== winner.id);
 

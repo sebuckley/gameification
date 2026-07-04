@@ -3,12 +3,16 @@ import usePeople from "../store/usePeopleStore";
 
 export default function Leaderboard({ people, data, running }) {
   const scoreField = data === "quiz" ? "quizScore" : "answers";
+  const getScore = (person) => {
+    const value = Number(person?.[scoreField]);
+    return Number.isFinite(value) ? value : 0;
+  };
 
   // ⭐ Animated score state
   const [animatedScores, setAnimatedScores] = useState({});
 
 const sorted = useMemo(() => {
-  return [...people].sort((a, b) => b[scoreField] - a[scoreField]);
+  return [...people].sort((a, b) => getScore(b) - getScore(a));
 }, [people, scoreField]);
 
   const { resetAnswers, resetQuizScores } = usePeople();
@@ -44,14 +48,15 @@ const sorted = useMemo(() => {
   useEffect(() => {
     const newScores = {};
     sorted.forEach((p) => {
-      newScores[p.id] = p[scoreField];
+      newScores[p.id] = getScore(p);
     });
 
     setAnimatedScores((prev) => {
       const updated = { ...prev };
       sorted.forEach((p) => {
-        if (prev[p.id] !== undefined && prev[p.id] !== p[scoreField]) {
-          updated[p.id] = p[scoreField];
+        const score = getScore(p);
+        if (prev[p.id] !== undefined && prev[p.id] !== score) {
+          updated[p.id] = score;
         }
       });
       return updated;
@@ -122,10 +127,10 @@ const sorted = useMemo(() => {
               <span
                 className={`
                   font-bold text-gray-900
-                  ${animatedScores[p.id] !== p[scoreField] ? "animate-pulse text-black" : ""}
+                  ${animatedScores[p.id] !== getScore(p) ? "animate-pulse text-black" : ""}
                 `}
               >
-                {p[scoreField]}
+                {getScore(p)}
               </span>
             </div>
           );

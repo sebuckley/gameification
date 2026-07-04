@@ -7,7 +7,7 @@ import Leaderboard from "../shared/Leaderboard";
 import ResultModal from "../spinner/ResultModal";
 
 export default function SpinnerPage() {
-  const { people, incrementAnswers, addHistory } = usePeople();
+  const { people, incrementAnswers, addHistory, removePerson } = usePeople();
   const [winner, setWinner] = useState(null);
   const [autoRemove, setAutoRemove] = useState(false);
   const spinnerPeople = people.filter((p) => p?.inSpinner !== false);
@@ -19,7 +19,12 @@ export default function SpinnerPage() {
       person.id,
       `Answered at ${new Date().toLocaleString()}`
     );
-    setWinner(person);
+
+    if (autoRemove) {
+      removePerson(person.id);
+    }
+
+    setWinner({ ...person, wonAt: Date.now() });
   };
 
   if (!hasPeople) {
