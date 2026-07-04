@@ -1,11 +1,33 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import usePeopleStore from "../store/usePeopleStore";
 import { iceBreakers } from "../../data/icebreakers";
 
 export default function IceBreakerSetup({ setRunning }) {
-  const { selectedIceBreaker, selectIceBreaker } = usePeopleStore();
+  const {
+    selectedIceBreaker,
+    selectIceBreaker,
+    iceBreakerSets,
+    activeIceBreakerSetId,
+    createIceBreakerSet,
+    selectIceBreakerSet,
+    renameIceBreakerSet,
+    deleteIceBreakerSet,
+  } = usePeopleStore();
   const [open, setOpen] = useState(false);
   const { collectFreeTextAnswers, setCollectFreeTextAnswers } = usePeopleStore();
+  const [setName, setSetName] = useState("");
+  const activeSet = (iceBreakerSets || []).find((setItem) => setItem.id === activeIceBreakerSetId) || null;
+
+  useEffect(() => {
+    setSetName(activeSet?.name || "");
+  }, [activeSet?.id, activeSet?.name]);
+
+  const saveSetName = () => {
+    if (!activeIceBreakerSetId) return;
+    const safeName = setName.trim() || "Icebreaker Set";
+    renameIceBreakerSet(activeIceBreakerSetId, safeName);
+    setSetName(safeName);
+  };
 
   const grouped = {
     simple: iceBreakers.filter((i) => i.type === "simple"),
@@ -37,6 +59,68 @@ export default function IceBreakerSetup({ setRunning }) {
         <div className="p-5 space-y-6">
           <div className="text-sm text-gray-600">
             Pick a prompt set, then launch it in fullscreen so one person answers at a time.
+          </div>
+
+          <div className="rounded-lg border border-slate-200 bg-white p-4 space-y-3">
+            <button
+              type="button"
+              onClick={() => createIceBreakerSet()}
+              className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 text-sm"
+            >
+              Add Set
+            </button>
+            <div className="text-sm font-semibold text-slate-700">Select icebreaker set to edit</div>
+            <div className="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-2">
+              <select
+                className="border rounded p-2 text-sm"
+                value={activeIceBreakerSetId || ""}
+                onChange={(e) => selectIceBreakerSet(e.target.value)}
+              >
+                {(iceBreakerSets || []).map((setItem) => (
+                  <option key={setItem.id} value={setItem.id}>
+                    {setItem.name}
+                  </option>
+                ))}
+              </select>
+              <button
+                type="button"
+                className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 text-sm"
+                onClick={() => {
+                  if (!activeIceBreakerSetId) return;
+                  deleteIceBreakerSet(activeIceBreakerSetId);
+                }}
+              >
+                Delete Set
+              </button>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <div className="text-sm font-semibold text-slate-700">Set Name</div>
+            {activeSet && (
+              <div className="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-2">
+                <input
+                  className="border rounded p-2 text-sm w-full"
+                  placeholder="Set name"
+                  value={setName}
+                  onChange={(e) => setSetName(e.target.value)}
+                  onBlur={saveSetName}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      saveSetName();
+                    }
+                  }}
+                />
+                <button
+                  type="button"
+                  className="px-4 py-2 bg-slate-700 text-white rounded hover:bg-slate-800 text-sm"
+                  onClick={saveSetName}
+                >
+                  Update Name
+                </button>
+              </div>
+            )}
           </div>
 
           {selectedIceBreaker && (

@@ -1,9 +1,9 @@
 import { agendaTypes } from "../../data/AgendaTypes";
 
-export default function AgendaAddButtons({ onAdd }) {
+export default function AgendaAddButtons({ onAdd, typeList = agendaTypes }) {
   return (
     <div className="flex flex-wrap gap-2">
-      {agendaTypes.map((t) => {
+      {typeList.map((t) => {
         const Icon = t.icon;
 
         return (

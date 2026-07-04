@@ -73,7 +73,7 @@ export default function GameShowQuestion({
   };
 
   return (
-    <div className="space-y-8 text-center">
+    <div className="w-full space-y-6 md:space-y-8 text-center">
 
       {/* Question Count */}
       <div className="text-sm font-medium text-gray-600">
@@ -88,23 +88,21 @@ export default function GameShowQuestion({
           rounded-xl 
           shadow-xl 
           p-6 
-          mx-auto 
           overflow-y-auto
           flex
           items-center
           justify-center
           w-full
-          max-w-4xl
-          h-10 sm:h-28 md:h-32 lg:h-36
+          h-24 sm:h-28 md:h-32 lg:h-36
         "
       >
-        <h2 className="text-3xl font-bold leading-snug text-center w-full">
+        <h2 className="text-xl sm:text-2xl md:text-3xl font-bold leading-snug text-center w-full">
           {currentQuestion.question}
         </h2>
       </div>
 
       {/* PLAYER SELECTOR */}
-      <div className="max-w-xl mx-auto grid grid-cols-2 sm:grid-cols-3 gap-3 mb-6">
+      <div className="w-full grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 mb-6">
         {quizPeople.map((p) => (
           <button
             key={p.id}
@@ -121,7 +119,7 @@ export default function GameShowQuestion({
       </div>
 
       {/* OPTIONS */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-xl mx-auto">
+      <div className="w-full grid grid-cols-1 sm:grid-cols-2 gap-4">
         {shuffledOptions.map((option, i) => (
           <button
             key={i}

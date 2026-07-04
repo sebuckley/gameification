@@ -197,11 +197,6 @@ export default function IceBreakerPlay({ running, setRunning }) {
             No prompt selected yet.
           </div>
         )}
-        {!hasParticipants && (
-          <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-            Add at least one participant before starting the icebreaker.
-          </div>
-        )}
         <button
           type="button"
           onClick={handleStart}

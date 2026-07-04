@@ -4,9 +4,10 @@ import {
   Draggable
 } from "@hello-pangea/dnd";
 
-import { getAgendaDefaultMinutes  } from "../../data/AgendaTypes";
+import { agendaTypes, getAgendaDefaultMinutes  } from "../../data/AgendaTypes";
 import { useMemo } from "react";
 import usePeople from "../store/usePeopleStore";
+import { getAgendaTypesForUserType } from "../../data/UserTypes";
 
 // NEW COMPONENT IMPORTS
 import AgendaHeader from "./AgendaHeader";
@@ -17,12 +18,15 @@ export default function AgendaScheduler() {
   const {
     agendaStartTime,
     agendaItems,
+    questionSets,
+    iceBreakerSets,
     setAgendaStartTime,
     addAgendaItem,
     updateAgendaItemsOrder,
     updateAgendaItem,
     removeAgendaItem,
-    people
+    people,
+    userProfile,
   } = usePeople();
 
   const presenters = people.filter((p) => p.isPresenter);
@@ -39,6 +43,11 @@ export default function AgendaScheduler() {
     return `${hh}:${mm}`;
   }, [agendaStartTime, agendaItems]);
 
+  const availableAgendaTypes = useMemo(
+    () => getAgendaTypesForUserType(userProfile?.userType, agendaTypes),
+    [userProfile?.userType]
+  );
+
 const handleAddItem = (type) => {
   addAgendaItem({
     type,
@@ -47,7 +56,13 @@ const handleAddItem = (type) => {
     presenterId: presenters[0]?.id ?? null,
     guestPresenter: "",
     notes: "",
-    artefactUrl: ""
+    artefactUrl: "",
+    artefacts: [],
+    linkedQuestionSetId: null,
+    linkedIceBreakerSetId: null,
+    enableGroupSetup: false,
+    groupCount: 2,
+    groupHistoryEntryId: null,
   });
 };
 
@@ -72,7 +87,7 @@ const handleAddItem = (type) => {
       />
 
       {/* Add buttons */}
-      <AgendaAddButtons onAdd={handleAddItem} />
+      <AgendaAddButtons onAdd={handleAddItem} typeList={availableAgendaTypes} />
 
       {/* Drag & Drop Agenda */}
  <DragDropContext onDragEnd={onDragEnd}>
@@ -94,6 +109,9 @@ const handleAddItem = (type) => {
                 <AgendaItemCard
                   item={item}
                   presenters={presenters}
+                  agendaTypeOptions={availableAgendaTypes}
+                  questionSets={questionSets}
+                  iceBreakerSets={iceBreakerSets}
                   updateAgendaItem={updateAgendaItem}
                   removeAgendaItem={removeAgendaItem}
                 />

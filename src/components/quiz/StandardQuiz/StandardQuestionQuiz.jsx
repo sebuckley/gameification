@@ -21,10 +21,10 @@ export default function StandardQuizQuestion({
     currentQuestion.text;
 
   return (
-    <div className="w-full h-full flex flex-col items-center justify-start gap-6">
+    <div className="w-full h-full flex flex-col items-stretch justify-start gap-4 md:gap-6">
 
       {/* ⭐ BUTTONS AT TOP — stable, no jumping */}
-      <div className="flex gap-4">
+      <div className="flex flex-wrap gap-3 md:gap-4 justify-center">
 
         {/* Reveal Answer (only cycle 2) */}
         {isRevealMode && (
@@ -68,10 +68,10 @@ export default function StandardQuizQuestion({
       {/* ⭐ FIXED HEIGHT QUESTION BOX — no movement */}
       <div
         className="
-          w-full max-w-4xl mx-auto bg-indigo-600 text-white rounded-xl shadow-xl
+          w-full bg-indigo-600 text-white rounded-xl shadow-xl
           border border-indigo-700 p-8
           flex flex-col items-center justify-between
-          h-56 md:h-64 lg:h-72
+          h-48 sm:h-56 md:h-64 lg:h-72
         "
       >
         {/* Q NUMBER — FIXED POSITION */}
@@ -80,7 +80,7 @@ export default function StandardQuizQuestion({
         </div>
 
         {/* Centered question text */}
-        <p className="text-3xl font-extrabold leading-snug text-center drop-shadow px-4">
+        <p className="text-xl sm:text-2xl md:text-3xl font-extrabold leading-snug text-center drop-shadow px-2 sm:px-4">
           {questionText}
         </p>
 
@@ -92,7 +92,7 @@ export default function StandardQuizQuestion({
       {isRevealMode && showAnswer && (
         <div
           className="
-            w-full max-w-4xl mx-auto text-center text-3xl font-bold text-indigo-700
+            w-full text-center text-xl sm:text-2xl md:text-3xl font-bold text-indigo-700
             animate-[fadeIn_0.7s_ease-out,slideUp_0.7s_ease-out]
           "
         >

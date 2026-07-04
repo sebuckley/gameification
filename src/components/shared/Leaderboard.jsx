@@ -1,15 +1,15 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import usePeople from "../store/usePeopleStore";
 
 export default function Leaderboard({ people, data, running }) {
-  const spinnerPeople = people.filter((p) => p.inSpinner === true);
-
   const scoreField = data === "quiz" ? "quizScore" : "answers";
 
   // ⭐ Animated score state
   const [animatedScores, setAnimatedScores] = useState({});
 
-  const sorted = [...spinnerPeople].sort((a, b) => b[scoreField] - a[scoreField]);
+const sorted = useMemo(() => {
+  return [...people].sort((a, b) => b[scoreField] - a[scoreField]);
+}, [people, scoreField]);
 
   const { resetAnswers, resetQuizScores } = usePeople();
 

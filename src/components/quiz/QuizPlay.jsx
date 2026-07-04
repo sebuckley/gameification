@@ -9,9 +9,19 @@ import GameShowEngine from "./gameshow/GameShowEngine";
 import PodiumModal from "./shared/PodiumModal";
 
 export default function QuizPlay({ running, setRunning }) {
-  const { people, questions, resetQuizScores, quizMode, setQuizMode } = usePeople();
+  const {
+    people,
+    questions,
+    questionSets,
+    activeQuestionSetId,
+    selectQuestionSet,
+    updateQuestionSetQuizMode,
+    resetQuizScores,
+    quizMode,
+    setQuizMode
+  } = usePeople();
 
-  const quizPeople = people.filter((p) => p.inSpinner);
+  const quizPeople = people.filter((p) => p?.inSpinner !== false);
   const hasPeople = quizPeople.length > 0;
 
   const [index, setIndex] = useState(0);
@@ -21,7 +31,25 @@ export default function QuizPlay({ running, setRunning }) {
   const [podium, setPodium] = useState([]);
 
   const currentQuestion = index !== null ? questions[index] : null;
-  const hasMultiChoice = questions.some((q) => q.type === "multi");
+  const quizSets = Array.isArray(questionSets) && questionSets.length > 0
+    ? questionSets
+    : [{ id: "default", name: "Question Set 1", questions: questions || [] }];
+  const hasAnyQuestions = quizSets.some((setItem) => Array.isArray(setItem.questions) && setItem.questions.length > 0);
+  const activeSetName =
+    quizSets.find((setItem) => setItem.id === activeQuestionSetId)?.name ||
+    quizSets[0]?.name ||
+    "Quiz";
+
+  const activeSetMode =
+    quizSets.find((setItem) => setItem.id === activeQuestionSetId)?.quizMode ||
+    quizMode ||
+    "standard";
+
+  const getQuizModeLabel = (mode) => {
+    if (mode === "standard-points") return "Standard Points";
+    if (mode === "gameshow") return "Game-Show";
+    return "Standard";
+  };
 
   const enterFullscreen = () => {
     const el = document.documentElement;
@@ -34,8 +62,15 @@ export default function QuizPlay({ running, setRunning }) {
     }
   };
 
-  const startQuiz = () => {
-    if (!questions.length) return;
+  const startQuizForSet = (setItem) => {
+    if (!setItem || !Array.isArray(setItem.questions) || setItem.questions.length === 0) return;
+    if (setItem.id && setItem.id !== activeQuestionSetId) {
+      selectQuestionSet(setItem.id);
+    }
+    const hasMulti = setItem.questions.some((q) => q.type === "multi");
+    const modeForSet = setItem.quizMode || "standard";
+    const safeMode = modeForSet === "gameshow" && !hasMulti ? "standard" : modeForSet;
+    setQuizMode(safeMode);
     resetQuizScores();
     setCycle(1);
     setRunning(true);
@@ -78,23 +113,64 @@ const finishQuiz = () => {
   return (
     <>
       {/* FULL-WIDTH HEADER */}
-      <div className="w-full bg-white shadow-md border-b border-gray-300 p-4 flex flex-wrap items-center justify-between gap-4">
+      <div className="w-full flex flex-wrap items-center justify-between gap-4">
 
         {/* LEFT: Close / Start */}
         {!running ? (
-          <div className="flex flex-col gap-3">
-            {questions.length > 0 && (
-              <button
-                onClick={startQuiz}
-                disabled={!hasPeople}
-                className={`px-4 py-2 rounded text-white ${hasPeople ? "bg-indigo-600 hover:bg-indigo-700" : "bg-gray-400 cursor-not-allowed"}`}
-              >
-                Start Quiz
-              </button>
-            )}
+          <div className="flex flex-col gap-3 w-full">
+            {hasAnyQuestions && quizSets.map((setItem, index) => {
+              const setName = setItem.name || `Question Set ${index + 1}`;
+              const setQuestionCount = Array.isArray(setItem.questions) ? setItem.questions.length : 0;
+              const canStartSet = hasPeople && setQuestionCount > 0;
+              const isActiveSet = setItem.id === activeQuestionSetId;
+              const setHasMultiChoice = Array.isArray(setItem.questions)
+                ? setItem.questions.some((q) => q.type === "multi")
+                : false;
+              const setMode = setItem.quizMode || "standard";
+              const safeSetMode = setMode === "gameshow" && !setHasMultiChoice ? "standard" : setMode;
+
+              return (
+                <div
+                  key={setItem.id || `quiz-set-${index}`}
+                  className={`rounded-lg border p-3 flex flex-col gap-3 ${isActiveSet ? "border-indigo-300 bg-indigo-50" : "border-gray-200 bg-white"}`}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="font-semibold text-gray-800">{setName}</div>
+                    <div className="text-xs font-medium text-indigo-700 rounded-full bg-indigo-100 px-2 py-1 whitespace-nowrap">
+                      {getQuizModeLabel(safeSetMode)}
+                    </div>
+                  </div>
+                  <div className="text-xs text-gray-600">
+                    {setQuestionCount} {setQuestionCount === 1 ? "question" : "questions"}
+                    {isActiveSet ? " • Active" : ""}
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-2 items-center">
+                    <select
+                      className="border rounded px-3 py-2 text-sm w-full"
+                      value={safeSetMode}
+                      onChange={(e) => updateQuestionSetQuizMode(setItem.id, e.target.value)}
+                    >
+                      <option value="standard">Standard</option>
+                      <option value="standard-points">Standard Points</option>
+                      <option value="gameshow" disabled={!setHasMultiChoice}>Game-Show</option>
+                    </select>
+
+                    <button
+                      onClick={() => startQuizForSet(setItem)}
+                      disabled={!canStartSet}
+                      className={`px-4 py-2 rounded text-white text-sm font-medium w-full sm:w-auto ${canStartSet ? "bg-indigo-600 hover:bg-indigo-700" : "bg-gray-400 cursor-not-allowed"}`}
+                    >
+                      Start {setName}
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+
             {!hasPeople && (
               <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
-                No people loaded. Add participants in the People Manager before starting the quiz.
+                Add people before starting a quiz.
               </div>
             )}
           </div>
@@ -113,49 +189,17 @@ const finishQuiz = () => {
             <span className="text-lg font-semibold text-gray-700">
               Question {index + 1} / {questions.length}
             </span>
-          </div>
-        )}
-
-        {/* RIGHT: Mode Switch */}
-        {!running && (
-          <div className="flex gap-2">
-            <button
-              onClick={() => setQuizMode("standard")}
-              className={`px-3 py-1 rounded text-sm ${
-                quizMode === "standard"
-                  ? "bg-indigo-600 text-white"
-                  : "bg-gray-200 text-gray-700"
-              }`}
-            >
-              Standard
-            </button>
-
-            <button
-              onClick={() => setQuizMode("standard-points")}
-              className={`px-3 py-1 rounded text-sm ${
-                quizMode === "standard-points"
-                  ? "bg-indigo-600 text-white"
-                  : "bg-gray-200 text-gray-700"
-              }`}
-            >
-              Standard Points
-            </button>
-
-            {hasMultiChoice && (
-              <button
-                onClick={() => setQuizMode("gameshow")}
-                className={`px-3 py-1 rounded text-sm ${
-                  quizMode === "gameshow"
-                    ? "bg-indigo-600 text-white"
-                    : "bg-gray-200 text-gray-700"
-                }`}
-              >
-                Game‑Show
-              </button>
-            )}
+            <div className="text-sm text-gray-500 mt-1">{activeSetName}</div>
+            <div className="text-xs text-gray-400 mt-1">{getQuizModeLabel(activeSetMode)}</div>
           </div>
         )}
       </div>
+
+      {!running && !hasAnyQuestions && (
+        <div className="mt-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+          Please add questions before starting the quiz.
+        </div>
+      )}
 
       {/* TRUE FULLSCREEN QUIZ AREA */}
       {running && currentQuestion && !showPodium && (
@@ -167,8 +211,6 @@ const finishQuiz = () => {
             w-full 
             h-[calc(100vh-80px)] 
             overflow-hidden
-            lg:items-center
-            lg:justify-center
           "
         >
 
@@ -178,13 +220,13 @@ const finishQuiz = () => {
               flex-1 
               h-full 
               overflow-auto 
-              px-8 
-              py-10 
-              lg:px-16 
-              lg:py-20
-              flex
-              lg:items-center
-              lg:justify-center
+              px-3 
+              py-4 
+              sm:px-4
+              sm:py-6
+              lg:px-8 
+              lg:py-8
+              w-full
             "
           >
             {quizMode === "standard" && (
@@ -250,16 +292,16 @@ const finishQuiz = () => {
         </div>
       )}
 
-    {/* PODIUM */}
-    {quizMode !== "standard" && (
-        
-      <PodiumModal
-        show={showPodium}
-        podium={podium}
-        onClose={() => setShowPodium(false)}
-      />
+      {/* PODIUM */}
+      {quizMode !== "standard" && (
+          
+        <PodiumModal
+          show={showPodium}
+          podium={podium}
+          onClose={() => setShowPodium(false)}
+        />
 
-    )}
+      )}
     
     </>
   );

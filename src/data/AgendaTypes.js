@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 
 export const agendaTypes = [
+  // ⭐ OPENING
   {
     id: "welcome",
     label: "Welcome",
@@ -34,6 +35,34 @@ export const agendaTypes = [
     icon: Sparkles,
     description: "Warm-up activity to energise participants and build rapport."
   },
+
+  // ⭐ QUIZ TYPES (NEW)
+  {
+    id: "quiz",
+    label: "Quiz",
+    color: "#AAB600",
+    defaultMinutes: 10,
+    icon: ListChecks,
+    description: "A short interactive quiz to engage participants."
+  },
+  {
+    id: "quiz-fun",
+    label: "Fun Quiz",
+    color: "#C4C900",
+    defaultMinutes: 10,
+    icon: Sparkles,
+    description: "A light-hearted trivia quiz just for fun."
+  },
+  {
+    id: "quiz-knowledge",
+    label: "Knowledge Test",
+    color: "#8FA600",
+    defaultMinutes: 10,
+    icon: Brain,
+    description: "A quiz designed to test understanding or reinforce learning."
+  },
+
+  // ⭐ BREAKS & MEALS
   {
     id: "break",
     label: "Break",
@@ -50,6 +79,8 @@ export const agendaTypes = [
     icon: Sandwich,
     description: "Midday meal and informal networking time."
   },
+
+  // ⭐ COLLABORATION & IDEATION
   {
     id: "brainstorming",
     label: "Brainstorming",
@@ -57,6 +88,14 @@ export const agendaTypes = [
     defaultMinutes: 30,
     icon: Lightbulb,
     description: "Generate ideas collaboratively using structured or free-form techniques."
+  },
+  {
+    id: "ideation",
+    label: "Ideation",
+    color: "#E3C26F",
+    defaultMinutes: 25,
+    icon: Brain,
+    description: "Creative thinking session to explore innovative solutions."
   },
   {
     id: "storymapping",
@@ -75,7 +114,7 @@ export const agendaTypes = [
     description: "Identify challenges, blockers, and frustrations in current processes."
   },
 
-  // ⭐ NEW WORKSHOP ACTIVITIES
+  // ⭐ DISCOVERY & ANALYSIS
   {
     id: "requirements-gathering",
     label: "Requirements Gathering",
@@ -108,6 +147,8 @@ export const agendaTypes = [
     icon: Workflow,
     description: "Document current processes and identify opportunities for improvement."
   },
+
+  // ⭐ TRAINING & DISCUSSION
   {
     id: "training",
     label: "Training",
@@ -115,14 +156,6 @@ export const agendaTypes = [
     defaultMinutes: 30,
     icon: BookOpen,
     description: "Teach participants new tools, processes, or methodologies."
-  },
-  {
-    id: "ideation",
-    label: "Ideation",
-    color: "#E3C26F",
-    defaultMinutes: 25,
-    icon: Brain,
-    description: "Creative thinking session to explore innovative solutions."
   },
   {
     id: "discussion",
@@ -141,7 +174,7 @@ export const agendaTypes = [
     description: "Rank ideas or requirements using MoSCoW, voting, or scoring."
   },
 
-  // ⭐ NEW CLOSE SESSION
+  // ⭐ CLOSE
   {
     id: "close",
     label: "Close",
@@ -151,7 +184,7 @@ export const agendaTypes = [
     description: "Wrap up the workshop, summarise outcomes, confirm next steps."
   },
 
-  // Catch-all
+  // ⭐ CATCH-ALL
   {
     id: "other",
     label: "Other",

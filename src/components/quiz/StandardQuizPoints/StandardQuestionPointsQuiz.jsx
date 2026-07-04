@@ -24,7 +24,7 @@ export default function StandardQuizPointsQuestion({
   if (!currentQuestion) return null;
 
   return (
-    <div className="p-4 bg-gray-50 rounded border border-gray-200 space-y-4">
+    <div className="w-full p-2 sm:p-3 md:p-4 space-y-4">
 
       {/* Timer + Question Count */}
       <div className="flex justify-between items-center text-sm font-medium text-gray-600">

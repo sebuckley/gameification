@@ -1,15 +1,17 @@
 import { useState, useEffect } from "react";
 
 export default function SpinnerWheel({ people, onResult, autoRemove, setAutoRemove }) {
+  const isInSpinner = (person) => person?.inSpinner !== false;
+
   // Track spinner membership only
   const spinnerKey = people
-    .filter((p) => p.inSpinner)
+    .filter(isInSpinner)
     .map((p) => p.id)
     .sort()
     .join(",");
 
   // Initial spinner list
-  const initialSpinnerPeople = people.filter((p) => p.inSpinner);
+  const initialSpinnerPeople = people.filter(isInSpinner);
 
   const [activePeople, setActivePeople] = useState(initialSpinnerPeople);
   const [currentRotation, setCurrentRotation] = useState(0);
@@ -17,7 +19,7 @@ export default function SpinnerWheel({ people, onResult, autoRemove, setAutoRemo
 
   // ⭐ Only resync when spinner membership changes
   useEffect(() => {
-    const newSpinnerPeople = people.filter((p) => p.inSpinner);
+    const newSpinnerPeople = people.filter(isInSpinner);
     setActivePeople(newSpinnerPeople);
     setWinnerIndex(null);
   }, [spinnerKey]);
@@ -99,7 +101,7 @@ export default function SpinnerWheel({ people, onResult, autoRemove, setAutoRemo
 
           if (updated.length === 0) {
             // ⭐ Reset to current spinner membership
-            const resetList = people.filter((p) => p.inSpinner);
+            const resetList = people.filter(isInSpinner);
             setWinnerIndex(null);
             return resetList;
           }

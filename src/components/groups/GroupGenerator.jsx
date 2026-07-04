@@ -41,7 +41,7 @@ export default function GroupGenerator() {
      ELIGIBLE PEOPLE (same as original)
   ------------------------------------------------------- */
   const eligible = people.filter(
-    (p) => p.inGroups === true && p.isPresenter === false
+    (p) => p?.inGroups !== false && p?.isPresenter !== true
   );
 
   /* -------------------------------------------------------

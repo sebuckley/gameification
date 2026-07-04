@@ -8,6 +8,9 @@ import {
 export default function AgendaItemCard({
   item,
   presenters,
+  agendaTypeOptions = agendaTypes,
+  questionSets = [],
+  iceBreakerSets = [],
   updateAgendaItem,
   removeAgendaItem,
   allArtefacts = []
@@ -30,21 +33,36 @@ export default function AgendaItemCard({
 
   const presenterName = selectedPresenter || item.guestPresenter || "No presenter";
   const isGuestSelected = item.presenterId === "guest";
+  const isQuizItem = String(item.type || "").startsWith("quiz");
+  const isIceBreakerItem = String(item.type || "") === "ice-breaker";
+  const linkedQuestionSet = questionSets.find((setItem) => setItem.id === item.linkedQuestionSetId) || null;
+  const linkedIceBreakerSet = iceBreakerSets.find((setItem) => setItem.id === item.linkedIceBreakerSetId) || null;
+  const hasQuizSetQuestions = !!(linkedQuestionSet?.questions?.length);
+  const hasIceBreakerSelected = !!linkedIceBreakerSet?.selectedIceBreaker;
 
   // Validation (NOTES REMOVED FROM VALIDATION)
   const isMissingLabel = !item.label?.trim();
   const isMissingMinutes = !item.minutes || item.minutes <= 0;
   const isMissingPresenter = !item.presenterId && !item.guestPresenter;
-  const isMissingArtefact = !item.artefacts || item.artefacts.length === 0;
+  const isMissingSetLink =
+    (isQuizItem && !item.linkedQuestionSetId) ||
+    (isIceBreakerItem && !item.linkedIceBreakerSetId);
+  const isMissingGroupCount = !!item.enableGroupSetup && (!item.groupCount || Number(item.groupCount) < 1);
+  const isMissingArtefact =
+    !isQuizItem &&
+    !isIceBreakerItem &&
+    (!item.artefacts || item.artefacts.length === 0);
 
   const isIncomplete =
     isMissingLabel ||
     isMissingMinutes ||
     isMissingPresenter ||
+    isMissingSetLink ||
+    isMissingGroupCount ||
     isMissingArtefact;
 
   // Filter session types for searchable dropdown
-  const filteredTypes = agendaTypes.filter((t) =>
+  const filteredTypes = agendaTypeOptions.filter((t) =>
     t.label.toLowerCase().includes(search.toLowerCase())
   );
 
@@ -282,8 +300,157 @@ export default function AgendaItemCard({
             )}
           </div>
 
+          <div className="space-y-2">
+            <div className="text-sm font-semibold text-gray-700">Group setup</div>
+            <div className="flex flex-wrap items-center gap-3">
+              <label className="inline-flex items-center gap-2 text-sm text-gray-700">
+                <input
+                  type="radio"
+                  name={`group-setup-${item.id}`}
+                  checked={!item.enableGroupSetup}
+                  onChange={() =>
+                    updateAgendaItem(item.id, {
+                      enableGroupSetup: false,
+                      groupCount: Math.max(1, Number(item.groupCount) || 2),
+                    })
+                  }
+                />
+                No
+              </label>
+
+              <label className="inline-flex items-center gap-2 text-sm text-gray-700">
+                <input
+                  type="radio"
+                  name={`group-setup-${item.id}`}
+                  checked={!!item.enableGroupSetup}
+                  onChange={() =>
+                    updateAgendaItem(item.id, {
+                      enableGroupSetup: true,
+                      groupCount: Math.max(1, Number(item.groupCount) || 2),
+                    })
+                  }
+                />
+                Yes
+              </label>
+
+              {item.enableGroupSetup && (
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-gray-700">Number of groups</span>
+                  <input
+                    type="number"
+                    min={1}
+                    className={`border rounded p-2 text-sm w-24 ${
+                      isMissingGroupCount ? "border-red-500 bg-red-50" : ""
+                    }`}
+                    value={Math.max(1, Number(item.groupCount) || 1)}
+                    onChange={(e) =>
+                      updateAgendaItem(item.id, {
+                        groupCount: Math.max(1, Number(e.target.value) || 1),
+                      })
+                    }
+                  />
+                </div>
+              )}
+            </div>
+
+            {item.enableGroupSetup && (
+              <div className="rounded border border-indigo-200 bg-indigo-50 p-3 text-sm text-indigo-800">
+                A group session is created/updated in Group History using this session name and time.
+              </div>
+            )}
+          </div>
+
           {/* Artefacts */}
-          <div className="space-y-3">
+          {(isQuizItem || isIceBreakerItem) && (
+            <div className="space-y-3">
+              <div className="text-sm font-semibold text-gray-700">Linked set</div>
+
+              {isQuizItem && (
+                <>
+                  <select
+                    className={`border rounded p-3 text-sm w-full ${
+                      isMissingSetLink ? "border-red-500 bg-red-50" : ""
+                    }`}
+                    value={item.linkedQuestionSetId || ""}
+                    onChange={(e) =>
+                      updateAgendaItem(item.id, {
+                        linkedQuestionSetId: e.target.value || null,
+                      })
+                    }
+                  >
+                    <option value="">Select question set...</option>
+                    {questionSets.map((setItem) => (
+                      <option key={setItem.id} value={setItem.id}>
+                        {setItem.name}
+                      </option>
+                    ))}
+                  </select>
+
+                  {linkedQuestionSet && (
+                    <div className="rounded border border-blue-200 bg-blue-50 p-3 text-sm text-blue-900">
+                      Linked to {linkedQuestionSet.name}
+                      {!hasQuizSetQuestions && (
+                        <span className="block mt-1 text-blue-700">Add questions to this set to enable the set artefact link.</span>
+                      )}
+                    </div>
+                  )}
+
+                  {item.linkedQuestionSetId && (
+                    <button
+                      className="px-3 py-2 bg-gray-200 text-gray-700 rounded text-xs hover:bg-gray-300"
+                      onClick={() => updateAgendaItem(item.id, { linkedQuestionSetId: null, artefacts: [] })}
+                    >
+                      Unlink Question Set
+                    </button>
+                  )}
+                </>
+              )}
+
+              {isIceBreakerItem && (
+                <>
+                  <select
+                    className={`border rounded p-3 text-sm w-full ${
+                      isMissingSetLink ? "border-red-500 bg-red-50" : ""
+                    }`}
+                    value={item.linkedIceBreakerSetId || ""}
+                    onChange={(e) =>
+                      updateAgendaItem(item.id, {
+                        linkedIceBreakerSetId: e.target.value || null,
+                      })
+                    }
+                  >
+                    <option value="">Select icebreaker set...</option>
+                    {iceBreakerSets.map((setItem) => (
+                      <option key={setItem.id} value={setItem.id}>
+                        {setItem.name}
+                      </option>
+                    ))}
+                  </select>
+
+                  {linkedIceBreakerSet && (
+                    <div className="rounded border border-blue-200 bg-blue-50 p-3 text-sm text-blue-900">
+                      Linked to {linkedIceBreakerSet.name}
+                      {!hasIceBreakerSelected && (
+                        <span className="block mt-1 text-blue-700">Choose an icebreaker prompt in this set to enable the set artefact link.</span>
+                      )}
+                    </div>
+                  )}
+
+                  {item.linkedIceBreakerSetId && (
+                    <button
+                      className="px-3 py-2 bg-gray-200 text-gray-700 rounded text-xs hover:bg-gray-300"
+                      onClick={() => updateAgendaItem(item.id, { linkedIceBreakerSetId: null, artefacts: [] })}
+                    >
+                      Unlink Icebreaker Set
+                    </button>
+                  )}
+                </>
+              )}
+            </div>
+          )}
+
+          {!isQuizItem && !isIceBreakerItem && (
+            <div className="space-y-3">
 
             <div className="text-sm font-semibold text-gray-700">
               Artefacts (links, slides, exercises)
@@ -359,7 +526,8 @@ export default function AgendaItemCard({
                 </div>
               </div>
             )}
-          </div>
+            </div>
+          )}
 
           {/* Notes */}
           <div className="space-y-3">
