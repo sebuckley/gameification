@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { Settings } from "lucide-react";
 import usePeople from "../store/usePeopleStore";
+import SelectField from "./PersonCard/SelectField";
+import { PERSON_TYPE_OPTIONS } from "../../data/PersonOptions";
 
 export default function AddPersonForm() {
   const people = usePeople((s) => s.people);
@@ -32,17 +34,6 @@ export default function AddPersonForm() {
   const [personType, setPersonType] = useState("participant");
   const [message, setMessage] = useState("");
 
-  const personTypeOptions = [
-    { value: "organiser", label: "Organiser" },
-    { value: "presenter", label: "Presenter" },
-    { value: "keynote-speaker", label: "Key Note Speaker" },
-    { value: "participant", label: "Participant" },
-    { value: "volunteer", label: "Volunteer" },
-    { value: "facilitator", label: "Facilitator" },
-    { value: "moderator", label: "Moderator" },
-    { value: "panelist", label: "Panelist" },
-    { value: "observer", label: "Observer" },
-  ];
 
   const usedColors = people.map(p => p.color?.toLowerCase()).filter(Boolean);
   const availableColors = chicColors.filter(
@@ -174,17 +165,11 @@ export default function AddPersonForm() {
 
           <label className="flex flex-col gap-1">
             <span className="text-sm font-medium text-gray-700">Person Type</span>
-            <select
-              className="border p-2 rounded w-full"
+            <SelectField
+              options={PERSON_TYPE_OPTIONS}
               value={personType}
-              onChange={(e) => setPersonType(e.target.value)}
-            >
-              {personTypeOptions.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
+              onSelect={(item) => setPersonType(item.value)}
+            />
           </label>
 
           {/* Colour Picker */}

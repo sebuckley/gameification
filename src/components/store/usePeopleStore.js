@@ -745,7 +745,7 @@ const usePeople = create((set, get) => ({
     set((state) => {
       const personType = (data.personType || "participant").trim();
       const presenterTypes = new Set(["presenter", "keynote-speaker"]);
-      const updated = {
+      const nextState = {
         ...state,
         people: [
           ...state.people,
@@ -764,35 +764,108 @@ const usePeople = create((set, get) => ({
           }
         ]
       };
+      const updated = state.currentEventId
+        ? {
+            ...nextState,
+            events: upsertAgendaEvent(
+              state.events,
+              buildAgendaEventRecord(nextState, {
+                id: state.currentEventId,
+                people: nextState.people,
+              })
+            )
+          }
+        : nextState;
       save(get);
       return updated;
     }),
 
   updatePerson: (id, updates) =>
     set((state) => {
-      const updated = {
+      const presenterTypes = new Set(["presenter", "keynote-speaker"]);
+      const nextState = {
         ...state,
         people: state.people.map((p) =>
-          p.id === id ? { ...p, ...updates } : p
+          p.id === id
+            ? (() => {
+                const merged = { ...p, ...updates };
+
+                if (Object.prototype.hasOwnProperty.call(updates || {}, "personType")) {
+                  const normalizedType = String(updates.personType || "participant").trim() || "participant";
+                  merged.personType = normalizedType;
+
+                  if (!Object.prototype.hasOwnProperty.call(updates || {}, "isPresenter")) {
+                    merged.isPresenter = presenterTypes.has(normalizedType);
+                  }
+
+                  if (!Object.prototype.hasOwnProperty.call(updates || {}, "inGroups")) {
+                    merged.inGroups = normalizedType === "participant";
+                  }
+
+                  if (!Object.prototype.hasOwnProperty.call(updates || {}, "inSpinner")) {
+                    merged.inSpinner = !presenterTypes.has(normalizedType);
+                  }
+                }
+
+                return merged;
+              })()
+            : p
         )
       };
+      const updated = state.currentEventId
+        ? {
+            ...nextState,
+            events: upsertAgendaEvent(
+              state.events,
+              buildAgendaEventRecord(nextState, {
+                id: state.currentEventId,
+                people: nextState.people,
+              })
+            )
+          }
+        : nextState;
       save(get);
       return updated;
     }),
 
     setPeople: (list) =>
     set((state) => {
-      const updated = {
+      const presenterTypes = new Set(["presenter", "keynote-speaker"]);
+      const nextState = {
         ...state,
         people: Array.isArray(list)
           ? list.map((person) => ({
               ...person,
+              personType: person?.personType
+                ? person.personType
+                : (person?.isPresenter ? "presenter" : "participant"),
+              isPresenter: person?.personType
+                ? presenterTypes.has(person.personType)
+                : !!person?.isPresenter,
+              inGroups: person?.personType
+                ? person.personType === "participant"
+                : (person?.isPresenter ? false : true),
+              inSpinner: person?.personType
+                ? !presenterTypes.has(person.personType)
+                : (person?.isPresenter ? false : true),
               history: Array.isArray(person?.history) ? person.history : [],
               answers: Number.isFinite(person?.answers) ? person.answers : 0,
               quizScore: Number.isFinite(person?.quizScore) ? person.quizScore : 0
             }))
           : []
       };
+      const updated = state.currentEventId
+        ? {
+            ...nextState,
+            events: upsertAgendaEvent(
+              state.events,
+              buildAgendaEventRecord(nextState, {
+                id: state.currentEventId,
+                people: nextState.people,
+              })
+            )
+          }
+        : nextState;
       save(get);
       return updated;
     }),
@@ -811,39 +884,94 @@ const usePeople = create((set, get) => ({
         : p
     );
 
-    const updated = { ...state, people: updatedPeople };
+    const nextState = { ...state, people: updatedPeople };
+    const updated = state.currentEventId
+      ? {
+          ...nextState,
+          events: upsertAgendaEvent(
+            state.events,
+            buildAgendaEventRecord(nextState, {
+              id: state.currentEventId,
+              people: nextState.people,
+            })
+          )
+        }
+      : nextState;
     save(get);
     return updated;
   }),
 
   removePerson: (id) =>
   set((state) => {
-    const updated = {
+    const nextState = {
       ...state,
       people: state.people.filter((p) => p.id !== id)
     };
+    const updated = state.currentEventId
+      ? {
+          ...nextState,
+          events: upsertAgendaEvent(
+            state.events,
+            buildAgendaEventRecord(nextState, {
+              id: state.currentEventId,
+              people: nextState.people,
+            })
+          )
+        }
+      : nextState;
     save(get);
     return updated;
   }),
 
   reorderPeople: (startIndex, endIndex) =>
   set((state) => {
-    const updated = Array.from(state.people);
-    const [removed] = updated.splice(startIndex, 1);
-    updated.splice(endIndex, 0, removed);
-    return { people: updated };
+    const reorderedPeople = Array.from(state.people);
+    const [removed] = reorderedPeople.splice(startIndex, 1);
+    reorderedPeople.splice(endIndex, 0, removed);
+
+    const nextState = {
+      ...state,
+      people: reorderedPeople,
+    };
+    const updated = state.currentEventId
+      ? {
+          ...nextState,
+          events: upsertAgendaEvent(
+            state.events,
+            buildAgendaEventRecord(nextState, {
+              id: state.currentEventId,
+              people: nextState.people,
+            })
+          )
+        }
+      : nextState;
+
+    save(get);
+    return updated;
   }),
 
 
   resetAnswers: () =>
   set((state) => {
-    const updated = {
+    const nextState = {
       ...state,
       people: state.people.map((p) => ({
         ...p,
         answers: 0
       }))
     };
+    const updated = state.currentEventId
+      ? {
+          ...nextState,
+          events: upsertAgendaEvent(
+            state.events,
+            buildAgendaEventRecord(nextState, {
+              id: state.currentEventId,
+              people: nextState.people,
+            })
+          )
+        }
+      : nextState;
     save(get);
     return updated;
   }),

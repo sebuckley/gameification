@@ -1,29 +1,24 @@
 import { useState } from "react";
 import usePeople from "../store/usePeopleStore";
 import ColourPicker from "./PersonCard/ColorPicker";
-import ListField from "./PersonCard/ListField";
-import DropdownSection from "./PersonCard/DropdownSection";
 import InputField from "./PersonCard/InputField";
 import SelectField from "./PersonCard/SelectField";
-
-import { DIETARY_OPTIONS, ACCESSIBILITY_OPTIONS } from "../../data/PersonCardOptions";
+import NotesSection from "./PersonCard/Notes";
+import AccessibilityRequirementsSection from "./PersonCard/Accessibility";
+import DietaryRequirementsSection from "./PersonCard/Dietry";
+import { PERSON_TYPE_OPTIONS } from "../../data/PersonOptions";
 
 import {
   User,
   Tag,
   Mail,
-  Utensils,
-  Accessibility,
-  StickyNote,
-  Plus,
-  Trash2,
   CheckCircle
 } from "lucide-react";
 
 
 export default function PersonCard({ person, index, dragHandleProps }) {
   const { updatePerson, people, removePerson } = usePeople();
-    const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(false);
   const [dietOpen, setDietOpen] = useState(false);
   const [accessOpen, setAccessOpen] = useState(false);
   const [noteDraft, setNoteDraft] = useState("");
@@ -48,6 +43,7 @@ export default function PersonCard({ person, index, dragHandleProps }) {
     fullName: "",
     preferredName: "",
     email: "",
+    personType: "",
     dietaryRequirements: [],
     accessibilityRequirements: [],
     notesHistory: [],
@@ -68,6 +64,7 @@ export default function PersonCard({ person, index, dragHandleProps }) {
     safePerson.fullName,
     safePerson.preferredName,
     safePerson.email,
+    safePerson.personType,
     safePerson.dietaryRequirements?.length,
     safePerson.accessibilityRequirements?.length,
     safePerson.notesHistory?.length
@@ -168,14 +165,6 @@ export default function PersonCard({ person, index, dragHandleProps }) {
     updatePerson(safePerson.id, { color: unique });
   };
 
-  const handlePresenterToggle = (v) => {
-    updatePerson(safePerson.id, {
-      isPresenter: v,
-      inSpinner: !v,
-      inGroups: !v
-    });
-  };
-
   const initials = (name) =>
     name
       .split(" ")
@@ -236,7 +225,6 @@ export default function PersonCard({ person, index, dragHandleProps }) {
 
     <div className="bg-white rounded-xl shadow overflow-hidden border border-gray-300 flex flex-col self-start">
 
-      {/* HEADER */}
 {/* HEADER */}
 <div
   className="px-4 py-3 flex items-center justify-between w-full cursor-pointer"
@@ -322,152 +310,41 @@ export default function PersonCard({ person, index, dragHandleProps }) {
             onChange={(v) => updatePerson(safePerson.id, { preferredName: v })}
           />
 
-          {/* Email */}
-          <InputField
-            label="Email Address"
-            icon={<Mail size={16} />}
-            value={safePerson.email || ""}
-            error={safePerson.email && !validateEmail(safePerson.email)}
-            onChange={(v) => {
-              const auto = v.includes("@") ? v : `${v}@gmail.com`;
-              updatePerson(safePerson.id, { email: auto });
+{/* Email */}
+<InputField
+  label="Email Address"
+  icon={<Mail size={16} />}
+  value={safePerson.email || ""}
+  error={safePerson.email && !validateEmail(safePerson.email)}
+  onChange={(v) => {
+    // Just store exactly what the user typed
+    updatePerson(safePerson.id, { email: v });
+  }}
+/>
+
+
+          <SelectField
+            label="Select Person Type"
+            options={PERSON_TYPE_OPTIONS}
+            value={safePerson.personType}
+            onSelect={(item) => {
+              const nextType = typeof item === "string" ? item : item?.value;
+              if (!nextType) return;
+
+              const isPresenterType = nextType === "presenter" || nextType === "keynote-speaker";
+              const isParticipantType = nextType === "participant";
+
+              updatePerson(safePerson.id, {
+                personType: nextType,
+                isPresenter: isPresenterType,
+                inSpinner: !isPresenterType,
+                inGroups: isParticipantType,
+              });
             }}
           />
 
-          {/* Dietary Requirements */}
-          <DropdownSection
-            label="Dietary Requirements"
-            icon={<Utensils size={16} />}
-            open={dietOpen}
-            setOpen={setDietOpen}
-          >
-            <SelectField
-              label="Select Dietary Requirement"
-              options={DIETARY_OPTIONS}
-              onSelect={(item) =>
-                updatePerson(safePerson.id, {
-                  dietaryRequirements: [
-                    ...(safePerson.dietaryRequirements || []),
-                    item
-                  ]
-                })
-              }
-            />
-
-            <ListField
-              items={safePerson.dietaryRequirements || []}
-              onRemove={(i) =>
-                updatePerson(safePerson.id, {
-                  dietaryRequirements: safePerson.dietaryRequirements.filter(
-                    (_, idx) => idx !== i
-                  )
-                })
-              }
-            />
-          </DropdownSection>
-
-          {/* Accessibility Requirements */}
-          <DropdownSection
-            label="Accessibility Requirements"
-            icon={<Accessibility size={16} />}
-            open={accessOpen}
-            setOpen={setAccessOpen}
-          >
-            <SelectField
-              label="Select Accessibility Requirement"
-              options={ACCESSIBILITY_OPTIONS}
-              onSelect={(item) =>
-                updatePerson(safePerson.id, {
-                  accessibilityRequirements: [
-                    ...(safePerson.accessibilityRequirements || []),
-                    item
-                  ]
-                })
-              }
-            />
-
-            <ListField
-              items={safePerson.accessibilityRequirements || []}
-              onRemove={(i) =>
-                updatePerson(safePerson.id, {
-                  accessibilityRequirements:
-                    safePerson.accessibilityRequirements.filter(
-                      (_, idx) => idx !== i
-                    )
-                })
-              }
-            />
-          </DropdownSection>
-
-          {/* Notes */}
-          <div className="flex flex-col gap-3">
-            <span className="text-sm font-medium text-gray-700 flex items-center gap-2">
-              <StickyNote size={16} />
-              Notes
-            </span>
-
-            {/* Add Note */}
-            <textarea
-              className="border p-2 rounded w-full resize-none border-gray-300"
-              rows={3}
-              value={noteDraft}
-              onChange={(e) => setNoteDraft(e.target.value)}
-            />
-
-            <button
-              className="px-3 py-2 bg-gray-100 rounded border text-sm flex items-center gap-2"
-              onClick={addNote}
-            >
-              <Plus size={16} /> Add Note
-            </button>
-
-            {/* Display Notes */}
-            {safePerson.notesHistory.length > 0 && (
-              <div className="mt-2">
-
-                {/* Most Recent Note */}
-                <div className="p-3 bg-gray-50 border rounded-lg mb-2">
-                  <div className="text-xs text-gray-500 font-medium">
-                    {safePerson.notesHistory[0].split(" — ")[1]}
-                  </div>
-                  <div className="text-sm text-gray-800">
-                    {safePerson.notesHistory[0].split(" — ")[0]}
-                  </div>
-                </div>
-
-                {/* Older Notes Dropdown */}
-                {safePerson.notesHistory.length > 1 && (
-                  <DropdownSection
-                    label="Older Notes"
-                    icon={<StickyNote size={14} />}
-                    open={olderNotesOpen}
-                    setOpen={setOlderNotesOpen}
-                  >
-                    <ul className="ml-4 list-disc text-sm text-gray-700 space-y-2">
-                      {safePerson.notesHistory.slice(1).map((note, i) => {
-                        const [text, timestamp] = note.split(" — ");
-                        return (
-                          <li key={i}>
-                            <div className="text-xs text-gray-500">{timestamp}</div>
-                            <div>{text}</div>
-                          </li>
-                        );
-                      })}
-                    </ul>
-                  </DropdownSection>
-                )}
-              </div>
-            )}
-          </div>
-
           {/* Toggles */}
           <div className="space-y-2">
-            <Toggle
-              label="Presenter"
-              value={safePerson.isPresenter}
-              onChange={handlePresenterToggle}
-            />
-
             <Toggle
               label="Include in Spinner"
               value={safePerson.inSpinner}
@@ -480,6 +357,33 @@ export default function PersonCard({ person, index, dragHandleProps }) {
               onChange={(v) => updatePerson(safePerson.id, { inGroups: v })}
             />
           </div>
+
+          {/* Dietary Requirements */}
+          <DietaryRequirementsSection
+            safePerson={safePerson}
+            updatePerson={updatePerson}
+            dietOpen={dietOpen}
+            setDietOpen={setDietOpen}
+
+          />
+
+          {/* Accessibility Requirements */}
+          <AccessibilityRequirementsSection
+            safePerson={safePerson}
+            updatePerson={updatePerson}
+            accessOpen={accessOpen}
+            setAccessOpen={setAccessOpen}
+         
+          />
+
+          <NotesSection
+            notesHistory={safePerson.notesHistory}
+            olderNotesOpen={olderNotesOpen}
+            setOlderNotesOpen={setOlderNotesOpen}
+            noteDraft={noteDraft}
+            setNoteDraft={setNoteDraft}
+            addNote={addNote}
+          />
 
           {/* Colour Picker */}
           <ColourPicker

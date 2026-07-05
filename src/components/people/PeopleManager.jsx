@@ -2,6 +2,7 @@ import { useState } from "react";
 import usePeople from "../store/usePeopleStore";
 import AddPersonForm from "./AddPersonForm";
 import PersonCard from "./PersonCard";
+import { PERSON_TYPE_OPTIONS } from "../../data/PersonOptions";
 
 import {
   DragDropContext,
@@ -12,6 +13,11 @@ import {
 export default function PeopleManager() {
   const { people, reorderPeople } = usePeople();
   const [activeTypeFilter, setActiveTypeFilter] = useState("all");
+
+  const typeLabelMap = PERSON_TYPE_OPTIONS.reduce((acc, option) => {
+    acc[option.value] = option.label;
+    return acc;
+  }, {});
 
   const getPersonType = (person) => {
     if (person?.personType) return String(person.personType);
@@ -31,6 +37,8 @@ export default function PeopleManager() {
     observer: "Observers",
   };
 
+  const getTypeLabel = (type) => personTypeLabels[type] || typeLabelMap[type] || type;
+
   const typeCounts = people.reduce((acc, person) => {
     const type = getPersonType(person);
     acc[type] = (acc[type] || 0) + 1;
@@ -39,7 +47,7 @@ export default function PeopleManager() {
 
   const dynamicTypes = Object.keys(typeCounts)
     .filter((type) => !["participant", "presenter"].includes(type) && typeCounts[type] > 0)
-    .sort((a, b) => (personTypeLabels[a] || a).localeCompare(personTypeLabels[b] || b));
+    .sort((a, b) => getTypeLabel(a).localeCompare(getTypeLabel(b)));
 
   const filterCards = [
     { key: "all", label: "All People", count: people.length },
@@ -47,7 +55,7 @@ export default function PeopleManager() {
     { key: "presenter", label: "Presenters", count: typeCounts.presenter || 0 },
     ...dynamicTypes.map((type) => ({
       key: type,
-      label: personTypeLabels[type] || type,
+      label: getTypeLabel(type),
       count: typeCounts[type] || 0,
     })),
   ];
