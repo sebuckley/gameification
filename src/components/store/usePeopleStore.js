@@ -743,6 +743,8 @@ const usePeople = create((set, get) => ({
   --------------------------------------------------------- */
   addPerson: (data) =>
     set((state) => {
+      const personType = (data.personType || "participant").trim();
+      const presenterTypes = new Set(["presenter", "keynote-speaker"]);
       const updated = {
         ...state,
         people: [
@@ -752,9 +754,10 @@ const usePeople = create((set, get) => ({
             fullName: data.fullName.trim(),
             preferredName: data.preferredName.trim(),
             color: data.color,
-            isPresenter: false,
+            personType,
+            isPresenter: presenterTypes.has(personType),
             inSpinner: true,
-            inGroups: true,
+            inGroups: personType === "participant",
             answers: 0,
             quizScore: 0,
             history: []

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Settings } from "lucide-react";
 import usePeople from "../store/usePeopleStore";
 import {
   DragDropContext,
@@ -23,6 +24,7 @@ export default function QuizSetup() {
     deleteQuestionSet,
     clearQuestionsInActiveSet,
     updateQuestionSetAgendaType,
+    updateQuestionSetQuizMode,
     quizSettings,
     updateQuizSettings,
   } = usePeople();
@@ -43,6 +45,7 @@ export default function QuizSetup() {
   const hasQuestions = questions.length > 0;
   const activeSet =
     questionSets.find((setItem) => setItem.id === activeQuestionSetId) || null;
+  const activeSetMode = activeSet?.quizMode || "standard";
 
   useEffect(() => {
     setSetNameDraft(activeSet?.name || "");
@@ -175,23 +178,32 @@ export default function QuizSetup() {
         className="flex items-center justify-between px-4 py-3 border-b cursor-pointer select-none bg-white rounded-t"
         onClick={() => setOpen((o) => !o)}
       >
-        <div className="text-gray-500 mr-2">⋮⋮</div>
+        <div className="text-gray-500 mr-2">
+          <Settings size={16} />
+        </div>
         <div className="font-medium text-gray-800 flex-1">Quiz Setup</div>
         <span className="text-gray-700 text-lg">{open ? "▼" : "◀"}</span>
       </div>
 
       {open && (
         <div className="p-5 space-y-6">
-          <div className="rounded-lg border border-slate-200 bg-white p-4 space-y-3">
-               <button
+          <div className="text-sm text-gray-600">
+            You can build your own set manually or import. If you choose to import, you can still add, remove and change any question.
+          </div>
+
+          <div className="space-y-2">
+            <div className="text-sm font-semibold text-slate-800">Step 1: Manage question set</div>
+            <div className="text-xs text-slate-600">Create a set, choose the set to edit, map its agenda quiz type, and choose the quiz mode.</div>
+          </div>
+          <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 space-y-3">
+            <button
                 onClick={() => createQuestionSet()}
                 className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 text-sm"
               >
-                Add Set
+                Create New Set
               </button>
-            <div className="text-sm font-semibold text-slate-700">
-              Select question set to edit
-            </div>
+
+            <div className="text-sm font-semibold text-slate-700">Editing set</div>
             <div className="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-2">
               <select
                 className="border rounded p-2 text-sm"
@@ -204,33 +216,62 @@ export default function QuizSetup() {
                   </option>
                 ))}
               </select>
-           
+              <button
+                onClick={() => {
+                  if (!activeSet) return;
+                  if (questionSets.length <= 1) {
+                    clearQuestionsInActiveSet();
+                    return;
+                  }
+                  deleteQuestionSet(activeSet.id);
+                }}
+                className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 text-sm"
+              >
+                {questionSets.length <= 1 ? "Clear Current Set" : "Delete Current Set"}
+              </button>
             </div>
-          </div>
 
-          
-            <div className="text-sm font-semibold text-slate-700">Set Name</div>
+            {activeSet && (
+              <>
+                <div className="text-sm font-semibold text-slate-700">Set name</div>
+                <div className="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-2">
+                  <input
+                    className="border rounded p-2 text-sm w-full"
+                    value={setNameDraft}
+                    onChange={(e) => setSetNameDraft(e.target.value)}
+                    onBlur={saveSetName}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        saveSetName();
+                      }
+                    }}
+                    placeholder="Set name"
+                  />
+                  <button
+                    onClick={saveSetName}
+                    className="px-4 py-2 bg-slate-700 text-white rounded hover:bg-slate-800 text-sm"
+                  >
+                    Save Set Name
+                  </button>
+                </div>
+              </>
+            )}
+
             {activeSet && (
               <div className="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-2">
-                <input
+                <select
                   className="border rounded p-2 text-sm w-full"
-                  value={setNameDraft}
-                  onChange={(e) => setSetNameDraft(e.target.value)}
-                  onBlur={saveSetName}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      saveSetName();
-                    }
-                  }}
-                  placeholder="Set name"
-                />
-                <button
-                  onClick={saveSetName}
-                  className="px-4 py-2 bg-slate-700 text-white rounded hover:bg-slate-800 text-sm"
+                  value={activeSetMode}
+                  onChange={(e) => updateQuestionSetQuizMode(activeSet.id, e.target.value)}
                 >
-                  Update Name
-                </button>
+                  <option value="standard">Question Set Type: Standard</option>
+                  <option value="standard-points">Question Set Type: Standard Points</option>
+                  <option value="gameshow">Question Set Type: Game-Show</option>
+                </select>
+                <div className="px-3 py-2 text-xs rounded bg-indigo-50 text-indigo-700 border border-indigo-200">
+                  Quiz runner uses this mode for this set
+                </div>
               </div>
             )}
 
@@ -254,33 +295,45 @@ export default function QuizSetup() {
                 </div>
               </div>
             )}
+          </div>
 
-
-          
-            <div className="text-sm font-semibold text-slate-700">Build Method</div>
-            <div className="flex flex-wrap gap-2">
-              <button
-                onClick={() => setBuildMode("manual")}
-                className={`px-3 py-2 rounded text-sm ${
-                  buildMode === "manual"
-                    ? "bg-indigo-600 text-white"
-                    : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                }`}
-              >
-                Manually Build Questions
-              </button>
-              <button
-                onClick={() => setBuildMode("import")}
-                className={`px-3 py-2 rounded text-sm ${
-                  buildMode === "import"
-                    ? "bg-indigo-600 text-white"
-                    : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                }`}
-              >
-                Import Questions
-              </button>
+          {!hasQuestions && (
+            <div className="space-y-2">
+              <div className="text-sm font-semibold text-slate-800">Step 2: Choose build method</div>
+              <div className="text-xs text-slate-600">Pick how to create the first batch of questions for this set.</div>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={() => setBuildMode("manual")}
+                  className={`px-3 py-2 rounded text-sm ${
+                    buildMode === "manual"
+                      ? "bg-indigo-600 text-white"
+                      : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                  }`}
+                >
+                  Manually Build Questions
+                </button>
+                <button
+                  onClick={() => setBuildMode("import")}
+                  className={`px-3 py-2 rounded text-sm ${
+                    buildMode === "import"
+                      ? "bg-indigo-600 text-white"
+                      : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                  }`}
+                >
+                  Import Questions
+                </button>
+              </div>
             </div>
-       
+          )}
+
+          {hasQuestions && (
+            <div className="space-y-2">
+              <div className="text-sm font-semibold text-slate-800">Step 2: Review loaded questions</div>
+              <div className="text-xs text-slate-600">
+                Loaded questions can be reordered by drag and drop.
+              </div>
+            </div>
+          )}
 
           {hasQuestions && (
             <>
@@ -328,10 +381,11 @@ export default function QuizSetup() {
                   Delete All
                 </button>
               </div>
+
             </>
           )}
 
-          {buildMode === "import" && (
+          {!hasQuestions && buildMode === "import" && (
             <div className="space-y-3">
               <div className="bg-indigo-50 border border-indigo-200 rounded p-4 space-y-4">
                 <div className="font-semibold text-indigo-700">Prompt Builder</div>
@@ -403,149 +457,145 @@ export default function QuizSetup() {
           )}
 
           <div className="space-y-2">
-            <label className="font-medium">Correct Answer Points</label>
-            <input
-              type="number"
-              className="border p-2 rounded w-full"
-              value={quizSettings.correctPoints}
-              onChange={(e) =>
-                updateQuizSettings({
-                  correctPoints: Number(e.target.value),
-                })
-              }
-            />
-
-            <label className="font-medium">Wrong Answer Points</label>
-            <input
-              type="number"
-              className="border p-2 rounded w-full"
-              value={quizSettings.wrongPoints}
-              onChange={(e) =>
-                updateQuizSettings({
-                  wrongPoints: Number(e.target.value),
-                })
-              }
-            />
+            <div className="text-sm font-semibold text-slate-800">Step 3: Add questions manually</div>
+            <p className="text-xs text-slate-600">
+              You can add additional questions manually below, even after importing or loading a set.
+            </p>
           </div>
+          <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 space-y-3">
 
-          {buildMode === "manual" && (
-            <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 space-y-3">
-              <div className="flex items-center justify-between gap-2">
-                <div className="font-semibold text-slate-700">Add Question</div>
-                <div className="text-xs text-slate-500">Bottom Quick Add</div>
+            {!hasQuestions && buildMode === "import" ? (
+              <div className="text-xs text-slate-500 rounded border border-slate-200 bg-white px-3 py-2">
+                Switch build method to Manual in Step 2 to add questions one by one.
               </div>
+            ) : (
+              <>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                  <input
+                    className="border p-2 rounded w-full md:col-span-2"
+                    placeholder="Question"
+                    value={question}
+                    onChange={(e) => setQuestion(e.target.value)}
+                  />
 
-              <p className="text-sm text-slate-600">
-                You only need a minimum of a question and answer. If you choose
-                multi-choice, provide at least 3 options.
-              </p>
+                  <select
+                    className="border p-2 rounded w-full"
+                    value={questionType}
+                    onChange={(e) => setQuestionType(e.target.value)}
+                  >
+                    <option value="single">Single Answer</option>
+                    <option value="multi">Multi-Choice</option>
+                  </select>
+                </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                {questionType === "multi" && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                    <input
+                      className="border p-2 rounded w-full"
+                      placeholder="Option 1 (required for multi-choice)"
+                      value={options[0]}
+                      onChange={(e) =>
+                        setOptions((prev) => [
+                          e.target.value,
+                          prev[1],
+                          prev[2],
+                          prev[3],
+                        ])
+                      }
+                    />
+                    <input
+                      className="border p-2 rounded w-full"
+                      placeholder="Option 2 (required for multi-choice)"
+                      value={options[1]}
+                      onChange={(e) =>
+                        setOptions((prev) => [
+                          prev[0],
+                          e.target.value,
+                          prev[2],
+                          prev[3],
+                        ])
+                      }
+                    />
+                    <input
+                      className="border p-2 rounded w-full"
+                      placeholder="Option 3 (required for multi-choice)"
+                      value={options[2]}
+                      onChange={(e) =>
+                        setOptions((prev) => [
+                          prev[0],
+                          prev[1],
+                          e.target.value,
+                          prev[3],
+                        ])
+                      }
+                    />
+                    <input
+                      className="border p-2 rounded w-full"
+                      placeholder="Option 4 (optional)"
+                      value={options[3]}
+                      onChange={(e) =>
+                        setOptions((prev) => [
+                          prev[0],
+                          prev[1],
+                          prev[2],
+                          e.target.value,
+                        ])
+                      }
+                    />
+                  </div>
+                )}
+
                 <input
-                  className="border p-2 rounded w-full md:col-span-2"
-                  placeholder="Question"
-                  value={question}
-                  onChange={(e) => setQuestion(e.target.value)}
+                  className="border p-2 rounded w-full"
+                  placeholder="Answer"
+                  value={answer}
+                  onChange={(e) => setAnswer(e.target.value)}
                 />
 
-                <select
-                  className="border p-2 rounded w-full"
-                  value={questionType}
-                  onChange={(e) => setQuestionType(e.target.value)}
+                <button
+                  onClick={handleAdd}
+                  className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700"
                 >
-                  <option value="single">Single Answer</option>
-                  <option value="multi">Multi-Choice</option>
-                </select>
+                  Add Question
+                </button>
+              </>
+            )}
+          </div>
+
+          {activeSetMode === "standard-points" && (
+            <>
+              <div className="space-y-2">
+                <div className="text-sm font-semibold text-slate-800">Step 4: Configure points</div>
+                <div className="text-xs text-slate-600">Points are only used for Standard Points mode.</div>
               </div>
+              <div className="space-y-2 rounded-lg border border-slate-200 bg-slate-50 p-4">
+                <label className="font-medium">Correct Answer Points</label>
+                <input
+                  type="number"
+                  className="border p-2 rounded w-full"
+                  value={quizSettings.correctPoints}
+                  onChange={(e) =>
+                    updateQuizSettings({
+                      correctPoints: Number(e.target.value),
+                    })
+                  }
+                />
 
-              {questionType === "multi" && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                  <input
-                    className="border p-2 rounded w-full"
-                    placeholder="Option 1 (required for multi-choice)"
-                    value={options[0]}
-                    onChange={(e) =>
-                      setOptions((prev) => [
-                        e.target.value,
-                        prev[1],
-                        prev[2],
-                        prev[3],
-                      ])
-                    }
-                  />
-                  <input
-                    className="border p-2 rounded w-full"
-                    placeholder="Option 2 (required for multi-choice)"
-                    value={options[1]}
-                    onChange={(e) =>
-                      setOptions((prev) => [
-                        prev[0],
-                        e.target.value,
-                        prev[2],
-                        prev[3],
-                      ])
-                    }
-                  />
-                  <input
-                    className="border p-2 rounded w-full"
-                    placeholder="Option 3 (required for multi-choice)"
-                    value={options[2]}
-                    onChange={(e) =>
-                      setOptions((prev) => [
-                        prev[0],
-                        prev[1],
-                        e.target.value,
-                        prev[3],
-                      ])
-                    }
-                  />
-                  <input
-                    className="border p-2 rounded w-full"
-                    placeholder="Option 4 (optional)"
-                    value={options[3]}
-                    onChange={(e) =>
-                      setOptions((prev) => [
-                        prev[0],
-                        prev[1],
-                        prev[2],
-                        e.target.value,
-                      ])
-                    }
-                  />
-                </div>
-              )}
-
-              <input
-                className="border p-2 rounded w-full"
-                placeholder="Answer"
-                value={answer}
-                onChange={(e) => setAnswer(e.target.value)}
-              />
-
-              <button
-                onClick={handleAdd}
-                className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700"
-              >
-                Add Question
-              </button>
-            </div>
+                <label className="font-medium">Wrong Answer Points</label>
+                <input
+                  type="number"
+                  className="border p-2 rounded w-full"
+                  value={quizSettings.wrongPoints}
+                  onChange={(e) =>
+                    updateQuizSettings({
+                      wrongPoints: Number(e.target.value),
+                    })
+                  }
+                />
+              </div>
+            </>
           )}
 
-          <div className="flex justify-end">
-            <button
-              onClick={() => {
-                if (!activeSet) return;
-                if (questionSets.length <= 1) {
-                  clearQuestionsInActiveSet();
-                  return;
-                }
-                deleteQuestionSet(activeSet.id);
-              }}
-              className="px-4 py-2 bg-red-600 text-white rounded-lg shadow hover:bg-red-700"
-            >
-              {questionSets.length <= 1 ? "Clear Set" : "Delete Set"}
-            </button>
-          </div>
         </div>
       )}
     </div>

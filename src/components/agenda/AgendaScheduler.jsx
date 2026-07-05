@@ -18,6 +18,7 @@ export default function AgendaScheduler() {
   const {
     agendaStartTime,
     agendaItems,
+    events,
     questionSets,
     iceBreakerSets,
     setAgendaStartTime,
@@ -47,6 +48,41 @@ export default function AgendaScheduler() {
     () => getAgendaTypesForUserType(userProfile?.userType, agendaTypes),
     [userProfile?.userType]
   );
+
+  const allArtefacts = useMemo(() => {
+    const seen = new Set();
+    const collected = [];
+    const allAgendaItems = [
+      ...(events || []).flatMap((eventItem) => eventItem?.agendaItems || []),
+      ...(agendaItems || []),
+    ];
+
+    allAgendaItems.forEach((agendaItem) => {
+      (agendaItem?.artefacts || []).forEach((artefact) => {
+        const name = (artefact?.name || "").trim();
+        const url = (artefact?.url || "").trim();
+        if (!name || !url) return;
+
+        const key = `${name.toLowerCase()}::${url.toLowerCase()}`;
+        if (seen.has(key)) return;
+
+        seen.add(key);
+        collected.push({ name, url });
+      });
+
+      const legacyUrl = (agendaItem?.artefactUrl || "").trim();
+      if (!legacyUrl) return;
+
+      const legacyName = (agendaItem?.label || "Document").trim() || "Document";
+      const legacyKey = `${legacyName.toLowerCase()}::${legacyUrl.toLowerCase()}`;
+      if (seen.has(legacyKey)) return;
+
+      seen.add(legacyKey);
+      collected.push({ name: legacyName, url: legacyUrl });
+    });
+
+    return collected;
+  }, [events, agendaItems]);
 
 const handleAddItem = (type) => {
   addAgendaItem({
@@ -114,6 +150,7 @@ const handleAddItem = (type) => {
                       iceBreakerSets={iceBreakerSets}
                       updateAgendaItem={updateAgendaItem}
                       removeAgendaItem={removeAgendaItem}
+                      allArtefacts={allArtefacts}
                     />
                   </div>
                 )}

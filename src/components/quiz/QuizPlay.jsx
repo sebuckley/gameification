@@ -15,7 +15,6 @@ export default function QuizPlay({ running, setRunning }) {
     questionSets,
     activeQuestionSetId,
     selectQuestionSet,
-    updateQuestionSetQuizMode,
     resetQuizScores,
     quizMode,
     setQuizMode
@@ -145,17 +144,7 @@ const finishQuiz = () => {
                     {isActiveSet ? " • Active" : ""}
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-2 items-center">
-                    <select
-                      className="border rounded px-3 py-2 text-sm w-full"
-                      value={safeSetMode}
-                      onChange={(e) => updateQuestionSetQuizMode(setItem.id, e.target.value)}
-                    >
-                      <option value="standard">Standard</option>
-                      <option value="standard-points">Standard Points</option>
-                      <option value="gameshow" disabled={!setHasMultiChoice}>Game-Show</option>
-                    </select>
-
+                  <div className="flex justify-end">
                     <button
                       onClick={() => startQuizForSet(setItem)}
                       disabled={!canStartSet}

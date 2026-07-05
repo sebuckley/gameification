@@ -14,7 +14,11 @@ import {
   MessageSquare,
   Workflow,
   ListChecks,
-  DoorClosed
+  DoorClosed,
+  UserPlus,        // Registration
+  Mic,             // Keynote Speaker
+  Presentation,    // Show & Tell
+  Share2           // Networking
 } from "lucide-react";
 
 export const agendaTypes = [
@@ -27,6 +31,24 @@ export const agendaTypes = [
     defaultMinutes: 10,
     icon: Handshake,
     description: "Kick off the workshop, set expectations, outline goals and agenda."
+  },
+  {
+    id: "registration",
+    label: "Registration",
+    color: "#6366F1",
+    textColor: "#FFFFFF",
+    defaultMinutes: 15,
+    icon: UserPlus,
+    description: "Check-in, name badges, and welcoming participants as they arrive."
+  },
+  {
+    id: "keynote",
+    label: "Keynote Speaker",
+    color: "#4338CA",
+    textColor: "#FFFFFF",
+    defaultMinutes: 30,
+    icon: Mic,
+    description: "A featured speaker delivering insights, inspiration, or domain expertise."
   },
   {
     id: "ice-breaker",
@@ -52,7 +74,7 @@ export const agendaTypes = [
     id: "quiz-fun",
     label: "Fun Quiz",
     color: "#A3E635",
-    textColor: "#111827", // gray-900
+    textColor: "#111827",
     defaultMinutes: 10,
     icon: Sparkles,
     description: "A light-hearted trivia quiz just for fun."
@@ -86,6 +108,15 @@ export const agendaTypes = [
     icon: Sandwich,
     description: "Midday meal and informal networking time."
   },
+  {
+    id: "networking",
+    label: "Networking",
+    color: "#9CA3AF",
+    textColor: "#111827",
+    defaultMinutes: 20,
+    icon: Share2,
+    description: "Open networking time for participants to connect and share insights."
+  },
 
   // ⭐ COLLABORATION & IDEATION — Amber family
   {
@@ -116,9 +147,18 @@ export const agendaTypes = [
     description: "Visualise user journeys and break down work into meaningful slices."
   },
   {
+    id: "show-and-tell",
+    label: "Show & Tell",
+    color: "#FCD34D",
+    textColor: "#111827",
+    defaultMinutes: 20,
+    icon: Presentation,
+    description: "Participants present work, ideas, or examples to the group."
+  },
+  {
     id: "painpoints",
     label: "Pain Points",
-    color: "#B45309",
+    color: "#b40909",
     textColor: "#FFFFFF",
     defaultMinutes: 30,
     icon: Bug,

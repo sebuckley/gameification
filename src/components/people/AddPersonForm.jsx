@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Settings } from "lucide-react";
 import usePeople from "../store/usePeopleStore";
 
 export default function AddPersonForm() {
@@ -28,7 +29,20 @@ export default function AddPersonForm() {
 
   const [fullName, setFullName] = useState("");
   const [preferredName, setPreferredName] = useState("");
+  const [personType, setPersonType] = useState("participant");
   const [message, setMessage] = useState("");
+
+  const personTypeOptions = [
+    { value: "organiser", label: "Organiser" },
+    { value: "presenter", label: "Presenter" },
+    { value: "keynote-speaker", label: "Key Note Speaker" },
+    { value: "participant", label: "Participant" },
+    { value: "volunteer", label: "Volunteer" },
+    { value: "facilitator", label: "Facilitator" },
+    { value: "moderator", label: "Moderator" },
+    { value: "panelist", label: "Panelist" },
+    { value: "observer", label: "Observer" },
+  ];
 
   const usedColors = people.map(p => p.color?.toLowerCase()).filter(Boolean);
   const availableColors = chicColors.filter(
@@ -87,11 +101,13 @@ export default function AddPersonForm() {
     addPerson({
       fullName: fullName.trim(),
       preferredName: preferredName.trim(),
-      color: customColor || color
+      color: customColor || color,
+      personType,
     });
 
     setFullName("");
     setPreferredName("");
+    setPersonType("participant");
     setCustomColor(null);
     setMessage("");
   };
@@ -113,8 +129,9 @@ export default function AddPersonForm() {
         className="flex items-center justify-between px-4 py-3 border-b cursor-pointer select-none"
         onClick={() => setIsOpen(o => !o)}
       >
-        {/* Move handle (visual only) */}
-        <div className="text-gray-500 mr-2">⋮⋮</div>
+        <div className="text-gray-500 mr-2">
+          <Settings size={16} />
+        </div>
 
         {/* Title */}
         <div className="font-medium text-gray-800 flex-1">
@@ -153,6 +170,21 @@ export default function AddPersonForm() {
               onChange={(e) => setPreferredName(e.target.value)}
               placeholder="e.g. Steve"
             />
+          </label>
+
+          <label className="flex flex-col gap-1">
+            <span className="text-sm font-medium text-gray-700">Person Type</span>
+            <select
+              className="border p-2 rounded w-full"
+              value={personType}
+              onChange={(e) => setPersonType(e.target.value)}
+            >
+              {personTypeOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
           </label>
 
           {/* Colour Picker */}

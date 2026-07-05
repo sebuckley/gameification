@@ -4,7 +4,14 @@ import usePeopleStore from "../store/usePeopleStore";
 import PersonBadge from "../shared/PersonBadge";
 
 export default function IceBreakerPlay({ running, setRunning }) {
-  const { selectedIceBreaker, participants, collectFreeTextAnswers } = usePeopleStore();
+  const {
+    selectedIceBreaker,
+    participants,
+    collectFreeTextAnswers,
+    iceBreakerSets,
+    activeIceBreakerSetId,
+    selectIceBreakerSet,
+  } = usePeopleStore();
   const engine = useIceBreakerEngine(selectedIceBreaker, participants);
   const hasStartedRef = useRef(false);
   const [sessionResponses, setSessionResponses] = useState([]);
@@ -31,7 +38,13 @@ export default function IceBreakerPlay({ running, setRunning }) {
   } = engine;
 
   const hasParticipants = participants && participants.length > 0;
-  const canStart = !!selectedIceBreaker && hasParticipants;
+  const availableSetPrompts = useMemo(
+    () =>
+      (iceBreakerSets || []).filter(
+        (setItem) => setItem?.selectedIceBreaker && setItem?.selectedIceBreaker?.label
+      ),
+    [iceBreakerSets]
+  );
 
   const promptText = useMemo(() => {
     if (isRandom) return randomPrompt;
@@ -109,8 +122,12 @@ export default function IceBreakerPlay({ running, setRunning }) {
     };
   }, [running]);
 
-  const handleStart = () => {
-    if (!selectedIceBreaker) return;
+  const handleStart = (setId = null) => {
+    if (setId) {
+      selectIceBreakerSet(setId);
+    }
+
+    if (!selectedIceBreaker && !setId) return;
     setRunning(true);
     setSessionResponses([]);
   };
@@ -172,39 +189,68 @@ export default function IceBreakerPlay({ running, setRunning }) {
         <p className="text-sm text-gray-600">
           Start the session to enter fullscreen and guide one person at a time through the chosen prompt.
         </p>
-        {selectedIceBreaker ? (
-          <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
-            <div className="text-sm font-semibold text-slate-700">Selected Prompt</div>
-            <div className="mt-2 text-lg font-semibold text-slate-900">{selectedIceBreaker.label}</div>
-            <div className="mt-1 text-sm text-slate-600">{selectedIceBreaker.prompt}</div>
-            <div className="mt-4 inline-flex items-center gap-2">
-              <span className="inline-flex items-center rounded-full bg-indigo-100 px-3 py-1 text-xs font-semibold text-indigo-700">
-                {selectedIceBreaker.type === "random"
-                  ? "Random"
-                  : selectedIceBreaker.type === "performance"
-                  ? "Performance"
-                  : selectedIceBreaker.type === "choice"
-                  ? "Choice"
-                  : selectedIceBreaker.type === "reveal"
-                  ? "Reveal"
-                  : "Simple"}
-              </span>
-              <span className="text-xs text-slate-500">Choose another prompt from setup to change it.</span>
+        {availableSetPrompts.length > 0 ? (
+          <div className="space-y-3">
+            <div className="text-sm font-semibold text-slate-700">Available Icebreaker Sets</div>
+            <div className="space-y-3">
+              {availableSetPrompts.map((setItem) => {
+                const prompt = setItem.selectedIceBreaker;
+                const isActive = setItem.id === activeIceBreakerSetId;
+                const promptTypeLabel =
+                  prompt.type === "random"
+                    ? "Random"
+                    : prompt.type === "performance"
+                    ? "Performance"
+                    : prompt.type === "choice"
+                    ? "Choice"
+                    : prompt.type === "reveal"
+                    ? "Reveal"
+                    : "Simple";
+
+                return (
+                  <div
+                    key={setItem.id}
+                    className={`rounded-lg border p-4 ${
+                      isActive ? "border-indigo-300 bg-indigo-50" : "border-slate-200 bg-slate-50"
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <div className="text-xs font-semibold text-slate-600">{setItem.name}</div>
+                        <div className="mt-1 text-lg font-semibold text-slate-900">{prompt.label}</div>
+                        <div className="mt-1 text-sm text-slate-600">{prompt.prompt}</div>
+                        <div className="mt-3 inline-flex items-center gap-2">
+                          <span className="inline-flex items-center rounded-full bg-indigo-100 px-3 py-1 text-xs font-semibold text-indigo-700">
+                            {promptTypeLabel}
+                          </span>
+                          {isActive && <span className="text-xs text-indigo-700">Current active set</span>}
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => handleStart(setItem.id)}
+                        disabled={!hasParticipants}
+                        className={`px-4 py-2 rounded-md text-white text-sm font-semibold whitespace-nowrap ${
+                          hasParticipants ? "bg-indigo-600 hover:bg-indigo-700" : "bg-gray-400 cursor-not-allowed"
+                        }`}
+                      >
+                        Start This Icebreaker
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         ) : (
           <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
-            No prompt selected yet.
+            No icebreaker set has a selected prompt yet.
           </div>
         )}
-        <button
-          type="button"
-          onClick={handleStart}
-          disabled={!canStart}
-          className={`px-4 py-2 rounded-md text-white text-sm font-semibold ${canStart ? "bg-indigo-600 hover:bg-indigo-700" : "bg-gray-400 cursor-not-allowed"}`}
-        >
-          Start Ice Breaker
-        </button>
+        {!hasParticipants && (
+          <div className="text-xs text-slate-500">Add participants before starting an icebreaker session.</div>
+        )}
       </div>
     );
   }

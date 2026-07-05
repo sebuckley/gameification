@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { FileText } from "lucide-react";
 import {
   getAgendaColor,
   getAgendaTextColor,
@@ -35,6 +36,7 @@ export default function AgendaItemCard({
 
   const presenterName = selectedPresenter || item.guestPresenter || "No presenter";
   const isGuestSelected = item.presenterId === "guest";
+  const isOtherItem = String(item.type || "") === "other";
   const isQuizItem = String(item.type || "").startsWith("quiz");
   const isIceBreakerItem = String(item.type || "") === "ice-breaker";
   const linkedQuestionSet = questionSets.find((setItem) => setItem.id === item.linkedQuestionSetId) || null;
@@ -109,6 +111,14 @@ export default function AgendaItemCard({
   };
 
   const latestNote = item.notes?.length ? item.notes[item.notes.length - 1] : null;
+  const previousNotes = item.notes?.length > 1 ? item.notes.slice(0, -1) : [];
+  const currentArtefactKeys = new Set(
+    (item.artefacts || []).map((a) => `${(a?.name || "").trim().toLowerCase()}::${(a?.url || "").trim().toLowerCase()}`)
+  );
+  const reusableArtefacts = allArtefacts.filter((a) => {
+    const key = `${(a?.name || "").trim().toLowerCase()}::${(a?.url || "").trim().toLowerCase()}`;
+    return !currentArtefactKeys.has(key);
+  });
 
   return (
     <div
@@ -121,18 +131,14 @@ export default function AgendaItemCard({
         {/* LEFT SIDE */}
         <div className="flex flex-col md:flex-row md:items-center gap-3">
 
-          {/* MOVE HANDLE */}
-   <div
-   
-      className="text-gray-800 hover:text-gray-600 cursor-grab select-none pr-1"
-    
-    >
-      ⋮⋮
-    </div>
-
-          {/* TIME */}
-          <div className="text-sm font-semibold text-gray-700">
-            {item.startTime} – {item.endTime}
+          {/* MOVE HANDLE + TIME */}
+          <div className="flex items-center gap-2">
+            <div className="text-gray-800 hover:text-gray-600 cursor-grab select-none pr-1">
+              ⋮⋮
+            </div>
+            <div className="text-sm font-semibold text-gray-700 whitespace-nowrap">
+              {item.startTime} – {item.endTime}
+            </div>
           </div>
 
           {/* NAME BUBBLE */}
@@ -157,10 +163,25 @@ export default function AgendaItemCard({
               {presenterName}
             </div>
 
-            {/* LATEST NOTE */}
-            {latestNote && (
-              <div className="px-2 py-1 text-xs rounded-md bg-blue-50 text-blue-800 border border-blue-300">
-                📝 {latestNote.text}
+            {/* ARTEFACTS */}
+            {(item.artefacts || []).length > 0 && (
+              <div  className="px-2 py-1 text-xs font-semibold rounded-md bg-gray-100 text-gray-700">
+                {(item.artefacts || []).map((a, idx) => (
+                  <span
+                    key={`${a.url}-${idx}`}
+                    
+                  >
+                    <a
+                      href={a.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 underline"
+                      title={a.name}
+                    >
+                      <FileText size={14} />
+                    </a>
+                  </span>
+                ))}
               </div>
             )}
 
@@ -171,6 +192,7 @@ export default function AgendaItemCard({
               </div>
             )}
           </div>
+
         </div>
 
         {/* RIGHT SIDE */}
@@ -202,16 +224,20 @@ export default function AgendaItemCard({
               className={`border rounded p-3 w-full text-sm ${
                 isMissingLabel ? "border-red-500 bg-red-50" : ""
               }`}
-              placeholder="Search or type session name"
+              placeholder={isOtherItem ? "Type custom session name" : "Search session type"}
               value={search || item.label}
               onChange={(e) => {
-                setSearch(e.target.value);
-                updateAgendaItem(item.id, { label: e.target.value });
+                const nextValue = e.target.value;
+                if (isOtherItem) {
+                  updateAgendaItem(item.id, { label: nextValue });
+                } else {
+                  setSearch(nextValue);
+                }
               }}
             />
 
             {/* DROPDOWN */}
-            {search.length > 0 && (
+            {search.length > 0 && !isOtherItem && (
               <div className="absolute left-0 right-0 bg-white border rounded shadow mt-1 z-20 max-h-60 overflow-auto">
                 {filteredTypes.map((t) => {
                   const TIcon = t.icon;
@@ -454,11 +480,9 @@ export default function AgendaItemCard({
             </div>
           )}
 
-          {!isQuizItem && !isIceBreakerItem && (
-            <div className="space-y-3">
-
+          <div className="space-y-3">
             <div className="text-sm font-semibold text-gray-700">
-              Artefacts (links, slides, exercises)
+              Documents (links, slides, exercises)
             </div>
 
             {(item.artefacts || []).map((a, idx) => (
@@ -470,9 +494,11 @@ export default function AgendaItemCard({
                   href={a.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-blue-600 underline text-sm"
+                  className="flex items-center gap-2 text-blue-600 underline text-sm"
+                  title={a.name}
                 >
-                  {a.name}
+                  <FileText size={16} />
+                  <span>{a.name}</span>
                 </a>
                 <button
                   className="text-xs text-red-600"
@@ -486,13 +512,13 @@ export default function AgendaItemCard({
               </div>
             ))}
 
-            {/* Add new artefact */}
+            {/* Add new document URL */}
             <div className="flex flex-col md:flex-row gap-3">
               <input
                 className={`border rounded p-3 text-sm w-full ${
                   isMissingArtefact ? "border-red-500 bg-red-50" : ""
                 }`}
-                placeholder="Friendly name (e.g., Icebreaker Slides)"
+                placeholder="Friendly name (e.g., Workshop Slides)"
                 value={newArtefactName}
                 onChange={(e) => setNewArtefactName(e.target.value)}
               />
@@ -501,7 +527,7 @@ export default function AgendaItemCard({
                 className={`border rounded p-3 text-sm w-full ${
                   isMissingArtefact ? "border-red-500 bg-red-50" : ""
                 }`}
-                placeholder="Paste link"
+                placeholder="Paste document URL"
                 value={newArtefactUrl}
                 onChange={(e) => setNewArtefactUrl(e.target.value)}
               />
@@ -514,12 +540,12 @@ export default function AgendaItemCard({
               </button>
             </div>
 
-            {/* Reuse artefact */}
-            {allArtefacts.length > 0 && (
+            {/* Reuse document URL */}
+            {reusableArtefacts.length > 0 && (
               <div className="space-y-2">
                 <div className="text-xs text-gray-600">Reuse existing:</div>
                 <div className="flex flex-wrap gap-2">
-                  {allArtefacts.map((a, idx) => (
+                  {reusableArtefacts.map((a, idx) => (
                     <button
                       key={idx}
                       className="px-2 py-1 text-xs bg-gray-200 rounded hover:bg-gray-300"
@@ -531,8 +557,7 @@ export default function AgendaItemCard({
                 </div>
               </div>
             )}
-            </div>
-          )}
+          </div>
 
           {/* Notes */}
           <div className="space-y-3">
@@ -554,19 +579,26 @@ export default function AgendaItemCard({
               </button>
             </div>
 
+            {latestNote && (
+              <div className="border rounded p-3 bg-blue-50 border-blue-200 space-y-2">
+                <div className="text-xs font-semibold text-blue-800">Latest note ({latestNote.ts})</div>
+                <div className="text-sm text-blue-900">{latestNote.text}</div>
+              </div>
+            )}
+
             {/* Notes dropdown */}
-            {item.notes?.length > 0 && (
+            {previousNotes.length > 0 && (
               <div className="space-y-2">
                 <button
                   className="text-xs text-gray-600 underline"
                   onClick={() => setShowNotes(!showNotes)}
                 >
-                  {showNotes ? "Hide all notes" : "Show all notes"}
+                  {showNotes ? "Hide earlier notes" : "Show earlier notes"}
                 </button>
 
                 {showNotes && (
                   <div className="space-y-2">
-                    {item.notes.map((n, idx) => (
+                    {previousNotes.map((n, idx) => (
                       <div
                         key={idx}
                         className="border rounded p-2 bg-gray-50 text-sm"
