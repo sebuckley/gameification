@@ -20,6 +20,7 @@ export default function GroupsPage() {
   const activeEvent = events.find((event) => event.id === currentEventId);
   const eventName = activeEvent?.title || agendaEventTitle || "Unnamed Event";
   const eventDate = activeEvent?.date || agendaEventDate || null;
+  const selectEvent = usePeople((s) => s.selectEvent);
 
   if (!hasPeople) {
     return (
@@ -61,7 +62,7 @@ export default function GroupsPage() {
         </div>
 
         {eventDate && (
-          <div className="text-sm text-gray-600">
+          <div className="text-sm text-gray-600 mb-3">
             {new Date(eventDate).toLocaleDateString("en-GB", {
               weekday: "long",
               year: "numeric",
@@ -70,6 +71,29 @@ export default function GroupsPage() {
             })}
           </div>
         )}
+
+          <label className="text-sm font-medium text-gray-700">Selected Event</label>
+          <select
+            className="border rounded p-2 text-sm w-full"
+            value={currentEventId || ""}
+            onChange={(e) => {
+              const eventId = e.target.value;
+              if (!eventId) return;
+              selectEvent(eventId);
+            }}
+          >
+            {events.map((eventItem, index) => {
+              const label =
+                eventItem.title?.trim() ||
+                eventItem.date ||
+                `Event ${events.length - index}`;
+              return (
+                <option key={eventItem.id} value={eventItem.id}>
+                  {label}
+                </option>
+              );
+            })}
+          </select>
       </div>
 
       {/* Show history OR editor */}
