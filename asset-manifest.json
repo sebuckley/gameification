@@ -1,19 +1,19 @@
 {
   "files": {
-    "main.css": "/gameification/static/css/main.7674553d.css",
-    "main.js": "/gameification/static/js/main.4c2b29d7.js",
+    "main.css": "/gameification/static/css/main.3b6d477c.css",
+    "main.js": "/gameification/static/js/main.5c68a0de.js",
     "static/js/239.695f6790.chunk.js": "/gameification/static/js/239.695f6790.chunk.js",
     "static/js/977.be94d74c.chunk.js": "/gameification/static/js/977.be94d74c.chunk.js",
     "static/js/455.754dfde8.chunk.js": "/gameification/static/js/455.754dfde8.chunk.js",
     "index.html": "/gameification/index.html",
-    "main.7674553d.css.map": "/gameification/static/css/main.7674553d.css.map",
-    "main.4c2b29d7.js.map": "/gameification/static/js/main.4c2b29d7.js.map",
+    "main.3b6d477c.css.map": "/gameification/static/css/main.3b6d477c.css.map",
+    "main.5c68a0de.js.map": "/gameification/static/js/main.5c68a0de.js.map",
     "239.695f6790.chunk.js.map": "/gameification/static/js/239.695f6790.chunk.js.map",
     "977.be94d74c.chunk.js.map": "/gameification/static/js/977.be94d74c.chunk.js.map",
     "455.754dfde8.chunk.js.map": "/gameification/static/js/455.754dfde8.chunk.js.map"
   },
   "entrypoints": [
-    "static/css/main.7674553d.css",
-    "static/js/main.4c2b29d7.js"
+    "static/css/main.3b6d477c.css",
+    "static/js/main.5c68a0de.js"
   ]
 }
