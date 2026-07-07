@@ -198,12 +198,12 @@ export default function QuizSetup() {
           <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 space-y-3">
             <button
                 onClick={() => createQuestionSet()}
-                className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 text-sm"
+                className="px-4 py-2 bg-indigo-600 text-white rounded-lg shadow hover:bg-indigo-700"
               >
                 Create New Set
               </button>
 
-            <div className="text-sm font-semibold text-slate-700">Editing set</div>
+            <div className="text-sm font-semibold text-slate-700">Select set</div>
             <div className="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-2">
               <select
                 className="border rounded p-2 text-sm"
@@ -216,19 +216,7 @@ export default function QuizSetup() {
                   </option>
                 ))}
               </select>
-              <button
-                onClick={() => {
-                  if (!activeSet) return;
-                  if (questionSets.length <= 1) {
-                    clearQuestionsInActiveSet();
-                    return;
-                  }
-                  deleteQuestionSet(activeSet.id);
-                }}
-                className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 text-sm"
-              >
-                {questionSets.length <= 1 ? "Clear Current Set" : "Delete Current Set"}
-              </button>
+             
             </div>
 
             {activeSet && (
@@ -248,35 +236,42 @@ export default function QuizSetup() {
                     }}
                     placeholder="Set name"
                   />
-                  <button
+                  {/* <button
                     onClick={saveSetName}
                     className="px-4 py-2 bg-slate-700 text-white rounded hover:bg-slate-800 text-sm"
                   >
                     Save Set Name
-                  </button>
+                  </button> */}
                 </div>
               </>
             )}
 
             {activeSet && (
+              <>
+              <div className="text-sm font-semibold text-slate-700">Question set type</div>
               <div className="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-2">
+                
                 <select
                   className="border rounded p-2 text-sm w-full"
                   value={activeSetMode}
                   onChange={(e) => updateQuestionSetQuizMode(activeSet.id, e.target.value)}
                 >
-                  <option value="standard">Question Set Type: Standard</option>
-                  <option value="standard-points">Question Set Type: Standard Points</option>
-                  <option value="gameshow">Question Set Type: Game-Show</option>
+                  <option value="standard">Standard</option>
+                  <option value="standard-points">Standard Points</option>
+                  <option value="gameshow">Game-Show</option>
                 </select>
                 <div className="px-3 py-2 text-xs rounded bg-indigo-50 text-indigo-700 border border-indigo-200">
-                  Quiz runner uses this mode for this set
+                  Set question type for this set, standard, standard-points or gameshow.
                 </div>
               </div>
+              </>
             )}
 
             {activeSet && (
+              <>
+              <div className="text-sm font-semibold text-slate-700">Agenday dsiplay type</div>
               <div className="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-2">
+                
                 <select
                   className="border rounded p-2 text-sm w-full"
                   value={activeSet.agendaQuizType || "quiz"}
@@ -286,15 +281,30 @@ export default function QuizSetup() {
                     .filter((agendaType) => String(agendaType.id || "").startsWith("quiz"))
                     .map((agendaType) => (
                       <option key={agendaType.id} value={agendaType.id}>
-                        Agenda Type: {agendaType.label}
+                        {agendaType.label}
                       </option>
                     ))}
                 </select>
                 <div className="px-3 py-2 text-xs rounded bg-indigo-50 text-indigo-700 border border-indigo-200">
-                  Linked agenda quiz items mirror this type
+                  Linked agenda type for this question set.
                 </div>
               </div>
+              </>
             )}
+
+             <button
+                onClick={() => {
+                  if (!activeSet) return;
+                  if (questionSets.length <= 1) {
+                    clearQuestionsInActiveSet();
+                    return;
+                  }
+                  deleteQuestionSet(activeSet.id);
+                }}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg shadow hover:bg-red-700"
+              >
+                {questionSets.length <= 1 ? "Clear Current Set" : `Delete ${activeSet.name}`}
+              </button>
           </div>
 
           {!hasQuestions && (
@@ -378,7 +388,7 @@ export default function QuizSetup() {
                   onClick={deleteAllQuestions}
                   className="px-4 py-2 bg-red-600 text-white rounded-lg shadow hover:bg-red-700"
                 >
-                  Delete All
+                  Delete All Questions
                 </button>
               </div>
 
@@ -554,7 +564,7 @@ export default function QuizSetup() {
 
                 <button
                   onClick={handleAdd}
-                  className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700"
+                  className="px-4 py-2 bg-indigo-600 text-white rounded-lg shadow hover:bg-indigo-700"
                 >
                   Add Question
                 </button>

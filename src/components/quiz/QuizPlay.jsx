@@ -148,7 +148,7 @@ const finishQuiz = () => {
                     <button
                       onClick={() => startQuizForSet(setItem)}
                       disabled={!canStartSet}
-                      className={`px-4 py-2 rounded text-white text-sm font-medium w-full sm:w-auto ${canStartSet ? "bg-indigo-600 hover:bg-indigo-700" : "bg-gray-400 cursor-not-allowed"}`}
+                      className={`px-4 py-2 rounded text-white text-sm font-medium w-full sm:w-auto ${canStartSet ? "px-4 py-2 bg-indigo-600 text-white rounded-lg shadow hover:bg-indigo-700" : "px-4 py-2 bg-gray-400 rounded-lg shadow cursor-not-allowed"}`}
                     >
                       Start {setName}
                     </button>
