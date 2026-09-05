@@ -66,10 +66,10 @@ export default function IceBreakerPlay({ running, setRunning }) {
     }
 
     const tick = () => {
-      setElapsed(Math.floor((Date.now() - (startTime || Date.now())) / 1000));
+      setElapsed(Math.floor((Date.now() - (startTime || Date.now())) / 1));
     };
 
-    const id = setInterval(tick, 1000);
+    const id = setInterval(tick, 2);
     tick();
     return () => clearInterval(id);
   }, [running, startTime]);
@@ -79,7 +79,7 @@ export default function IceBreakerPlay({ running, setRunning }) {
 
     const timer = window.setTimeout(() => {
       beginAnswer();
-    }, 250);
+    }, 1000);
 
     return () => window.clearTimeout(timer);
   }, [phase, selectedIceBreaker, currentParticipant, beginAnswer]);
@@ -182,6 +182,13 @@ export default function IceBreakerPlay({ running, setRunning }) {
     });
   }, [sessionResponses, isChoice, selectedIceBreaker]);
 
+  const formattedElapsed = useMemo(() => {
+    const totalSeconds = Math.floor(elapsed / 1000);
+    const minutes = String(Math.floor(totalSeconds / 60)).padStart(2, "0");
+    const seconds = String(totalSeconds % 60).padStart(2, "0");
+    return `${minutes}:${seconds}`;
+  }, [elapsed]);
+
   if (!running) {
     return (
       <div className="border rounded shadow bg-white p-6 space-y-4">
@@ -274,13 +281,25 @@ export default function IceBreakerPlay({ running, setRunning }) {
         </div>
 
         <div className="flex items-center gap-4">
-          <div className="text-sm text-slate-300">{selectedIceBreaker?.label ?? "Ice Breaker"}</div>
-          <div className="text-sm font-medium text-slate-500">{Math.floor(elapsed / 60)}:{String(elapsed % 60).padStart(2, '0')}</div>
+          <div className="text-sm text-slate-300">Time elapsed</div>
+          <div className="text-sm font-medium text-slate-500">{formattedElapsed}</div>
         </div>
       </div>
 
       <div className="flex-1 overflow-auto p-6 grid place-items-center">
         <div className="w-full max-w-4xl mx-auto max-h-[calc(100vh-73px)] flex flex-col justify-center rounded-2xl border border-slate-200 bg-slate-50 shadow-2xl p-6 md:p-10">
+             <div className="text-center max-w-2xl mx-auto mb-8">
+            
+            {(isRandom || isPerformance) && (
+              <div className="text-sm text-slate-500 mt-2  mb-4">
+                <strong>{selectedIceBreaker?.label}</strong>
+                {isRandom ? " — Random Prompts" : isPerformance ? " — Performance" : ""}
+              </div>
+            )}
+
+            {phase !== "selecting" &&(<h1 className="text-3xl md:text-4xl font-bold mb-3">{promptText}</h1>)}
+          </div>
+
           {currentParticipant && (
             <div className="flex justify-center mb-8">
               <div className="w-full max-w-md">
@@ -289,28 +308,18 @@ export default function IceBreakerPlay({ running, setRunning }) {
             </div>
           )}
 
-          <div className="text-center max-w-2xl mx-auto mb-8">
-            <h1 className="text-3xl md:text-4xl font-bold mb-3">{promptText}</h1>
-            {(isRandom || isPerformance) && (
-              <div className="text-sm text-slate-500 mt-2">
-                <strong>{selectedIceBreaker?.label}</strong>
-                {isRandom ? " — Random Prompts" : isPerformance ? " — Performance" : ""}
-              </div>
-            )}
-          </div>
-
+       
           {phase === "selecting" && currentParticipant && (
             <div className="flex flex-col items-center space-y-6">
               <div className="rounded-2xl border border-slate-200 bg-white p-6 text-center shadow-sm w-full max-w-2xl">
-                <div className="text-sm uppercase tracking-[0.2em] text-slate-400">Ready for</div>
-                <div className="mt-3 text-xl font-semibold text-slate-900">{currentParticipant.preferredName || currentParticipant.fullName}</div>
+                 <div className="text-sm uppercase tracking-[0.2em] text-slate-400">Has been selected</div>
                 <div className="mt-2 text-sm text-slate-600">Press the button below to display the question and continue.</div>
               </div>
               <button
                 onClick={beginAnswer}
                 className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 rounded-md text-lg font-semibold text-white"
               >
-                Show Question
+                Time to answer
               </button>
             </div>
           )}
@@ -338,7 +347,7 @@ export default function IceBreakerPlay({ running, setRunning }) {
           )}
 
           {phase === "reveal" && (
-            <div className="flex flex-col items-center justify-center space-y-6 w-full min-h-[50vh]">
+            <div className="flex flex-col items-center justify-center space-y-6 w-full min-h-[20vh]">
               <div className="text-xl bg-white text-gray-900 px-5 py-4 rounded-lg shadow w-full max-w-2xl text-center">
                 <strong>Answer:</strong>
                 <div className="mt-3 text-2xl font-semibold text-slate-900">{answer}</div>

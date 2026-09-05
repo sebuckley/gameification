@@ -9,6 +9,8 @@ export default function StandardQuizEngine({
   cycle        // 1 = question cycle, 2 = reveal cycle
 }) {
 
+  const isLastQuestion = index === questions.length - 1;
+
   const isRevealMode = cycle === 2;
 
   // ⭐ Reset any per-question UI state when question changes
@@ -42,6 +44,7 @@ export default function StandardQuizEngine({
       currentQuestion={currentQuestion}
       isRevealMode={isRevealMode}
       nextQuestion={advanceQuestion}
+      isLastQuestion={isLastQuestion}
     />
   );
 }
