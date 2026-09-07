@@ -103,28 +103,28 @@ export default function MediaQuizQuestion({
   };
 
   return (
-    <div className="flex min-h-[calc(100vh-160px)] w-full items-center justify-center px-4 py-6">
-      <div className="flex w-full max-w-5xl flex-col items-center justify-center gap-6 text-center">
+    <div className="flex min-h-full w-full items-start justify-center overflow-y-auto px-2 py-3 sm:px-4 sm:py-4">
+      <div className="flex w-full max-w-5xl flex-col items-center justify-start gap-3 text-center sm:gap-4">
         {currentQuestion.mediaUrl && currentQuestion.contentType !== "question" && (
-          <div className="flex min-h-[180px] w-full max-w-4xl items-center justify-center rounded-[28px] bg-white p-8 shadow-[0_30px_70px_rgba(15,23,42,0.12)] ring-1 ring-slate-200 sm:min-h-[210px] md:min-h-[240px]">
+          <div className="flex h-[clamp(120px,24vh,240px)] w-full max-w-4xl items-center justify-center rounded-[28px] bg-white p-3 shadow-[0_20px_45px_rgba(15,23,42,0.12)] ring-1 ring-slate-200 sm:p-5">
             <div className="flex h-full w-full items-center justify-center">
               {renderMedia()}
             </div>
           </div>
         )}
 
-        <div className="flex min-h-[180px] w-full max-w-4xl flex-col items-center justify-center rounded-[28px] bg-gradient-to-br from-indigo-600 via-violet-600 to-fuchsia-600 p-8 text-white shadow-[0_30px_70px_rgba(76,29,149,0.35)] ring-1 ring-white/20 sm:min-h-[210px] md:min-h-[240px]">
-          <div className="mb-4 text-xs font-bold uppercase tracking-[0.35em] text-indigo-100">
+        <div className="flex h-[clamp(110px,18vh,180px)] w-full max-w-4xl flex-col items-center justify-center rounded-[28px] bg-gradient-to-br from-indigo-600 via-violet-600 to-fuchsia-600 p-4 text-white shadow-[0_20px_45px_rgba(76,29,149,0.25)] ring-1 ring-white/20 sm:p-6">
+          <div className="mb-2 text-xs font-bold uppercase tracking-[0.35em] text-indigo-100">
             Q{index + 1} / {total}
           </div>
           <div>
-            <p className="text-2xl font-black leading-tight sm:text-2xl md:text-4xl">
+            <p className="text-xl font-black leading-tight sm:text-2xl md:text-3xl">
               {currentQuestion.question}
             </p>
           </div>
         </div>
 
-        <div className="flex w-full max-w-4xl flex-wrap items-center justify-center gap-3 md:gap-4">
+        <div className="flex w-full max-w-4xl flex-wrap items-center justify-center gap-2 md:gap-3">
           {quizPeople.map((person) => {
             const disabled = wrongAnswersBy.includes(person.id);
             const initials = (person.fullName || person.preferredName || "?")
@@ -138,7 +138,7 @@ export default function MediaQuizQuestion({
                 key={person.id}
                 disabled={disabled}
                 onClick={() => setSelectedPerson(person.id)}
-                className={`flex items-center gap-3 rounded-full px-5 py-3 text-lg font-bold shadow-md transition hover:-translate-y-0.5 ${
+                className={`flex items-center gap-2 rounded-full px-4 py-2 text-base font-bold shadow-md transition hover:-translate-y-0.5 ${
                   disabled
                     ? "cursor-not-allowed bg-red-200 text-red-700"
                     : selectedPerson === person.id
@@ -156,7 +156,7 @@ export default function MediaQuizQuestion({
         </div>
 
         {hasOptions ? (
-          <div className="flex w-full max-w-4xl flex-wrap items-center justify-center gap-3 md:gap-4">
+          <div className="flex w-full max-w-4xl flex-wrap items-center justify-center gap-2 md:gap-3">
             {shuffledOptions.map((option, optionIndex) => {
               const isSelected = normalizeAnswer(option) === normalizeAnswer(selectedOption);
               const isCorrect = isSelected && normalizeAnswer(option) === normalizedAnswer;
@@ -166,7 +166,7 @@ export default function MediaQuizQuestion({
                   key={`${option}-${optionIndex}`}
                   disabled={!selectedPerson || locked}
                   onClick={() => submitAnswer(option)}
-                  className={`rounded-full px-6 py-3 text-lg font-bold shadow-md transition hover:-translate-y-0.5 ${
+                  className={`rounded-full px-5 py-2 text-base font-bold shadow-md transition hover:-translate-y-0.5 ${
                     locked && isCorrect
                       ? "bg-green-600 text-white"
                       : locked && isSelected
@@ -188,14 +188,14 @@ export default function MediaQuizQuestion({
             <button
               disabled={!selectedPerson || locked}
               onClick={() => recordAnswer(true)}
-              className="rounded-full bg-emerald-600 px-6 py-3 text-lg font-bold text-white shadow-md transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400"
+              className="rounded-full bg-emerald-600 px-5 py-2 text-base font-bold text-white shadow-md transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400"
             >
               Correct
             </button>
             <button
               disabled={!selectedPerson || locked}
               onClick={() => recordAnswer(false)}
-              className="rounded-full bg-red-600 px-6 py-3 text-lg font-bold text-white shadow-md transition hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400"
+              className="rounded-full bg-red-600 px-5 py-2 text-base font-bold text-white shadow-md transition hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400"
             >
               Wrong
             </button>
@@ -204,7 +204,7 @@ export default function MediaQuizQuestion({
 
         <button
           onClick={onNext}
-          className={`rounded-full px-6 py-3 text-lg font-semibold shadow-md transition hover:-translate-y-0.5 ${
+          className={`rounded-full px-5 py-2 text-base font-semibold shadow-md transition hover:-translate-y-0.5 ${
             locked ? "bg-slate-800 text-white hover:bg-slate-900" : "bg-slate-200 text-slate-800 hover:bg-slate-300"
           }`}
         >
