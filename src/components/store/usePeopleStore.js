@@ -685,6 +685,18 @@ const buildAgendaEventRecord = (state, overrides = {}) => {
   };
 };
 
+const syncCurrentEventSnapshot = (state) => {
+  if (!state.currentEventId) return state;
+
+  return {
+    ...state,
+    events: upsertAgendaEvent(
+      state.events,
+      buildAgendaEventRecord(state, { id: state.currentEventId })
+    )
+  };
+};
+
 const hydrateStateFromEvent = (state, selected) => {
   const startTime = selected.agendaStartTime || selected.time || "09:00";
   const people = cloneList(selected.people);
@@ -1160,13 +1172,13 @@ const usePeople = create((set, get) => ({
         questionSets: mediaMode.questionSets,
         iceBreakerSets: state.iceBreakerSets,
       });
-      const updated = {
+      const updated = syncCurrentEventSnapshot({
         ...state,
         ...synced,
         questionSets: mediaMode.questionSets,
         quizMode: mediaMode.quizMode || state.quizMode,
         agendaItems: syncedAgendaItems,
-      };
+      });
       save(get);
       return updated;
     }),
@@ -1189,13 +1201,13 @@ const usePeople = create((set, get) => ({
         questionSets: mediaMode.questionSets,
         iceBreakerSets: state.iceBreakerSets,
       });
-      const updated = {
+      const updated = syncCurrentEventSnapshot({
         ...state,
         ...synced,
         questionSets: mediaMode.questionSets,
         quizMode: mediaMode.quizMode || state.quizMode,
         agendaItems: syncedAgendaItems,
-      };
+      });
       save(get);
       return updated;
     }),
@@ -1512,11 +1524,11 @@ const usePeople = create((set, get) => ({
           : setItem
       );
 
-      const updated = {
+      const updated = syncCurrentEventSnapshot({
         ...state,
         questionSets: updatedSets,
         quizMode: setId === state.activeQuestionSetId ? mode : state.quizMode
-      };
+      });
       save(get);
       return updated;
     }),
