@@ -104,14 +104,21 @@ export default function MediaQuizQuestion({
   return (
     <div className="flex min-h-[calc(100vh-160px)] w-full items-center justify-center px-4 py-6">
       <div className="flex w-full max-w-5xl flex-col items-center justify-center gap-6 text-center">
-        <div className="flex min-h-[180px] w-full max-w-4xl flex-col items-center justify-center rounded-[28px] bg-gradient-to-br from-indigo-600 via-violet-600 to-fuchsia-600 p-8 text-white shadow-[0_30px_70px_rgba(76,29,149,0.35)] ring-1 ring-white/20 sm:min-h-[210px] md:min-h-[240px]">
+        {currentQuestion.mediaUrl && currentQuestion.contentType !== "question" && (
+          <div className="flex min-h-[180px] w-full max-w-4xl items-center justify-center rounded-[28px] bg-white p-8 shadow-[0_30px_70px_rgba(15,23,42,0.12)] ring-1 ring-slate-200 sm:min-h-[210px] md:min-h-[240px]">
+            {renderMedia()}
+          </div>
+        )}
+
+        <div className="flex min-h-[180px] w-full max-w-4xl items-center justify-center rounded-[28px] bg-gradient-to-br from-indigo-600 via-violet-600 to-fuchsia-600 p-8 text-white shadow-[0_30px_70px_rgba(76,29,149,0.35)] ring-1 ring-white/20 sm:min-h-[210px] md:min-h-[240px]">
           <div className="mb-4 text-xs font-bold uppercase tracking-[0.35em] text-indigo-100">
             Q{index + 1} / {total}
           </div>
-          {renderMedia()}
-          <p className="mt-5 text-2xl font-black leading-tight sm:text-2xl md:text-4xl">
-            {currentQuestion.question}
-          </p>
+          <div>
+            <p className="text-2xl font-black leading-tight sm:text-2xl md:text-4xl">
+              {currentQuestion.question}
+            </p>
+          </div>
         </div>
 
         <div className="flex w-full max-w-4xl flex-wrap items-center justify-center gap-3 md:gap-4">

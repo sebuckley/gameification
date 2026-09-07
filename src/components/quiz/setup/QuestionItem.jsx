@@ -14,6 +14,9 @@ export function QuestionItem({
   const [open, setOpen] = useState(false);
   const [mediaPreviewError, setMediaPreviewError] = useState(false);
   const [mediaPreviewLoaded, setMediaPreviewLoaded] = useState(false);
+  const imageSearchQuery = encodeURIComponent(
+    q.mediaAlt || q.question || "football team logo"
+  );
 
   useEffect(() => {
     setMediaPreviewError(false);
@@ -220,6 +223,25 @@ export function QuestionItem({
                         : "Checking media URL..."
                     }
                   </div>
+
+                  {mediaPreviewError && q.contentType === "image" && (
+                    <div className="rounded border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+                      <a
+                        href={`https://www.google.com/search?tbm=isch&q=${imageSearchQuery}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="font-semibold text-indigo-700 underline"
+                      >
+                        Search Google Images for a replacement
+                      </a>
+                      <p className="mt-1">
+                        Open an image, right-click the actual image, choose
+                        <strong> Copy image address</strong>, then paste that
+                        direct URL into Media URL. Do not copy the Google search
+                        page address.
+                      </p>
+                    </div>
+                  )}
                 </div>
               )}
             </>

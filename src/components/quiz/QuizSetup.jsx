@@ -107,6 +107,15 @@ export default function QuizSetup() {
     reader.readAsDataURL(file);
   };
 
+  const cleanImportedMediaUrl = (value) => {
+    const mediaLine = String(value || "").trim();
+    const backtickMatch = mediaLine.match(/`(https?:\/\/[^`]+)`/i);
+    if (backtickMatch) return backtickMatch[1].trim();
+
+    const urlMatch = mediaLine.match(/https?:\/\/[^\s\])}>]+/i);
+    return urlMatch ? urlMatch[0].replace(/[.,;]+$/, "") : "";
+  };
+
   const parseBulkQuestions = (text) => {
     const lines = text.split("\n").map((l) => l.trim());
     const parsedQuestions = [];
@@ -133,7 +142,7 @@ export default function QuizSetup() {
           ? value
           : "question";
       } else if (line.startsWith("MEDIA:") && currentQ) {
-        currentQ.mediaUrl = line.substring(6).trim();
+        currentQ.mediaUrl = cleanImportedMediaUrl(line.substring(6));
       } else if (line.startsWith("ALT:") && currentQ) {
         currentQ.mediaAlt = line.substring(4).trim();
       } else if (line.startsWith("O:") && currentQ) {
@@ -221,7 +230,7 @@ export default function QuizSetup() {
         promptMediaType === "mix" ? "image, audio, or video" : promptMediaType
       } for media items.\n- ${promptMediaSource === "public"
         ? "For media items, use a real direct browser-loadable URL on the MEDIA: line; never invent a local file path."
-        : "Leave MEDIA: blank and add the local file manually after importing; never invent a local file path."}\n- Use ALT: for a short image description and leave it blank for audio or video.\n- ${
+        : "Leave MEDIA: blank and add the local file manually after importing; never invent a local file path."}\n- Use stable, well-known direct media URLs from trusted public hosts such as Wikimedia Commons. Prefer URLs that end in a media file extension or are documented direct asset URLs.\n- Do not claim that a URL was opened or verified. The app will check whether it loads in the media preview after import.\n- If you are unsure of the exact direct asset URL, leave MEDIA: blank instead of guessing.\n- MEDIA: must contain only the direct media URL and nothing else. Do not include Bing, Google, search-result, thumbnail, redirect, citation, markdown, parentheses, domain labels, or explanatory text.\n- Use ALT: for a short image description and leave it blank for audio or video.\n- ${
         promptMediaType === "mix"
           ? "Include a balanced mixture of the requested media and text questions."
           : `Use ${promptMediaType} for every item; do not include other media types.`
@@ -233,7 +242,7 @@ export default function QuizSetup() {
     promptQuestionCount || 10
   } ${promptFormatInstructions.description} about ${
     promptTopic || "<TOPIC HERE>"
-  } at ${promptDifficulty} difficulty.\n\nFormat every item exactly as:\nQ: [question or prompt]\nTYPE: [question|image|audio|video]\nMEDIA: [direct media URL, or blank for question items]\nALT: [short image description, or blank]\nO: [option 1, optional]\nO: [option 2, optional]\nO: [option 3, optional]\nO: [option 4, optional]\nA: [correct answer]\n\nRules:\n- Keep the Q:, TYPE:, MEDIA:, ALT:, and A: lines for every item.\n${promptFormatInstructions.rules}\n- Return only the formatted plain text in the chat window.`;
+  } at ${promptDifficulty} difficulty.\n\nFormat every item exactly as:\nQ: [question or prompt]\nTYPE: [question|image|audio|video]\nMEDIA: [direct media URL only, or blank for question items]\nALT: [short image description, or blank]\nO: [option 1, optional]\nO: [option 2, optional]\nO: [option 3, optional]\nO: [option 4, optional]\nA: [correct answer]\n\nRules:\n- Keep the Q:, TYPE:, MEDIA:, ALT:, and A: lines for every item.\n${promptFormatInstructions.rules}\n- Do not claim to have opened, tested, or verified URLs. Use trusted direct asset URLs or leave MEDIA: blank.\n- Do not include Bing links, search-result links, citations, markdown links, annotations, explanations, or any text outside the required item format.\n- Return only the formatted plain text in the chat window.`;
 
   return (
     <div className="border rounded shadow bg-white">
