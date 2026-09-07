@@ -5,6 +5,8 @@ import usePeople from "../../store/usePeopleStore";
 
 export default function WrongAnswerModal({
   show,
+  setShowWrongModal,
+  setLocked,
   wrongPerson,
   wrongTimer,
   onClear,
@@ -15,7 +17,12 @@ export default function WrongAnswerModal({
   const { quizMode } = usePeople();
   if (!show) return null;
 
+  const answerAgain = () => {
 
+    setShowWrongModal(false);
+    setLocked(false);
+
+  }
 
   const isGameShow = quizMode === "gameshow";
   const isStandardMode = !isGameShow;
@@ -43,6 +50,14 @@ export default function WrongAnswerModal({
                 </div>
               </div>
             )}
+
+              {/* Next Question */}
+            <button
+              onClick={answerAgain}
+              className="w-full px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700"
+            >
+              Answer again
+            </button>
 
             {/* Next Question */}
             <button

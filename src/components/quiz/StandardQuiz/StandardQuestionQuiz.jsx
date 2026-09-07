@@ -21,6 +21,14 @@ export default function StandardQuizQuestion({
     currentQuestion.questionText ||
     currentQuestion.text;
 
+  const nextQuestionHideAnswer = ()=>{
+
+    setShowAnswer(false);
+    nextQuestion();
+
+
+  }
+
   const actionLabel = isLastQuestion ? "Finish Quiz" : "Next Question";
 
   return (
@@ -49,7 +57,7 @@ export default function StandardQuizQuestion({
           )}
 
           <button
-            onClick={nextQuestion}
+            onClick={nextQuestionHideAnswer}
             className={`rounded-full px-6 py-3 text-lg font-semibold shadow-md transition hover:-translate-y-0.5 ${
               showAnswer
                 ? "bg-slate-800 text-white hover:bg-slate-900"

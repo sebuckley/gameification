@@ -5,6 +5,7 @@ import Leaderboard from "../shared/Leaderboard";
 import StandardQuizEngine from "./StandardQuiz/StandardQuizEngine";
 import StandardQuizPointsEngine from "./StandardQuizPoints/StandardQuizPointsEngine";
 import GameShowEngine from "./gameshow/GameShowEngine";
+import MediaQuizEngine from "./Media/MediaEngine";
 
 import PodiumModal from "./shared/PodiumModal";
 
@@ -50,6 +51,7 @@ export default function QuizPlay({ running, setRunning }) {
   const getQuizModeLabel = (mode) => {
     if (mode === "standard-points") return "Standard Points";
     if (mode === "gameshow") return "Game-Show";
+    if (mode === "media") return "Media Quiz";
     return "Standard";
   };
 
@@ -310,6 +312,16 @@ export default function QuizPlay({ running, setRunning }) {
 
             {quizMode === "gameshow" && currentQuestion.type === "multi" && (
               <GameShowEngine
+                currentQuestion={currentQuestion}
+                index={index}
+                questions={questions}
+                quizPeople={quizPeople}
+                nextQuestion={nextQuestion}
+              />
+            )}
+
+            {quizMode === "media" && (
+              <MediaQuizEngine
                 currentQuestion={currentQuestion}
                 index={index}
                 questions={questions}

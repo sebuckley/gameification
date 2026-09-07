@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { GripVertical } from "lucide-react";
 
 
@@ -12,6 +12,13 @@ export function QuestionItem({
   removeQuestion
 }) {
   const [open, setOpen] = useState(false);
+  const [mediaPreviewError, setMediaPreviewError] = useState(false);
+  const [mediaPreviewLoaded, setMediaPreviewLoaded] = useState(false);
+
+  useEffect(() => {
+    setMediaPreviewError(false);
+    setMediaPreviewLoaded(false);
+  }, [q.mediaUrl, q.contentType]);
 
   return (
     <div
@@ -99,6 +106,124 @@ export function QuestionItem({
                 updateSingleQuestion(q.id, "answer", e.target.value)
               }
             />
+          </div>
+
+          <div className="space-y-2 rounded border border-indigo-200 bg-indigo-50 p-3">
+            <label className="text-sm font-medium text-indigo-900">Content type</label>
+            <select
+              className="border p-2 rounded w-full bg-white"
+              value={q.contentType || "question"}
+              onChange={(e) =>
+                updateSingleQuestion(q.id, "contentType", e.target.value)
+              }
+            >
+              <option value="question">Question only</option>
+              <option value="image">Image</option>
+              <option value="audio">Audio</option>
+              <option value="video">Video</option>
+            </select>
+
+          {q.contentType && q.contentType !== "question" && (
+            <>
+              <input
+                className="border p-2 rounded w-full bg-white"
+                placeholder="Media URL"
+                value={q.mediaUrl?.startsWith("data:") ? "Local file selected" : q.mediaUrl || ""}
+                onChange={(e) =>
+                  updateSingleQuestion(q.id, "mediaUrl", e.target.value)
+                }
+              />
+
+              <input
+                type="file"
+                accept={`${q.contentType}/*`}
+                className="block w-full text-sm"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+
+                  const reader = new FileReader();
+                  reader.onload = () =>
+                    updateSingleQuestion(q.id, "mediaUrl", String(reader.result || ""));
+                  reader.readAsDataURL(file);
+                }}
+              />
+
+              <input
+                className="border p-2 rounded w-full bg-white"
+                placeholder="Image alt text (optional)"
+                value={q.mediaAlt || ""}
+                onChange={(e) =>
+                  updateSingleQuestion(q.id, "mediaAlt", e.target.value)
+                }
+              />
+
+              {q.mediaUrl && (
+                <div className="space-y-2 rounded border border-slate-200 bg-white p-3">
+                  <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    Media preview
+                  </div>
+
+                  {q.contentType === "image" && (
+                    <img
+                      src={q.mediaUrl}
+                      alt={q.mediaAlt || q.question || "Media preview"}
+                      onLoad={() => {
+                        setMediaPreviewError(false);
+                        setMediaPreviewLoaded(true);
+                      }}
+                      onError={() => setMediaPreviewError(true)}
+                      className="max-h-64 max-w-full rounded object-contain"
+                    />
+                  )}
+
+                  {q.contentType === "audio" && (
+                    <audio
+                      controls
+                      src={q.mediaUrl}
+                      onCanPlay={() => {
+                        setMediaPreviewError(false);
+                        setMediaPreviewLoaded(true);
+                      }}
+                      onError={() => setMediaPreviewError(true)}
+                      className="w-full"
+                    />
+                  )}
+
+                  {q.contentType === "video" && (
+                    <video
+                      controls
+                      src={q.mediaUrl}
+                      onCanPlay={() => {
+                        setMediaPreviewError(false);
+                        setMediaPreviewLoaded(true);
+                      }}
+                      onError={() => setMediaPreviewError(true)}
+                      className="max-h-64 max-w-full rounded"
+                    />
+                  )}
+
+                  <div
+                    role="alert"
+                    className={`rounded px-3 py-2 text-sm ${
+                      mediaPreviewError
+                        ? "border border-red-200 bg-red-50 text-red-700"
+                        : mediaPreviewLoaded
+                          ? "border border-emerald-200 bg-emerald-50 text-emerald-700"
+                          : "border border-amber-200 bg-amber-50 text-amber-700"
+                    }`}
+                  >
+                    {mediaPreviewError
+                      ? "This media could not be loaded. Check the URL or choose a local file."
+                      : mediaPreviewLoaded
+                        ? "Media preview loaded."
+                        : "Checking media URL..."
+                    }
+                  </div>
+                </div>
+              )}
+            </>
+          )}
           </div>
 
           {/* Multi-choice */}

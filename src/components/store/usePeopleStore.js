@@ -55,7 +55,12 @@ const normalizeImportedQuestions = (rawList) => {
     ...q,
     id: q.id || nanoid(),
     options: q.options || [],
-    type: q.type || (q.options?.length ? "multi" : "single")
+    type: q.type || (q.options?.length ? "multi" : "single"),
+    contentType: ["question", "image", "audio", "video"].includes(q.contentType)
+      ? q.contentType
+      : "question",
+    mediaUrl: q.mediaUrl || "",
+    mediaAlt: q.mediaAlt || ""
   }));
 };
 
@@ -1425,6 +1430,11 @@ const usePeople = create((set, get) => ({
     return (state.questions || [])
       .map((q) => {
         const lines = [`Q: ${q.question || ""}`];
+        if (q.contentType && q.contentType !== "question") {
+          lines.push(`TYPE: ${q.contentType}`);
+          lines.push(`MEDIA: ${q.mediaUrl || ""}`);
+          lines.push(`ALT: ${q.mediaAlt || ""}`);
+        }
         if (Array.isArray(q.options) && q.options.length > 0) {
           q.options.forEach((opt) => lines.push(`O: ${opt}`));
         }
