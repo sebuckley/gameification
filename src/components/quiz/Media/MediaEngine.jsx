@@ -2,16 +2,13 @@ import React from "react";
 import MediaQuizQuestion from "./MediaQuestion";
 import usePeople from "../../store/usePeopleStore";
 
-
-export default function GameShowEngine({
+export default function MediaEngine({
   currentQuestion,
   index,
   questions,
   nextQuestion,
-  quizPeople,
-  
+  quizPeople
 }) {
-
   const { applyQuizResult } = usePeople();
 
   const handleAnswer = (option, personId, correct) => {

@@ -5,7 +5,7 @@ import Leaderboard from "../shared/Leaderboard";
 import StandardQuizEngine from "./StandardQuiz/StandardQuizEngine";
 import StandardQuizPointsEngine from "./StandardQuizPoints/StandardQuizPointsEngine";
 import GameShowEngine from "./gameshow/GameShowEngine";
-import MediaQuizEngine from "./Media/MediaEngine";
+import MediaQuizEngine from "./media/MediaEngine";
 
 import PodiumModal from "./shared/PodiumModal";
 
