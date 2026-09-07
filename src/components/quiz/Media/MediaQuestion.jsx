@@ -12,7 +12,6 @@ export default function MediaQuizQuestion({
 }) {
   const [selectedPerson, setSelectedPerson] = useState(null);
   const [selectedOption, setSelectedOption] = useState(null);
-  const [answerInput, setAnswerInput] = useState("");
   const [locked, setLocked] = useState(false);
   const [shuffledOptions, setShuffledOptions] = useState([]);
   const [wrongAnswersBy, setWrongAnswersBy] = useState([]);
@@ -24,7 +23,6 @@ export default function MediaQuizQuestion({
   useEffect(() => {
     setSelectedPerson(null);
     setSelectedOption(null);
-    setAnswerInput("");
     setLocked(false);
     setWrongAnswersBy([]);
     setShowCorrectModal(false);
@@ -50,10 +48,9 @@ export default function MediaQuizQuestion({
   const normalizedAnswer = normalizeAnswer(currentQuestion.answer);
   const hasOptions = shuffledOptions.length > 0;
 
-  const submitAnswer = (option) => {
+  const recordAnswer = (correct, option = currentQuestion.answer) => {
     if (locked || !selectedPerson || wrongAnswersBy.includes(selectedPerson)) return;
 
-    const correct = normalizeAnswer(option) === normalizedAnswer;
     const personObj = quizPeople.find((person) => person.id === selectedPerson);
 
     setSelectedOption(option);
@@ -71,6 +68,10 @@ export default function MediaQuizQuestion({
     }
   };
 
+  const submitAnswer = (option) => {
+    recordAnswer(normalizeAnswer(option) === normalizedAnswer, option);
+  };
+
   const renderMedia = () => {
     if (!currentQuestion.mediaUrl) return null;
 
@@ -79,7 +80,7 @@ export default function MediaQuizQuestion({
         <img
           src={currentQuestion.mediaUrl}
           alt={currentQuestion.mediaAlt || currentQuestion.question || "Quiz media"}
-          className="max-h-56 max-w-full rounded-2xl object-contain shadow-lg sm:max-h-72"
+          className="h-full w-full rounded-2xl object-contain shadow-lg"
         />
       );
     }
@@ -106,11 +107,13 @@ export default function MediaQuizQuestion({
       <div className="flex w-full max-w-5xl flex-col items-center justify-center gap-6 text-center">
         {currentQuestion.mediaUrl && currentQuestion.contentType !== "question" && (
           <div className="flex min-h-[180px] w-full max-w-4xl items-center justify-center rounded-[28px] bg-white p-8 shadow-[0_30px_70px_rgba(15,23,42,0.12)] ring-1 ring-slate-200 sm:min-h-[210px] md:min-h-[240px]">
-            {renderMedia()}
+            <div className="flex h-full w-full items-center justify-center">
+              {renderMedia()}
+            </div>
           </div>
         )}
 
-        <div className="flex min-h-[180px] w-full max-w-4xl items-center justify-center rounded-[28px] bg-gradient-to-br from-indigo-600 via-violet-600 to-fuchsia-600 p-8 text-white shadow-[0_30px_70px_rgba(76,29,149,0.35)] ring-1 ring-white/20 sm:min-h-[210px] md:min-h-[240px]">
+        <div className="flex min-h-[180px] w-full max-w-4xl flex-col items-center justify-center rounded-[28px] bg-gradient-to-br from-indigo-600 via-violet-600 to-fuchsia-600 p-8 text-white shadow-[0_30px_70px_rgba(76,29,149,0.35)] ring-1 ring-white/20 sm:min-h-[210px] md:min-h-[240px]">
           <div className="mb-4 text-xs font-bold uppercase tracking-[0.35em] text-indigo-100">
             Q{index + 1} / {total}
           </div>
@@ -181,23 +184,20 @@ export default function MediaQuizQuestion({
             })}
           </div>
         ) : (
-          <div className="flex w-full max-w-2xl flex-col gap-3 sm:flex-row">
-            <input
-              value={answerInput}
-              disabled={!selectedPerson || locked}
-              onChange={(event) => setAnswerInput(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === "Enter") submitAnswer(answerInput);
-              }}
-              placeholder="Type the answer"
-              className="min-w-0 flex-1 rounded-full border border-indigo-200 bg-white px-6 py-3 text-lg text-slate-800 shadow-md outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
-            />
+          <div className="flex w-full max-w-2xl items-center justify-center gap-3">
             <button
-              disabled={!selectedPerson || !answerInput.trim() || locked}
-              onClick={() => submitAnswer(answerInput)}
-              className="rounded-full bg-gradient-to-r from-fuchsia-500 via-violet-500 to-indigo-600 px-6 py-3 text-lg font-bold text-white shadow-md disabled:cursor-not-allowed disabled:bg-slate-200 disabled:bg-none disabled:text-slate-400"
+              disabled={!selectedPerson || locked}
+              onClick={() => recordAnswer(true)}
+              className="rounded-full bg-emerald-600 px-6 py-3 text-lg font-bold text-white shadow-md transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400"
             >
-              Submit Answer
+              Correct
+            </button>
+            <button
+              disabled={!selectedPerson || locked}
+              onClick={() => recordAnswer(false)}
+              className="rounded-full bg-red-600 px-6 py-3 text-lg font-bold text-white shadow-md transition hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400"
+            >
+              Wrong
             </button>
           </div>
         )}

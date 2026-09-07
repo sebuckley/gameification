@@ -73,6 +73,7 @@ const normalizeQuestionSets = (rawSets, fallbackQuestions = []) => {
           name: (setItem.name || `Question Set ${index + 1}`).trim(),
           agendaQuizType: isQuizAgendaType(setItem.agendaQuizType) ? setItem.agendaQuizType : "quiz",
           quizMode: setItem.quizMode || DEFAULT_STATE.quizMode,
+          quizModeManuallySet: Boolean(setItem.quizModeManuallySet),
           questions: normalizeImportedQuestions(setItem.questions || [])
         }))
     : [];
@@ -340,6 +341,28 @@ const syncQuestionSetsWithActive = ({ questionSets, activeQuestionSetId, questio
     questionSets: mergedSets,
     activeQuestionSetId: activeId,
     questions: normalizeImportedQuestions(questions)
+  };
+};
+
+const defaultMediaQuestionSetMode = ({ questionSets, activeQuestionSetId, questions }) => {
+  const hasMedia = normalizeImportedQuestions(questions).some(
+    (question) => question.contentType !== "question"
+  );
+
+  if (!hasMedia) return { questionSets, quizMode: null };
+
+  const activeSet = questionSets.find((setItem) => setItem.id === activeQuestionSetId);
+  if (!activeSet || activeSet.quizModeManuallySet || activeSet.quizMode !== "standard") {
+    return { questionSets, quizMode: null };
+  }
+
+  return {
+    questionSets: questionSets.map((setItem) =>
+      setItem.id === activeQuestionSetId
+        ? { ...setItem, quizMode: "media" }
+        : setItem
+    ),
+    quizMode: "media"
   };
 };
 
@@ -1127,14 +1150,21 @@ const usePeople = create((set, get) => ({
         activeQuestionSetId: state.activeQuestionSetId,
         questions: nextQuestions
       });
+      const mediaMode = defaultMediaQuestionSetMode({
+        questionSets: synced.questionSets,
+        activeQuestionSetId: synced.activeQuestionSetId,
+        questions: nextQuestions
+      });
       const syncedAgendaItems = syncAgendaLinkedArtefacts({
         agendaItems: state.agendaItems,
-        questionSets: synced.questionSets,
+        questionSets: mediaMode.questionSets,
         iceBreakerSets: state.iceBreakerSets,
       });
       const updated = {
         ...state,
         ...synced,
+        questionSets: mediaMode.questionSets,
+        quizMode: mediaMode.quizMode || state.quizMode,
         agendaItems: syncedAgendaItems,
       };
       save(get);
@@ -1149,14 +1179,21 @@ const usePeople = create((set, get) => ({
         activeQuestionSetId: state.activeQuestionSetId,
         questions: normalizedQuestions
       });
+      const mediaMode = defaultMediaQuestionSetMode({
+        questionSets: synced.questionSets,
+        activeQuestionSetId: synced.activeQuestionSetId,
+        questions: normalizedQuestions
+      });
       const syncedAgendaItems = syncAgendaLinkedArtefacts({
         agendaItems: state.agendaItems,
-        questionSets: synced.questionSets,
+        questionSets: mediaMode.questionSets,
         iceBreakerSets: state.iceBreakerSets,
       });
       const updated = {
         ...state,
         ...synced,
+        questionSets: mediaMode.questionSets,
+        quizMode: mediaMode.quizMode || state.quizMode,
         agendaItems: syncedAgendaItems,
       };
       save(get);
@@ -1177,6 +1214,7 @@ const usePeople = create((set, get) => ({
         name: (name || `Question Set ${nextIndex}`).trim(),
         agendaQuizType: "quiz",
         quizMode: DEFAULT_STATE.quizMode,
+        quizModeManuallySet: false,
         questions: []
       };
 
@@ -1469,7 +1507,9 @@ const usePeople = create((set, get) => ({
   updateQuestionSetQuizMode: (setId, mode) =>
     set((state) => {
       const updatedSets = state.questionSets.map((setItem) =>
-        setItem.id === setId ? { ...setItem, quizMode: mode } : setItem
+        setItem.id === setId
+          ? { ...setItem, quizMode: mode, quizModeManuallySet: true }
+          : setItem
       );
 
       const updated = {

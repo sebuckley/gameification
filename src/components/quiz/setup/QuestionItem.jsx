@@ -17,6 +17,7 @@ export function QuestionItem({
   const imageSearchQuery = encodeURIComponent(
     q.mediaAlt || q.question || "football team logo"
   );
+  const isMediaItem = q.contentType && q.contentType !== "question";
 
   useEffect(() => {
     setMediaPreviewError(false);
@@ -55,6 +56,28 @@ export function QuestionItem({
     <span className="text-white font-medium truncate max-w-[150px] sm:max-w-[250px] md:max-w-[300px]">
       {q.question || "Untitled Question"}
     </span>
+
+    {isMediaItem && (
+      <span
+        className={`shrink-0 rounded-full px-2 py-1 text-[10px] font-bold uppercase tracking-wide ${
+          !q.mediaUrl
+            ? "bg-red-200 text-red-800"
+            : mediaPreviewError
+              ? "bg-red-200 text-red-800"
+              : mediaPreviewLoaded
+                ? "bg-emerald-200 text-emerald-800"
+                : "bg-amber-200 text-amber-800"
+        }`}
+      >
+        {!q.mediaUrl
+          ? "Edit: media missing"
+          : mediaPreviewError
+            ? "Edit: media failed"
+            : mediaPreviewLoaded
+              ? "Media linked"
+              : "Edit to check media"}
+      </span>
+    )}
   </div>
 
   {/* Right side buttons */}
