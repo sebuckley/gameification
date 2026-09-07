@@ -117,7 +117,11 @@ export default function QuizSetup() {
   };
 
   const parseBulkQuestions = (text) => {
-    const lines = text.split("\n").map((l) => l.trim());
+    const normalizedText = String(text || "").replace(
+      /\s+(?=(?:Q|TYPE|MEDIA|ALT|O|A):)/gi,
+      "\n"
+    );
+    const lines = normalizedText.split("\n").map((l) => l.trim());
     const parsedQuestions = [];
 
     let currentQ = null;
