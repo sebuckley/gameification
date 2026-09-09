@@ -332,7 +332,7 @@ export default function QuizPlay({ running, setRunning }) {
           </div>
 
           {/* RIGHT-SIDE LEADERBOARD (desktop) */}
-      {quizMode !== "standard" && quizMode !== "media" && (
+      {quizMode !== "standard" && (
         <div
           className="
             hidden 
@@ -353,7 +353,7 @@ export default function QuizPlay({ running, setRunning }) {
       )}
 
       {/* MOBILE LEADERBOARD */}
-      {quizMode !== "standard" && quizMode !== "media" && (
+      {quizMode !== "standard" && (
         <div className="lg:hidden w-full bg-white border-t border-gray-300 shadow p-4">
           <Leaderboard people={quizPeople} data={"quiz"} running={running} />
         </div>
@@ -362,7 +362,7 @@ export default function QuizPlay({ running, setRunning }) {
       )}
 
       {/* PODIUM */}
-      {quizMode !== "standard" && quizMode !== "media" && (
+      {quizMode !== "standard" && (
         <PodiumModal
           show={showPodium}
           podium={podium}

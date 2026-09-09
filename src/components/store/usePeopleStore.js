@@ -41,7 +41,7 @@ const DEFAULT_STATE = {
     updatedAt: null,
   },
   quizMode: "standard",
-  quizSettings: { correctPoints: 1, wrongPoints: -1 }
+  quizSettings: { correctPoints: 1, wrongPoints: -1, revealSeconds: 20 }
   ,
   selectedIceBreaker: null,
   participants: [],

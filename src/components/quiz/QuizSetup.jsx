@@ -432,6 +432,16 @@ export default function QuizSetup() {
                   Set question type for this set, including mixed media quizzes.
                 </div>
               </div>
+              <p className="text-xs text-slate-500">
+                {activeSetMode === "standard" &&
+                  "Text-only questions answered by typing the answer."}
+                {activeSetMode === "standard-points" &&
+                  "Text-only questions answered by typing, with configurable correct/wrong points."}
+                {activeSetMode === "gameshow" &&
+                  "Multiple-choice questions presented like a TV game show."}
+                {activeSetMode === "media" &&
+                  "Image, audio, video, and text questions with optional blurred-zoom reveal on images."}
+              </p>
               </>
             )}
 
@@ -738,7 +748,7 @@ export default function QuizSetup() {
                               checked={mediaReveal}
                               onChange={(e) => setMediaReveal(e.target.checked)}
                             />
-                            Blurred zoom reveal (30s) — image starts blurred and zoomed, then sharpens
+                            Blurred zoom reveal — image starts blurred and zoomed, then sharpens
                           </label>
                         )}
                       </>
@@ -919,6 +929,29 @@ export default function QuizSetup() {
                   onChange={(e) =>
                     updateQuizSettings({
                       wrongPoints: Number(e.target.value),
+                    })
+                  }
+                />
+              </div>
+            </>
+          )}
+
+          {activeSetMode === "media" && questions.some((q) => q.mediaReveal) && (
+            <>
+              <div className="space-y-2">
+                <div className="text-sm font-semibold text-slate-800">Step 4: Configure media reveal</div>
+                <div className="text-xs text-slate-600">Used for blurred zoom reveal on image questions.</div>
+              </div>
+              <div className="space-y-2 rounded-lg border border-slate-200 bg-slate-50 p-4">
+                <label className="font-medium">Reveal duration (seconds)</label>
+                <input
+                  type="number"
+                  min={1}
+                  className="border p-2 rounded w-full"
+                  value={quizSettings.revealSeconds ?? 20}
+                  onChange={(e) =>
+                    updateQuizSettings({
+                      revealSeconds: Math.max(1, Number(e.target.value) || 20),
                     })
                   }
                 />

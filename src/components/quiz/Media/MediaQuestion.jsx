@@ -18,6 +18,7 @@ export default function MediaQuizQuestion({ index, total, currentQuestion, quizP
 
   const wantsReveal = Boolean(currentQuestion?.mediaReveal) && currentQuestion?.contentType === "image";
   const revealPaused = Boolean(selectedPerson) || locked;
+  const revealTotalMs = Math.max(1, Number(currentQuestion?.revealSeconds) || 20) * 1000;
 
   useEffect(() => {
     setSelectedPerson(null);
@@ -46,7 +47,7 @@ export default function MediaQuizQuestion({ index, total, currentQuestion, quizP
       revealElapsedRef.current += now - revealLastTickRef.current;
       revealLastTickRef.current = now;
 
-      const progress = Math.min(1, revealElapsedRef.current / 30000);
+      const progress = Math.min(1, revealElapsedRef.current / revealTotalMs);
       setRevealProgress(progress);
 
       if (progress >= 1) {
@@ -131,7 +132,7 @@ export default function MediaQuizQuestion({ index, total, currentQuestion, quizP
           <div className="flex min-h-[120px] w-full max-w-4xl flex-col items-center justify-center gap-2 rounded-[28px] bg-white p-3 shadow-[0_20px_45px_rgba(15,23,42,0.12)] ring-1 ring-slate-200 sm:min-h-[160px] sm:p-4">
             {wantsReveal && revealProgress < 1 && (
               <div className="self-end rounded-full bg-slate-900/80 px-3 py-1 text-xs font-semibold text-white">
-                Revealing… {Math.min(30, Math.max(0, Math.ceil((1 - revealProgress) * 30)))}s
+                Revealing… {Math.max(0, Math.ceil((1 - revealProgress) * (revealTotalMs / 1000)))}s
               </div>
             )}
             {renderMedia()}
