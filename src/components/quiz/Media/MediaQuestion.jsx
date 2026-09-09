@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import CorrectAnswerModal from "../shared/CorrectAnswerModal";
 import WrongAnswerModal from "../shared/WrongAnswerModal";
 
@@ -12,6 +12,12 @@ export default function MediaQuizQuestion({ index, total, currentQuestion, quizP
   const [showWrongModal, setShowWrongModal] = useState(false);
   const [modalCorrectPerson, setModalCorrectPerson] = useState(null);
   const [modalWrongPerson, setModalWrongPerson] = useState(null);
+  const [revealProgress, setRevealProgress] = useState(0);
+  const revealElapsedRef = useRef(0);
+  const revealLastTickRef = useRef(null);
+
+  const wantsReveal = Boolean(currentQuestion?.mediaReveal) && currentQuestion?.contentType === "image";
+  const revealPaused = Boolean(selectedPerson) || locked;
 
   useEffect(() => {
     setSelectedPerson(null);
@@ -20,7 +26,36 @@ export default function MediaQuizQuestion({ index, total, currentQuestion, quizP
     setWrongAnswersBy([]);
     setShowCorrectModal(false);
     setShowWrongModal(false);
+    setRevealProgress(0);
+    revealElapsedRef.current = 0;
+    revealLastTickRef.current = null;
   }, [index, currentQuestion]);
+
+  useEffect(() => {
+    if (!wantsReveal || revealPaused) {
+      revealLastTickRef.current = null;
+      return;
+    }
+
+    const timer = setInterval(() => {
+      const now = Date.now();
+      if (revealLastTickRef.current === null) {
+        revealLastTickRef.current = now;
+        return;
+      }
+      revealElapsedRef.current += now - revealLastTickRef.current;
+      revealLastTickRef.current = now;
+
+      const progress = Math.min(1, revealElapsedRef.current / 30000);
+      setRevealProgress(progress);
+
+      if (progress >= 1) {
+        clearInterval(timer);
+      }
+    }, 100);
+
+    return () => clearInterval(timer);
+  }, [wantsReveal, revealPaused, index, currentQuestion]);
 
   useEffect(() => {
     const options = Array.isArray(currentQuestion?.options) ? currentQuestion.options.filter(Boolean) : [];
@@ -55,6 +90,23 @@ export default function MediaQuizQuestion({ index, total, currentQuestion, quizP
   const renderMedia = () => {
     if (!currentQuestion.mediaUrl) return null;
     if (currentQuestion.contentType === "image") {
+      if (wantsReveal) {
+        return (
+          <div className="relative flex h-[32vh] w-full items-center justify-center overflow-hidden rounded-2xl bg-white shadow-lg sm:h-[36vh] lg:h-[40vh]">
+            <img
+              src={currentQuestion.mediaUrl}
+              alt={currentQuestion.mediaAlt || currentQuestion.question || "Quiz media"}
+              style={{
+                filter: `blur(${Math.round((1 - revealProgress) * 20)}px)`,
+                transform: `scale(${(1.35 - revealProgress * 0.35).toFixed(3)})`,
+                transition: "filter 120ms linear, transform 120ms linear"
+              }}
+              className="h-full w-full object-contain"
+            />
+          </div>
+        );
+      }
+
       return (
         <img
           src={currentQuestion.mediaUrl}
@@ -76,7 +128,12 @@ export default function MediaQuizQuestion({ index, total, currentQuestion, quizP
     <div className="flex min-h-full w-full items-start justify-center overflow-y-auto px-2 py-2 sm:px-4 sm:py-3">
       <div className="flex w-full max-w-5xl flex-col items-center justify-start gap-2 text-center sm:gap-3">
         {currentQuestion.mediaUrl && currentQuestion.contentType !== "question" && (
-          <div className="flex min-h-[120px] w-full max-w-4xl items-center justify-center rounded-[28px] bg-white p-3 shadow-[0_20px_45px_rgba(15,23,42,0.12)] ring-1 ring-slate-200 sm:min-h-[160px] sm:p-4">
+          <div className="flex min-h-[120px] w-full max-w-4xl flex-col items-center justify-center gap-2 rounded-[28px] bg-white p-3 shadow-[0_20px_45px_rgba(15,23,42,0.12)] ring-1 ring-slate-200 sm:min-h-[160px] sm:p-4">
+            {wantsReveal && revealProgress < 1 && (
+              <div className="self-end rounded-full bg-slate-900/80 px-3 py-1 text-xs font-semibold text-white">
+                Revealing… {Math.min(30, Math.max(0, Math.ceil((1 - revealProgress) * 30)))}s
+              </div>
+            )}
             {renderMedia()}
           </div>
         )}

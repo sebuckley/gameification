@@ -94,7 +94,7 @@ export default function QuizPlay({ running, setRunning }) {
   };
 
   const finishQuiz = () => {
-    if (quizMode === "standard") {
+    if (quizMode === "standard" || quizMode === "media") {
       setQuizFinished(true);
       setShowPodium(false);
       return;
@@ -332,38 +332,37 @@ export default function QuizPlay({ running, setRunning }) {
           </div>
 
           {/* RIGHT-SIDE LEADERBOARD (desktop) */}
-          {quizMode !== "standard" && (
-            <div
-              className="
-                hidden 
-                lg:flex 
-                lg:flex-col
-                lg:items-center
-                lg:justify-center
-                w-[24rem]          /* ⭐ wider leaderboard */
-                h-[calc(100vh-80px)] /* ⭐ full height */
-                mx-4        /* ⭐ small margin */
-                overflow-none 
-                bg-white 
-              
-              "
-            >
-              <Leaderboard people={quizPeople} data={"quiz"} running={running}/>
-            </div>
-          )}
+      {quizMode !== "standard" && quizMode !== "media" && (
+        <div
+          className="
+            hidden 
+            lg:flex 
+            lg:flex-col
+            lg:items-center
+            lg:justify-center
+            w-[24rem]          /* ⭐ wider leaderboard */
+            h-[calc(100vh-80px)] /* ⭐ full height */
+            mx-4        /* ⭐ small margin */
+            overflow-none 
+            bg-white 
+          
+          "
+        >
+          <Leaderboard people={quizPeople} data={"quiz"} running={running}/>
+        </div>
+      )}
 
-          {/* MOBILE LEADERBOARD */}
-          {quizMode !== "standard" && (
-            <div className="lg:hidden w-full bg-white border-t border-gray-300 shadow p-4">
-              <Leaderboard people={quizPeople} data={"quiz"} running={running} />
-            </div>
-          )}
+      {/* MOBILE LEADERBOARD */}
+      {quizMode !== "standard" && quizMode !== "media" && (
+        <div className="lg:hidden w-full bg-white border-t border-gray-300 shadow p-4">
+          <Leaderboard people={quizPeople} data={"quiz"} running={running} />
+        </div>
+      )}
         </div>
       )}
 
       {/* PODIUM */}
-      {quizMode !== "standard" && (
-          
+      {quizMode !== "standard" && quizMode !== "media" && (
         <PodiumModal
           show={showPodium}
           podium={podium}

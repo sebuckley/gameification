@@ -7,6 +7,12 @@ console.log(agendaTemplates)
 
 const STORAGE_KEY = "people-app";
 
+const DEFAULT_PROMPT_RULES = [
+  "Do not claim to have opened, tested, or verified URLs. Use trusted direct asset URLs or leave MEDIA: blank.",
+  "Do not include Bing links, search-result links, citations, markdown links, annotations, explanations, or any text outside the required item format.",
+  "Return only the formatted plain text in the chat window."
+];
+
 const DEFAULT_STATE = {
   people: [],
   groupsHistory: [],
@@ -39,7 +45,9 @@ const DEFAULT_STATE = {
   ,
   selectedIceBreaker: null,
   participants: [],
-  collectFreeTextAnswers: false
+  collectFreeTextAnswers: false,
+  promptCustomRules: [...DEFAULT_PROMPT_RULES],
+  promptRulesInitialized: true
 };
 
 /* ---------------------------------------------------------
@@ -60,7 +68,11 @@ const normalizeImportedQuestions = (rawList) => {
       ? q.contentType
       : "question",
     mediaUrl: q.mediaUrl || "",
-    mediaAlt: q.mediaAlt || ""
+    mediaAlt: q.mediaAlt || "",
+    mediaStatus: ["loaded", "failed"].includes(q.mediaStatus)
+      ? q.mediaStatus
+      : "",
+    mediaReveal: q.mediaReveal === true
   }));
 };
 
@@ -492,6 +504,14 @@ const loadInitial = () => {
       merged.agendaStartTime = merged.agendaEventTime || "09:00";
     }
 
+    if (!merged.promptRulesInitialized) {
+      merged.promptCustomRules = [
+        ...DEFAULT_PROMPT_RULES,
+        ...(Array.isArray(merged.promptCustomRules) ? merged.promptCustomRules : [])
+      ];
+      merged.promptRulesInitialized = true;
+    }
+
     if (!Array.isArray(merged.events)) {
       merged.events = [];
     }
@@ -567,7 +587,18 @@ const save = (get) => {
   // Defer persistence so get() reads the committed Zustand state,
   // not the pre-update snapshot from inside the setter callback.
   queueMicrotask(() => {
-    const finalState = get();
+    const state = get();
+    // Always rebuild the active event snapshot here so any action that
+    // forgets to sync it can never persist stale questions/sets on reload.
+    const finalState = state.currentEventId
+      ? {
+          ...state,
+          events: upsertAgendaEvent(
+            state.events,
+            buildAgendaEventRecord(state, { id: state.currentEventId })
+          )
+        }
+      : state;
     localStorage.setItem(STORAGE_KEY, JSON.stringify(finalState));
   });
 };
@@ -1094,6 +1125,29 @@ const usePeople = create((set, get) => ({
       const updated = {
         ...state,
         quizSettings: { ...state.quizSettings, ...settings }
+      };
+      save(get);
+      return updated;
+    }),
+
+  addPromptCustomRule: (rule) =>
+    set((state) => {
+      const trimmed = (rule || "").trim();
+      if (!trimmed) return state;
+
+      const updated = {
+        ...state,
+        promptCustomRules: [...(state.promptCustomRules || []), trimmed]
+      };
+      save(get);
+      return updated;
+    }),
+
+  removePromptCustomRule: (index) =>
+    set((state) => {
+      const updated = {
+        ...state,
+        promptCustomRules: (state.promptCustomRules || []).filter((_, i) => i !== index)
       };
       save(get);
       return updated;

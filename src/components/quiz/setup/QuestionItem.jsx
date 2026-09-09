@@ -12,17 +12,23 @@ export function QuestionItem({
   removeQuestion
 }) {
   const [open, setOpen] = useState(false);
-  const [mediaPreviewError, setMediaPreviewError] = useState(false);
-  const [mediaPreviewLoaded, setMediaPreviewLoaded] = useState(false);
+  const [mediaPreviewError, setMediaPreviewError] = useState(q.mediaStatus === "failed");
+  const [mediaPreviewLoaded, setMediaPreviewLoaded] = useState(q.mediaStatus === "loaded");
   const imageSearchQuery = encodeURIComponent(
     q.mediaAlt || q.question || "football team logo"
   );
   const isMediaItem = q.contentType && q.contentType !== "question";
 
   useEffect(() => {
-    setMediaPreviewError(false);
-    setMediaPreviewLoaded(false);
-  }, [q.mediaUrl, q.contentType]);
+    setMediaPreviewError(q.mediaStatus === "failed");
+    setMediaPreviewLoaded(q.mediaStatus === "loaded");
+  }, [q.mediaUrl, q.contentType, q.mediaStatus]);
+
+  const setMediaStatus = (status) => {
+    setMediaPreviewError(status === "failed");
+    setMediaPreviewLoaded(status === "loaded");
+    updateSingleQuestion(q.id, "mediaStatus", status);
+  };
 
   return (
     <div
@@ -184,6 +190,19 @@ export function QuestionItem({
                 }
               />
 
+              {q.contentType === "image" && (
+                <label className="flex items-center gap-2 text-sm text-slate-700">
+                  <input
+                    type="checkbox"
+                    checked={q.mediaReveal === true}
+                    onChange={(e) =>
+                      updateSingleQuestion(q.id, "mediaReveal", e.target.checked)
+                    }
+                  />
+                  Blurred zoom reveal (30s) — image starts blurred and zoomed, then sharpens
+                </label>
+              )}
+
               {q.mediaUrl && (
                 <div className="space-y-2 rounded border border-slate-200 bg-white p-3">
                   <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
@@ -195,10 +214,9 @@ export function QuestionItem({
                       src={q.mediaUrl}
                       alt={q.mediaAlt || q.question || "Media preview"}
                       onLoad={() => {
-                        setMediaPreviewError(false);
-                        setMediaPreviewLoaded(true);
+                        setMediaStatus("loaded");
                       }}
-                      onError={() => setMediaPreviewError(true)}
+                      onError={() => setMediaStatus("failed")}
                       className="max-h-64 max-w-full rounded object-contain"
                     />
                   )}
@@ -208,10 +226,9 @@ export function QuestionItem({
                       controls
                       src={q.mediaUrl}
                       onCanPlay={() => {
-                        setMediaPreviewError(false);
-                        setMediaPreviewLoaded(true);
+                        setMediaStatus("loaded");
                       }}
-                      onError={() => setMediaPreviewError(true)}
+                      onError={() => setMediaStatus("failed")}
                       className="w-full"
                     />
                   )}
@@ -221,10 +238,9 @@ export function QuestionItem({
                       controls
                       src={q.mediaUrl}
                       onCanPlay={() => {
-                        setMediaPreviewError(false);
-                        setMediaPreviewLoaded(true);
+                        setMediaStatus("loaded");
                       }}
-                      onError={() => setMediaPreviewError(true)}
+                      onError={() => setMediaStatus("failed")}
                       className="max-h-64 max-w-full rounded"
                     />
                   )}

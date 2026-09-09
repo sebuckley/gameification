@@ -27,6 +27,9 @@ export default function QuizSetup() {
     updateQuestionSetQuizMode,
     quizSettings,
     updateQuizSettings,
+    promptCustomRules,
+    addPromptCustomRule,
+    removePromptCustomRule,
   } = usePeople();
 
   const [answer, setAnswer] = useState("");
@@ -35,6 +38,7 @@ export default function QuizSetup() {
   const [contentType, setContentType] = useState("question");
   const [mediaUrl, setMediaUrl] = useState("");
   const [mediaAlt, setMediaAlt] = useState("");
+  const [mediaReveal, setMediaReveal] = useState(false);
   const [options, setOptions] = useState(["", "", "", ""]);
   const [bulkText, setBulkText] = useState("");
   const [open, setOpen] = useState(false);
@@ -43,9 +47,11 @@ export default function QuizSetup() {
   const [promptTopic, setPromptTopic] = useState("");
   const [promptQuestionCount, setPromptQuestionCount] = useState(10);
   const [promptDifficulty, setPromptDifficulty] = useState("mixed");
-  const [promptFormat, setPromptFormat] = useState("standard-qa");
+  const [promptContentMode, setPromptContentMode] = useState("standard");
   const [promptMediaType, setPromptMediaType] = useState("mix");
+  const [promptAnswerStyle, setPromptAnswerStyle] = useState("qa");
   const [promptMediaSource, setPromptMediaSource] = useState("public");
+  const [newRuleDraft, setNewRuleDraft] = useState("");
   const [buildMode, setBuildMode] = useState("manual");
 
   const hasQuestions = questions.length > 0;
@@ -87,6 +93,7 @@ export default function QuizSetup() {
       contentType: activeSetMode === "media" ? contentType : "question",
       mediaUrl: activeSetMode === "media" ? mediaUrl.trim() : "",
       mediaAlt: activeSetMode === "media" ? mediaAlt.trim() : "",
+      mediaReveal: activeSetMode === "media" && contentType === "image" ? mediaReveal : false,
     });
 
     setQuestion("");
@@ -96,6 +103,7 @@ export default function QuizSetup() {
     setContentType("question");
     setMediaUrl("");
     setMediaAlt("");
+    setMediaReveal(false);
   };
 
   const handleMediaFile = (event) => {
@@ -181,7 +189,15 @@ export default function QuizSetup() {
 
   const updateSingleQuestion = (id, field, value) => {
     const updated = questions.map((q) =>
-      q.id === id ? { ...q, [field]: value } : q
+      q.id === id
+        ? {
+            ...q,
+            [field]: value,
+            ...(field === "mediaUrl" || field === "contentType"
+              ? { mediaStatus: "" }
+              : {})
+          }
+        : q
     );
     importQuestions(updated);
   };
@@ -217,36 +233,111 @@ export default function QuizSetup() {
     importQuestions(reordered);
   };
 
-  const promptFormatInstructions = {
-    "standard-qa": {
-      description: "standard text questions with typed answers",
-      rules: "- Use TYPE: question for every item.\n- Do not include O: lines.\n- Every item must include exactly one A: line."
-    },
-    "standard-multiple": {
-      description: "standard multiple-choice questions",
-      rules: "- Use TYPE: question for every item.\n- Include exactly 4 O: lines per item.\n- Make A: exactly match one of the O: options."
-    },
-    "mixed-media": {
-      description: `mixed media using ${
-        promptMediaType === "mix" ? "a mix of images, audio, and video" : promptMediaType
-      }${promptMediaType === "mix" ? " plus text questions" : " items"}`,
-      rules: `- Use TYPE: question for text questions, or TYPE: ${
-        promptMediaType === "mix" ? "image, audio, or video" : promptMediaType
-      } for media items.\n- ${promptMediaSource === "public"
-        ? "For media items, use a real direct browser-loadable URL on the MEDIA: line; never invent a local file path."
-        : "Leave MEDIA: blank and add the local file manually after importing; never invent a local file path."}\n- Use stable, well-known direct media URLs from trusted public hosts such as Wikimedia Commons. Prefer URLs that end in a media file extension or are documented direct asset URLs.\n- Do not claim that a URL was opened or verified. The app will check whether it loads in the media preview after import.\n- If you are unsure of the exact direct asset URL, leave MEDIA: blank instead of guessing.\n- MEDIA: must contain only the direct media URL and nothing else. Do not include Bing, Google, search-result, thumbnail, redirect, citation, markdown, parentheses, domain labels, or explanatory text.\n- Use ALT: for a short image description and leave it blank for audio or video.\n- ${
+  const applyBlurToAllImages = () => {
+    const updated = questions.map((q) =>
+      q.contentType === "image" ? { ...q, mediaReveal: true } : q
+    );
+    importQuestions(updated);
+  };
+
+  const imageQuestionCount = questions.filter((q) => q.contentType === "image").length;
+
+  const promptFormatInstructions = (() => {
+    const isMedia = promptContentMode === "media";
+    const isOptions = promptAnswerStyle === "options";
+
+    const description = [
+      isMedia ? "media items" : "standard text questions",
+      isOptions ? "with multiple-choice options" : "with a typed question and answer only",
+      isMedia
+        ? `using ${
+            promptMediaType === "mix"
+              ? "a mix of images, audio, and video plus text questions"
+              : `${promptMediaType} items`
+          }`
+        : null
+    ]
+      .filter(Boolean)
+      .join(" ");
+
+    const formatLines = ["Q: [question or prompt]"];
+    const keepLabels = ["Q:"];
+
+    if (isMedia) {
+      formatLines.push(
+        "TYPE: [question|image|audio|video]",
+        "MEDIA: [direct media URL only, or blank for question items]",
+        "ALT: [short image description, or blank]"
+      );
+      keepLabels.push("TYPE:", "MEDIA:", "ALT:");
+    }
+
+    if (isOptions) {
+      formatLines.push(
+        "O: [option 1]",
+        "O: [option 2]",
+        "O: [option 3]",
+        "O: [option 4, optional]"
+      );
+      keepLabels.push("O:");
+    }
+
+    formatLines.push("A: [correct answer]");
+    keepLabels.push("A:");
+
+    const rules = [`Keep the ${keepLabels.join(", ")} lines for every item.`];
+
+    if (isMedia) {
+      rules.push(
+        `Use TYPE: question for text questions, or TYPE: ${
+          promptMediaType === "mix" ? "image, audio, or video" : promptMediaType
+        } for media items.`
+      );
+      rules.push(
+        promptMediaSource === "public"
+          ? "For media items, use a real direct browser-loadable URL on the MEDIA: line; never invent a local file path."
+          : "Leave MEDIA: blank and add the local file manually after importing; never invent a local file path."
+      );
+      rules.push(
+        "Use stable, well-known direct media URLs from trusted public hosts such as Wikimedia Commons. Prefer URLs that end in a media file extension or are documented direct asset URLs."
+      );
+      rules.push("If you are unsure of the exact direct asset URL, leave MEDIA: blank instead of guessing.");
+      rules.push(
+        "MEDIA: must contain only the direct media URL and nothing else. Do not include Bing, Google, search-result, thumbnail, redirect, citation, markdown, parentheses, domain labels, or explanatory text."
+      );
+      rules.push("Use ALT: for a short image description and leave it blank for audio or video.");
+      rules.push(
         promptMediaType === "mix"
           ? "Include a balanced mixture of the requested media and text questions."
           : `Use ${promptMediaType} for every item; do not include other media types.`
-      }\n- O: lines are optional; when used, include at least 3 and make A: match one option.`
+      );
     }
-  }[promptFormat];
+
+    rules.push(
+      isOptions
+        ? "Include at least 3 O: lines for every item and make A: match one of the O: options exactly. Do not add TYPE, MEDIA, or ALT lines unless this is a media prompt."
+        : "Do not include O: lines. Every item must have only a typed A: answer, just a question and answer."
+    );
+
+    return {
+      description,
+      format: formatLines.join("\n"),
+      rules: rules.map((rule) => `- ${rule}`).join("\n")
+    };
+  })();
+
+  const customRulesText = (promptCustomRules || [])
+    .map((rule) => `- ${rule}`)
+    .join("\n");
 
   const generatedPrompt = `Create ${
     promptQuestionCount || 10
   } ${promptFormatInstructions.description} about ${
     promptTopic || "<TOPIC HERE>"
-  } at ${promptDifficulty} difficulty.\n\nFormat every item exactly as:\nQ: [question or prompt]\nTYPE: [question|image|audio|video]\nMEDIA: [direct media URL only, or blank for question items]\nALT: [short image description, or blank]\nO: [option 1, optional]\nO: [option 2, optional]\nO: [option 3, optional]\nO: [option 4, optional]\nA: [correct answer]\n\nRules:\n- Keep the Q:, TYPE:, MEDIA:, ALT:, and A: lines for every item.\n${promptFormatInstructions.rules}\n- Do not claim to have opened, tested, or verified URLs. Use trusted direct asset URLs or leave MEDIA: blank.\n- Do not include Bing links, search-result links, citations, markdown links, annotations, explanations, or any text outside the required item format.\n- Return only the formatted plain text in the chat window.`;
+  } at ${promptDifficulty} difficulty.\n\nFormat every item exactly as:\n${promptFormatInstructions.format}\n\nRules:\n${promptFormatInstructions.rules}${
+    customRulesText ? `\n${customRulesText}` : ""
+  }`;
+
 
   return (
     <div className="border rounded shadow bg-white">
@@ -384,40 +475,38 @@ export default function QuizSetup() {
               </button>
           </div>
 
-          {!hasQuestions && (
-            <div className="space-y-2">
-              <div className="text-sm font-semibold text-slate-800">Step 2: Choose build method</div>
-              <div className="text-xs text-slate-600">Pick how to create the first batch of questions for this set.</div>
-              <div className="flex flex-wrap gap-2">
-                <button
-                  onClick={() => setBuildMode("manual")}
-                  className={`px-3 py-2 rounded text-sm ${
-                    buildMode === "manual"
-                      ? "bg-indigo-600 text-white"
-                      : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                  }`}
-                >
-                  Manually Build Questions
-                </button>
-                <button
-                  onClick={() => setBuildMode("import")}
-                  className={`px-3 py-2 rounded text-sm ${
-                    buildMode === "import"
-                      ? "bg-indigo-600 text-white"
-                      : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                  }`}
-                >
-                  Import Questions
-                </button>
-              </div>
+          <div className="space-y-2">
+            <div className="text-sm font-semibold text-slate-800">Step 2: Choose build method</div>
+            <div className="text-xs text-slate-600">Manually add questions, or use the AI Prompt Builder to generate and import a batch at any time.</div>
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => setBuildMode("manual")}
+                className={`px-3 py-2 rounded text-sm ${
+                  buildMode === "manual"
+                    ? "bg-indigo-600 text-white"
+                    : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                }`}
+              >
+                Manually Build Questions
+              </button>
+              <button
+                onClick={() => setBuildMode("import")}
+                className={`px-3 py-2 rounded text-sm ${
+                  buildMode === "import"
+                    ? "bg-indigo-600 text-white"
+                    : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                }`}
+              >
+                AI Prompt Builder
+              </button>
             </div>
-          )}
+          </div>
 
           {hasQuestions && (
             <div className="space-y-2">
               <div className="text-sm font-semibold text-slate-800">Step 2: Review loaded questions</div>
               <div className="text-xs text-slate-600">
-                Loaded questions can be reordered by drag and drop.
+                Loaded questions can be reordered by drag and drop. To use the AI Prompt Builder again, delete all questions first.
               </div>
             </div>
           )}
@@ -467,6 +556,15 @@ export default function QuizSetup() {
                 >
                   Delete All Questions
                 </button>
+
+                {imageQuestionCount > 0 && (
+                  <button
+                    onClick={applyBlurToAllImages}
+                    className="px-4 py-2 bg-violet-600 text-white rounded-lg shadow hover:bg-violet-700"
+                  >
+                    Blur All Images ({imageQuestionCount})
+                  </button>
+                )}
               </div>
 
             </>
@@ -497,25 +595,33 @@ export default function QuizSetup() {
                     value={promptDifficulty}
                     onChange={(e) => setPromptDifficulty(e.target.value)}
                   >
-                    <option value="easy">Easy</option>
-                    <option value="medium">Medium</option>
-                    <option value="hard">Hard</option>
-                    <option value="mixed">Mixed</option>
+                    <option value="easy">Easy difficulty</option>
+                    <option value="medium">Medium difficulty</option>
+                    <option value="hard">Hard difficulty</option>
+                    <option value="mixed">Mixed difficulty</option>
                   </select>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                   <select
                     className="border rounded p-2 text-sm bg-white"
-                    value={promptFormat}
-                    onChange={(e) => setPromptFormat(e.target.value)}
+                    value={promptContentMode}
+                    onChange={(e) => setPromptContentMode(e.target.value)}
                   >
-                    <option value="standard-qa">Standard: Q&amp;A</option>
-                    <option value="standard-multiple">Standard: Multiple Choice</option>
-                    <option value="mixed-media">Mixed Media</option>
+                    <option value="standard">Standard</option>
+                    <option value="media">Media</option>
                   </select>
 
-                  {promptFormat === "mixed-media" && (
+                  <select
+                    className="border rounded p-2 text-sm bg-white"
+                    value={promptAnswerStyle}
+                    onChange={(e) => setPromptAnswerStyle(e.target.value)}
+                  >
+                    <option value="qa">Question and answer only</option>
+                    <option value="options">With options (multiple choice)</option>
+                  </select>
+
+                  {promptContentMode === "media" && (
                     <>
                       <select
                         className="border rounded p-2 text-sm bg-white"
@@ -537,6 +643,57 @@ export default function QuizSetup() {
                       </select>
                     </>
                   )}
+                </div>
+
+                <div className="space-y-2 rounded border border-indigo-200 bg-white p-3">
+                  <label className="text-sm font-medium text-indigo-900">Prompt rules</label>
+                  <p className="text-xs text-slate-500">
+                    These rules are appended to every generated prompt. Preset rules can be removed or added to, and everything here persists for you across sessions.
+                  </p>
+
+                  {(promptCustomRules || []).length > 0 && (
+                    <ul className="space-y-1">
+                      {promptCustomRules.map((rule, ruleIndex) => (
+                        <li
+                          key={`${rule}-${ruleIndex}`}
+                          className="flex items-center justify-between gap-2 rounded bg-slate-50 px-2 py-1 text-sm text-slate-700"
+                        >
+                          <span className="break-words">{rule}</span>
+                          <button
+                            onClick={() => removePromptCustomRule(ruleIndex)}
+                            className="shrink-0 px-2 py-1 text-xs text-red-600 hover:text-red-700"
+                          >
+                            Remove
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+
+                  <div className="flex flex-col gap-2 sm:flex-row">
+                    <input
+                      className="border rounded p-2 text-sm w-full"
+                      placeholder="e.g. Avoid questions about current events"
+                      value={newRuleDraft}
+                      onChange={(e) => setNewRuleDraft(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && newRuleDraft.trim()) {
+                          addPromptCustomRule(newRuleDraft);
+                          setNewRuleDraft("");
+                        }
+                      }}
+                    />
+                    <button
+                      onClick={() => {
+                        if (!newRuleDraft.trim()) return;
+                        addPromptCustomRule(newRuleDraft);
+                        setNewRuleDraft("");
+                      }}
+                      className="px-3 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 text-sm whitespace-nowrap"
+                    >
+                      Add Rule
+                    </button>
+                  </div>
                 </div>
 
                 {activeSetMode === "media" && (
@@ -573,6 +730,17 @@ export default function QuizSetup() {
                           value={mediaAlt}
                           onChange={(e) => setMediaAlt(e.target.value)}
                         />
+
+                        {contentType === "image" && (
+                          <label className="flex items-center gap-2 text-sm text-slate-700">
+                            <input
+                              type="checkbox"
+                              checked={mediaReveal}
+                              onChange={(e) => setMediaReveal(e.target.checked)}
+                            />
+                            Blurred zoom reveal (30s) — image starts blurred and zoomed, then sharpens
+                          </label>
+                        )}
                       </>
                     )}
                   </div>
