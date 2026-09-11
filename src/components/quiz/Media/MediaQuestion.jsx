@@ -1,8 +1,11 @@
 import React, { useEffect, useRef, useState } from "react";
 import CorrectAnswerModal from "../shared/CorrectAnswerModal";
 import WrongAnswerModal from "../shared/WrongAnswerModal";
+import usePeopleStore from "../../store/usePeopleStore";
+
 
 export default function MediaQuizQuestion({ index, total, currentQuestion, quizPeople, onAnswer, onNext }) {
+  
   const [selectedPerson, setSelectedPerson] = useState(null);
   const [selectedOption, setSelectedOption] = useState(null);
   const [locked, setLocked] = useState(false);
@@ -15,10 +18,13 @@ export default function MediaQuizQuestion({ index, total, currentQuestion, quizP
   const [revealProgress, setRevealProgress] = useState(0);
   const revealElapsedRef = useRef(0);
   const revealLastTickRef = useRef(null);
+  const quizSettings = usePeopleStore((state) => state.quizSettings);
+
+  console.log(quizSettings);
 
   const wantsReveal = Boolean(currentQuestion?.mediaReveal) && currentQuestion?.contentType === "image";
   const revealPaused = Boolean(selectedPerson) || locked;
-  const revealTotalMs = Math.max(1, Number(currentQuestion?.revealSeconds) || 20) * 1000;
+  const revealTotalMs = Math.max(1, Number(quizSettings?.revealSeconds) || 20) * 1000;
 
   useEffect(() => {
     setSelectedPerson(null);

@@ -20,9 +20,6 @@ export default function SpinnerPage() {
       `Answered at ${new Date().toLocaleString()}`
     );
 
-    if (autoRemove) {
-      removePerson(person.id);
-    }
 
     setWinner({ ...person, wonAt: Date.now() });
   };

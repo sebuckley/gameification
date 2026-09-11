@@ -21,7 +21,11 @@ export default function QuizPlay({ running, setRunning }) {
     setQuizMode
   } = usePeople();
 
-  const quizPeople = people.filter((p) => p?.inSpinner !== false);
+  console.log(people)
+
+ const quizPeople = people.filter(
+    (p) => p?.inSpinner !== false && p?.isPresenter !== true
+  );
   const hasPeople = quizPeople.length > 0;
 
   const [index, setIndex] = useState(0);
