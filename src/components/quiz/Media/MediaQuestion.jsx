@@ -20,8 +20,6 @@ export default function MediaQuizQuestion({ index, total, currentQuestion, quizP
   const revealLastTickRef = useRef(null);
   const quizSettings = usePeopleStore((state) => state.quizSettings);
 
-  console.log(quizSettings);
-
   const wantsReveal = Boolean(currentQuestion?.mediaReveal) && currentQuestion?.contentType === "image";
   const revealPaused = Boolean(selectedPerson) || locked;
   const revealTotalMs = Math.max(1, Number(quizSettings?.revealSeconds) || 20) * 1000;
@@ -100,16 +98,19 @@ export default function MediaQuizQuestion({ index, total, currentQuestion, quizP
       if (wantsReveal) {
         return (
           <div className="relative flex h-[32vh] w-full items-center justify-center overflow-hidden rounded-2xl bg-white shadow-lg sm:h-[36vh] lg:h-[40vh]">
-            <img
-              src={currentQuestion.mediaUrl}
-              alt={currentQuestion.mediaAlt || currentQuestion.question || "Quiz media"}
-              style={{
-                filter: `blur(${Math.round((1 - revealProgress) * 20)}px)`,
-                transform: `scale(${(1.35 - revealProgress * 0.35).toFixed(3)})`,
-                transition: "filter 120ms linear, transform 120ms linear"
-              }}
-              className="h-full w-full object-contain"
-            />
+<img
+  src={currentQuestion.mediaUrl}
+  alt={currentQuestion.mediaAlt || currentQuestion.question || "Quiz media"}
+  className="h-full w-full object-contain opacity-0"
+  onLoad={(e) => {
+    e.currentTarget.style.opacity = 1;
+  }}
+  style={{
+    filter: `blur(${Math.round((1 - revealProgress) * 20)}px)`,
+    transform: `scale(${(1.35 - revealProgress * 0.35).toFixed(3)})`,
+    transition: "filter 120ms linear, transform 120ms linear, opacity 0ms"
+  }}
+/>
           </div>
         );
       }

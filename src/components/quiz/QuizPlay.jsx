@@ -8,6 +8,7 @@ import GameShowEngine from "./gameshow/GameShowEngine";
 import MediaQuizEngine from "./media/MediaEngine";
 
 import PodiumModal from "./shared/PodiumModal";
+import PersonBadge from "./shared/PersonBadge";
 
 export default function QuizPlay({ running, setRunning }) {
   const {
@@ -21,7 +22,7 @@ export default function QuizPlay({ running, setRunning }) {
     setQuizMode
   } = usePeople();
 
-  console.log(people)
+
 
  const quizPeople = people.filter(
     (p) => p?.inSpinner !== false && p?.isPresenter !== true
@@ -34,6 +35,8 @@ export default function QuizPlay({ running, setRunning }) {
   const [showPodium, setShowPodium] = useState(false);
   const [podium, setPodium] = useState([]);
   const [quizFinished, setQuizFinished] = useState(false);
+
+  console.log(podium);
 
   const [timerDisplay, setTimerDisplay] = useState([]);
 
@@ -98,14 +101,16 @@ export default function QuizPlay({ running, setRunning }) {
   };
 
   const finishQuiz = () => {
+
+    const sorted = [...quizPeople].sort((a, b) => b.quizScore - a.quizScore);
+    setPodium(sorted.slice(0, 3));
+
     if (quizMode === "standard" || quizMode === "media") {
       setQuizFinished(true);
       setShowPodium(false);
       return;
     }
 
-    const sorted = [...quizPeople].sort((a, b) => b.quizScore - a.quizScore);
-    setPodium(sorted.slice(0, 3));
     setShowPodium(true);
   };
 
@@ -244,25 +249,73 @@ export default function QuizPlay({ running, setRunning }) {
         </div>
       )}
 
-      {running && quizFinished && !showPodium && (
-        <div className="flex h-[calc(100vh-80px)] w-full items-center justify-center px-4 py-8">
-          <div className="flex w-full max-w-xl flex-col items-center justify-center rounded-[32px] border border-indigo-200 bg-white p-10 text-center shadow-[0_30px_80px_rgba(79,70,229,0.12)]">
-            <div className="mb-3 text-xs font-bold uppercase tracking-[0.35em] text-indigo-500">
-              Complete
+{running && quizFinished && !showPodium && (
+  <div className="flex h-[calc(100vh-80px)] w-full items-center justify-center px-4 py-8">
+
+    <div className="flex w-full max-w-3xl flex-col items-center justify-center rounded-[32px] border border-indigo-200 bg-white p-10 text-center shadow-[0_30px_80px_rgba(79,70,229,0.12)] space-y-10">
+
+      {/* Podium Section */}
+      <div className="space-y-6">
+        <h3 className="text-2xl font-bold">Final Scores</h3>
+
+        <div className="flex justify-center gap-6 items-end">
+
+          {/* 2nd Place */}
+          {podium[1] && (
+            <div className="flex flex-col items-center space-y-2">
+              <PersonBadge person={podium[1]} />
+              <div className="font-semibold text-gray-700">2nd Place</div>
+              <div className="text-sm text-gray-600">{podium[1].quizScore} pts</div>
             </div>
-            <h2 className="text-4xl font-black text-slate-900">Quiz ended</h2>
-            <p className="mt-3 text-base text-slate-600">
-              The quiz has finished. You can close this screen when you&apos;re ready.
-            </p>
-            <button
-              onClick={closeQuiz}
-              className="mt-8 rounded-full bg-red-600 px-8 py-3 text-lg font-semibold text-white shadow-md transition hover:bg-red-700"
-            >
-              Close
-            </button>
-          </div>
+          )}
+
+          {/* 1st Place */}
+          {podium[0] && (
+            <div className="flex flex-col items-center space-y-2 border-4 border-yellow-400 rounded-xl p-2">
+              <PersonBadge person={podium[0]} />
+              <div className="font-bold text-yellow-600 text-xl">1st Place</div>
+              <div className="text-sm text-gray-600">{podium[0].quizScore} pts</div>
+            </div>
+          )}
+
+          {/* 3rd Place */}
+          {podium[2] && (
+            <div className="flex flex-col items-center space-y-2">
+              <PersonBadge person={podium[2]} />
+              <div className="font-semibold text-gray-700">3rd Place</div>
+              <div className="text-sm text-gray-600">{podium[2].quizScore} pts</div>
+            </div>
+          )}
         </div>
-      )}
+      </div>
+
+      {/* Divider */}
+      <div className="h-px w-full bg-slate-200"></div>
+
+      {/* Quiz Ended Section */}
+      <div className="flex flex-col items-center space-y-4">
+        <div className="text-xs font-bold uppercase tracking-[0.35em] text-indigo-500">
+          Complete
+        </div>
+
+        <h2 className="text-4xl font-black text-slate-900">Quiz ended</h2>
+
+        <p className="text-base text-slate-600">
+          The quiz has finished. You can close this screen when you’re ready.
+        </p>
+
+        <button
+          onClick={closeQuiz}
+          className="mt-4 rounded-full bg-red-600 px-8 py-3 text-lg font-semibold text-white shadow-md transition hover:bg-red-700"
+        >
+          Close
+        </button>
+      </div>
+
+    </div>
+  </div>
+)}
+
 
       {/* TRUE FULLSCREEN QUIZ AREA */}
       {running && currentQuestion && !showPodium && !quizFinished && (
