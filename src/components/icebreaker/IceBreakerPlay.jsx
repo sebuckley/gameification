@@ -262,169 +262,232 @@ export default function IceBreakerPlay({ running, setRunning }) {
     );
   }
 
-  return (
-    <div className="fixed inset-0 z-50 h-screen w-screen bg-white text-slate-900 overflow-hidden flex flex-col">
-      <div className="w-full bg-white border-b border-slate-200 px-4 py-3 flex flex-wrap items-center justify-between gap-3 shadow-sm">
-        <button
-          onClick={closeSession}
-          className="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-md text-sm font-semibold text-white"
-        >
-          Close Ice Breaker
-        </button>
+return (
+  <div className="fixed inset-0 z-50 h-screen w-screen bg-white text-slate-900 overflow-hidden flex flex-col">
 
-        <div className="flex-1 text-center">
-          <div className="text-sm font-medium text-slate-300">
-            {phase === "complete"
-              ? "Session complete"
-              : `Person ${Math.max((currentIndex ?? 0) + 1, 1)} / ${totalParticipants || 0}`}
-          </div>
-        </div>
+    {/* HEADER */}
+    <div className="w-full bg-white border-b border-purple-200 px-4 py-3 flex flex-wrap items-center justify-between gap-3 shadow-sm">
+      <button
+        onClick={closeSession}
+        className="px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-md text-sm font-semibold text-white"
+      >
+        Close Ice Breaker
+      </button>
 
-        <div className="flex items-center gap-4">
-          <div className="text-sm text-slate-300">Time elapsed</div>
-          <div className="text-sm font-medium text-slate-500">{formattedElapsed}</div>
+      <div className="flex-1 text-center">
+        <div className="text-sm font-medium text-purple-400">
+          {phase === "complete"
+            ? "Session complete"
+            : `Person ${Math.max((currentIndex ?? 0) + 1, 1)} / ${totalParticipants || 0}`}
         </div>
       </div>
 
-      <div className="flex-1 overflow-auto p-6 grid place-items-center">
-        <div className="w-full max-w-4xl mx-auto max-h-[calc(100vh-73px)] flex flex-col justify-center rounded-2xl border border-slate-200 bg-slate-50 shadow-2xl p-6 md:p-10">
-             <div className="text-center max-w-2xl mx-auto mb-8">
-            
-            {(isRandom || isPerformance) && (
-              <div className="text-sm text-slate-500 mt-2  mb-4">
-                <strong>{selectedIceBreaker?.label}</strong>
-                {isRandom ? " — Random Prompts" : isPerformance ? " — Performance" : ""}
-              </div>
-            )}
-
-            {phase !== "selecting" &&(<h1 className="text-3xl md:text-4xl font-bold mb-3">{promptText}</h1>)}
-          </div>
-
-          {currentParticipant && (
-            <div className="flex justify-center mb-8">
-              <div className="w-full max-w-md">
-                <PersonBadge person={currentParticipant} />
-              </div>
-            </div>
-          )}
-
-       
-          {phase === "selecting" && currentParticipant && (
-            <div className="flex flex-col items-center space-y-6">
-              <div className="rounded-2xl border border-slate-200 bg-white p-6 text-center shadow-sm w-full max-w-2xl">
-                 <div className="text-sm uppercase tracking-[0.2em] text-slate-400">Has been selected</div>
-                <div className="mt-2 text-sm text-slate-600">Press the button below to display the question and continue.</div>
-              </div>
-              <button
-                onClick={beginAnswer}
-                className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 rounded-md text-lg font-semibold text-white"
-              >
-                Time to answer
-              </button>
-            </div>
-          )}
-
-          {phase === "selecting" && !currentParticipant && (
-            <div className="rounded-2xl border border-amber-200 bg-amber-50 p-6 text-center shadow-sm w-full max-w-2xl">
-              <div className="text-sm font-semibold text-amber-900">No participant available</div>
-              <div className="mt-2 text-sm text-amber-700">Load participants and restart the session to continue.</div>
-            </div>
-          )}
-
-          {phase === "answering" && (
-            <div className="flex flex-col items-center space-y-6">
-              {(isSimple || isRandom) && collectFreeTextAnswers && <TextAnswerInput onSubmit={handleTextSubmit} />}
-              {isChoice && <ChoiceList options={selectedIceBreaker?.options ?? []} onSelect={handleChoiceSelect} />}
-              {(isPerformance || isSimple || isRandom || isReveal) && (
-                <button
-                  onClick={handleSkip}
-                  className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 rounded-md text-lg font-semibold text-white"
-                >
-                  Next Person
-                </button>
-              )}
-            </div>
-          )}
-
-          {phase === "reveal" && (
-            <div className="flex flex-col items-center justify-center space-y-6 w-full min-h-[20vh]">
-              <div className="text-xl bg-white text-gray-900 px-5 py-4 rounded-lg shadow w-full max-w-2xl text-center">
-                <strong>Answer:</strong>
-                <div className="mt-3 text-2xl font-semibold text-slate-900">{answer}</div>
-              </div>
-
-              <button
-                onClick={finishReveal}
-                className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 rounded-md text-lg font-semibold text-white"
-              >
-                Next Person
-              </button>
-            </div>
-          )}
-
-          {phase === "complete" && (
-            <div className="flex flex-col items-center space-y-6 w-full">
-              <h2 className="text-3xl font-bold">Session Complete</h2>
-
-              {!isChoice && sessionResponses.length > 0 && (
-                <div className="w-full max-w-2xl rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-                  <div className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500">
-                    Everyone&apos;s Answers
-                  </div>
-                  <div className="space-y-3">
-                    {sessionResponses.map((entry, index) => (
-                      <div key={`${entry.participant}-${index}`} className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-                        <div className="font-semibold text-gray-800">{entry.participant}</div>
-                        <div className="mt-1 text-sm text-slate-700">{entry.answer}</div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {isChoice && choiceSummary.length > 0 && (
-                <div className="w-full max-w-2xl rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-                  <div className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500">
-                    Choice Summary
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {choiceSummary.map(({ option, count, people }) => (
-                      <div key={option} className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-                        <div className="flex items-center justify-between gap-2">
-                          <div className="font-semibold text-gray-800">{option}</div>
-                          <span className="rounded-full bg-indigo-100 px-2.5 py-1 text-xs font-semibold text-indigo-700">
-                            {count}
-                          </span>
-                        </div>
-                        <div className="mt-2 flex flex-wrap gap-2">
-                          {people.length > 0 ? (
-                            people.map((person) => (
-                              <span key={`${option}-${person}`} className="rounded-full bg-slate-200 px-2 py-1 text-xs text-slate-700">
-                                {person}
-                              </span>
-                            ))
-                          ) : (
-                            <span className="text-xs text-slate-500">No selections yet</span>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              <button
-                onClick={closeSession}
-                className="px-6 py-3 bg-red-600 hover:bg-red-700 rounded-md text-lg font-semibold text-white"
-              >
-                Close
-              </button>
-            </div>
-          )}
-        </div>
+      <div className="flex items-center gap-4">
+        <div className="text-sm text-purple-400">Time elapsed</div>
+        <div className="text-sm font-medium text-purple-600">{formattedElapsed}</div>
       </div>
     </div>
-  );
+
+    {/* MAIN CONTENT AREA */}
+    <div className="flex-1 flex items-center justify-center px-6 py-10 overflow-hidden">
+
+      {/* SELECTING PHASE */}
+      {phase === "selecting" && currentParticipant && (
+        <div className="w-full max-w-xl rounded-3xl bg-white border border-purple-200 shadow-lg p-10 text-center">
+
+          {(isRandom || isPerformance) && (
+            <div className="text-sm text-purple-500 mb-4">
+              <strong>{selectedIceBreaker?.label}</strong>
+              {isRandom ? " — Random Prompts" : isPerformance ? " — Performance" : ""}
+            </div>
+          )}
+
+          <div className="text-sm font-semibold uppercase tracking-wide text-purple-600 mb-4">
+            You’ve Been Selected
+          </div>
+
+          <div className="flex flex-col items-center space-y-4">
+            <PersonBadge person={currentParticipant} size="xl" />
+
+            <h2 className="text-3xl font-bold text-slate-900">
+              {currentParticipant?.preferredName || currentParticipant?.fullName}
+            </h2>
+
+            <p className="text-slate-600 text-base max-w-sm">
+              It’s your turn to answer the next question.
+              Take a moment, then press the button below.
+            </p>
+
+            <button
+              onClick={beginAnswer}
+              className="mt-6 rounded-full bg-purple-600 hover:bg-purple-700 px-10 py-4 text-lg font-semibold text-white shadow-md transition"
+            >
+              Time to Answer →
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ANSWERING PHASE */}
+      {phase === "answering" && (
+        <div className="flex flex-col items-center justify-center text-center space-y-8 max-w-3xl w-full">
+
+          <h1 className="text-3xl md:text-4xl font-bold text-purple-700">
+            {promptText}
+          </h1>
+
+          {(isSimple || isRandom) && collectFreeTextAnswers && (
+            <div className="w-full flex justify-center">
+              <TextAnswerInput onSubmit={handleTextSubmit} />
+            </div>
+          )}
+
+          {isChoice && (
+            <div className="w-full flex justify-center">
+              <ChoiceList
+                options={selectedIceBreaker?.options ?? []}
+                onSelect={handleChoiceSelect}
+              />
+            </div>
+          )}
+
+          {(isPerformance || isSimple || isRandom || isReveal) && (
+            <button
+              onClick={handleSkip}
+              className="px-10 py-4 bg-purple-600 hover:bg-purple-700 rounded-full text-lg font-semibold text-white shadow-md transition"
+            >
+              Next Person →
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* REVEAL PHASE — FUNKY CARD STAYS FUNKY */}
+      {phase === "reveal" && (
+        <div className="flex flex-col items-center justify-center space-y-8 w-full max-w-2xl">
+
+          <div className="
+            w-full 
+            rounded-3xl 
+            bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500
+            text-white 
+            p-8 
+            shadow-xl 
+            text-center 
+          ">
+            <div className="text-lg font-semibold tracking-wide opacity-90">
+              ✨ Reveal Time ✨
+            </div>
+
+            <div className="mt-4 text-4xl font-extrabold drop-shadow-md">
+              {answer}
+            </div>
+
+            <div className="mt-2 text-sm opacity-80">
+              Nice one!
+            </div>
+          </div>
+
+          <button
+            onClick={finishReveal}
+            className="px-10 py-4 bg-purple-600 hover:bg-purple-700 rounded-full text-lg font-semibold text-white shadow-md transition transform hover:scale-105"
+          >
+            Next Person →
+          </button>
+        </div>
+      )}
+
+      {/* COMPLETE PHASE */}
+      {phase === "complete" && (
+        <div className="flex flex-col items-center space-y-6 w-full max-w-2xl">
+
+          <h2 className="text-3xl font-bold text-purple-700">Icebreaker Complete 🎉</h2>
+
+          {/* SIMPLE ANSWERS */}
+          {!isChoice && sessionResponses.length > 0 && (
+            <div className="w-full rounded-xl border border-purple-200 bg-white p-4 shadow-md">
+              <div className="mb-3 text-sm font-semibold uppercase tracking-wide text-purple-600">
+                Everyone’s Answers
+              </div>
+
+              <div className="space-y-3">
+                {sessionResponses.map((entry, index) => (
+                  <div key={`${entry.participant}-${index}`} className="rounded-lg border border-purple-100 bg-purple-50 p-3">
+                    <div className="font-semibold text-purple-800">{entry.participant}</div>
+                    <div className="mt-1 text-sm text-purple-700">{entry.answer}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* CHOICE SUMMARY */}
+          {isChoice && choiceSummary.length > 0 && (
+            <div className="w-full rounded-xl border border-purple-200 bg-white p-4 shadow-md">
+
+              <div className="mb-3 text-sm font-semibold uppercase tracking-wide text-purple-600">
+                Choice Summary
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {choiceSummary
+                  .filter(item => item.count > 0)
+                  .map(({ option, count, people }) => (
+                    <div key={option} className="rounded-lg border border-purple-100 bg-purple-50 p-3">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="font-semibold text-purple-800">{option}</div>
+                        <span className="rounded-full bg-purple-200 px-2.5 py-1 text-xs font-semibold text-purple-900">
+                          {count}
+                        </span>
+                      </div>
+
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {people.map((person) => (
+                          <span
+                            key={`${option}-${person}`}
+                            className="rounded-full bg-purple-300 px-2 py-1 text-xs text-purple-900"
+                          >
+                            {person}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+              </div>
+
+              {choiceSummary.some(item => item.count === 0) && (
+                <div className="mt-6">
+                  <div className="mb-2 text-sm font-semibold uppercase tracking-wide text-purple-600">
+                    Superpowers Not Chosen
+                  </div>
+
+                  <ul className="list-disc list-inside text-sm text-purple-700">
+                    {choiceSummary
+                      .filter(item => item.count === 0)
+                      .map(item => (
+                        <li key={item.option}>{item.option}</li>
+                      ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
+
+          <button
+            onClick={closeSession}
+            className="px-10 py-4 bg-red-600 hover:bg-red-700 rounded-full text-lg font-semibold text-white shadow-md transition"
+          >
+            Close
+          </button>
+        </div>
+      )}
+
+    </div>
+  </div>
+);
+
+
+
 }
 
 function TextAnswerInput({ onSubmit }) {
