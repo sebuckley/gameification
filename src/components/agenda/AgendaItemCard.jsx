@@ -7,6 +7,7 @@ import {
   agendaTypes
 } from "../../data/AgendaTypes";
 import ToggleButton from "../shared/Toggle";
+import { hashFile, saveFile } from "../store/db";   // your IndexedDB helpers
 
 export default function AgendaItemCard({
   item,
@@ -22,6 +23,11 @@ export default function AgendaItemCard({
   const [search, setSearch] = useState("");
   const [newArtefactName, setNewArtefactName] = useState("");
   const [newArtefactUrl, setNewArtefactUrl] = useState("");
+  const [newArtefactFile, setNewArtefactFile] = useState(null);
+  const [newArtefactType, setNewArtefactType] = useState("");
+  const [newArtefactPage, setNewArtefactPage] = useState(1);
+  const [newArtefactFrom, setNewArtefactFrom] = useState(1);
+  const [newArtefactTo, setNewArtefactTo] = useState(1);
   const [newNote, setNewNote] = useState("");
   const [showNotes, setShowNotes] = useState(false);
 
@@ -70,29 +76,78 @@ export default function AgendaItemCard({
     t.label.toLowerCase().includes(search.toLowerCase())
   );
 
-  // Add artefact
-  const addArtefact = () => {
-    if (!newArtefactName.trim() || !newArtefactUrl.trim()) return;
+// Add artefact
+const addArtefact = async () => {
+  if (!newArtefactName.trim() || !newArtefactType.trim()) return;
 
-    const updated = [
-      ...(item.artefacts || []),
-      { name: newArtefactName.trim(), url: newArtefactUrl.trim() }
-    ];
+  let newEntry = null;
 
-    updateAgendaItem(item.id, { artefacts: updated });
+  // FILE‑BACKED PDF (slides)
+  if (newArtefactType === "pdf-upload") {
+    if (!newArtefactFile) {
+      alert("Please upload a PDF file for the slides.");
+      return;
+    }
 
-    setNewArtefactName("");
-    setNewArtefactUrl("");
-  };
+    // 1️⃣ Hash the file (stable identity across sessions)
+    const hash = await hashFile(newArtefactFile);
 
-  // Reuse artefact
-  const reuseArtefact = (artefact) => {
-    const updated = [
-      ...(item.artefacts || []),
-      { name: artefact.name, url: artefact.url }
-    ];
-    updateAgendaItem(item.id, { artefacts: updated });
-  };
+    // 2️⃣ Store the file permanently in IndexedDB
+    await saveFile(hash, newArtefactFile);
+
+    // 3️⃣ Store only metadata + hash in agenda
+    newEntry = {
+      name: newArtefactName.trim(),
+      type: "pdf-upload",
+      hash,                 // used to reload file later
+      page: newArtefactPage
+    };
+  }
+
+  // URL‑BASED ARTEFACTS
+  else {
+    if (!newArtefactUrl.trim()) {
+      alert("Please enter a URL for this artefact.");
+      return;
+    }
+
+    newEntry = {
+      name: newArtefactName.trim(),
+      type: newArtefactType.trim(),
+      url: newArtefactUrl.trim(),
+      page: newArtefactPage,
+    };
+  }
+
+  // Add to agenda
+  const updated = [...(item.artefacts || []), newEntry];
+  updateAgendaItem(item.id, { artefacts: updated });
+
+  // Reset UI fields
+  setNewArtefactName("");
+  setNewArtefactUrl("");
+  setNewArtefactType("");
+  setNewArtefactPage(1);
+  setNewArtefactFile(null);
+};
+
+
+
+const reuseArtefact = (artefact) => {
+  const updated = [
+    ...(item.artefacts || []),
+    {
+      name: artefact.name,
+      url: artefact.url || null,
+      type: artefact.type,
+      hash: artefact.hash || null,
+      from: artefact.from ?? artefact.page ?? 1,
+      to: artefact.to ?? artefact.page ?? 1
+    }
+  ];
+
+  updateAgendaItem(item.id, { artefacts: updated });
+};
 
   // Add timestamped note
   const addNote = () => {
@@ -112,13 +167,17 @@ export default function AgendaItemCard({
 
   const latestNote = item.notes?.length ? item.notes[item.notes.length - 1] : null;
   const previousNotes = item.notes?.length > 1 ? item.notes.slice(0, -1) : [];
-  const currentArtefactKeys = new Set(
-    (item.artefacts || []).map((a) => `${(a?.name || "").trim().toLowerCase()}::${(a?.url || "").trim().toLowerCase()}`)
-  );
-  const reusableArtefacts = allArtefacts.filter((a) => {
-    const key = `${(a?.name || "").trim().toLowerCase()}::${(a?.url || "").trim().toLowerCase()}`;
-    return !currentArtefactKeys.has(key);
-  });
+const currentArtefactKeys = new Set(
+  (item.artefacts || []).map((a) =>
+    `${(a?.name || "").trim().toLowerCase()}::${(a?.url || "").trim().toLowerCase()}::${(a?.hash || "").trim().toLowerCase()}`
+  )
+);
+
+const reusableArtefacts = allArtefacts.filter((a) => {
+  const key = `${(a?.name || "").trim().toLowerCase()}::${(a?.url || "").trim().toLowerCase()}::${(a?.hash || "").trim().toLowerCase()}`;
+  return !currentArtefactKeys.has(key);
+});
+
 
   return (
     <div
@@ -263,6 +322,17 @@ export default function AgendaItemCard({
             )}
           </div>
 
+
+           {/* Description */}
+          <div>
+            <textarea
+              className="border rounded p-3 w-full text-sm"
+              placeholder="Add a description for this agenda item"
+              value={item.description || ""}
+              onChange={(e) => updateAgendaItem(item.id, { description: e.target.value })}
+            />
+          </div>
+
           {/* Minutes + Presenter */}
           <div className="flex flex-col md:flex-row gap-3">
 
@@ -332,232 +402,283 @@ export default function AgendaItemCard({
             )}
           </div>
 
-<div className="space-y-2">
-  <div className="text-sm font-semibold text-gray-700">Group setup</div>
+          {/* Group Setup */}
+          <div className="space-y-2">
+            <div className="text-sm font-semibold text-gray-700">Group setup</div>
 
-  <div className="flex flex-wrap items-center gap-3">
+            <div className="flex flex-wrap items-center gap-3">
 
-    {/* LEFT: Toggle */}
-    <div className="flex items-center gap-2">
-      <ToggleButton
-        value={!!item.enableGroupSetup}
-        onChange={(newValue) =>
-          updateAgendaItem(item.id, {
-            enableGroupSetup: newValue,
-            groupCount: newValue
-              ? Math.max(1, Number(item.groupCount) || 2)
-              : item.groupCount
-          })
-        }
-        onLabel="Yes"
-        offLabel="No"
-        onBg="bg-green-600"
-        onHoverBg="hover:bg-green-700"
-        onBorder="border-green-600"
-        offBg="bg-gray-600"
-        offBorder="border-gray-500"
-      />
-    </div>
+              {/* LEFT: Toggle */}
+              <div className="flex items-center gap-2">
+                <ToggleButton
+                  value={!!item.enableGroupSetup}
+                  onChange={(newValue) =>
+                    updateAgendaItem(item.id, {
+                      enableGroupSetup: newValue,
+                      groupCount: newValue
+                        ? Math.max(1, Number(item.groupCount) || 2)
+                        : item.groupCount
+                    })
+                  }
+                  onLabel="Yes"
+                  offLabel="No"
+                  onBg="bg-green-600"
+                  onHoverBg="hover:bg-green-700"
+                  onBorder="border-green-600"
+                  offBg="bg-gray-600"
+                  offBorder="border-gray-500"
+                />
+              </div>
 
-    {/* RIGHT: Always same height, content hidden when OFF */}
-    <div className="flex items-center gap-2 min-h-[40px]">
+              {/* RIGHT: Always same height, content hidden when OFF */}
+              <div className="flex items-center gap-2 min-h-[40px]">
 
-      {item.enableGroupSetup ? (
-        <>
-          <span className="text-sm text-gray-700">Number of groups</span>
-          <input
-            type="number"
-            min={1}
-            className={`border rounded p-2 text-sm w-24 ${
-              isMissingGroupCount ? "border-red-500 bg-red-50" : ""
-            }`}
-            value={Math.max(1, Number(item.groupCount) || 1)}
-            onChange={(e) =>
-              updateAgendaItem(item.id, {
-                groupCount: Math.max(1, Number(e.target.value) || 1),
-              })
-            }
-          />
-        </>
-      ) : (
-        // Invisible placeholder to keep height stable
-        <div className="invisible flex items-center gap-2">
-          <span className="text-sm">Number of groups</span>
-          <input className="border rounded p-2 text-sm w-24" />
-        </div>
-      )}
+                {item.enableGroupSetup ? (
+                  <>
+                    <span className="text-sm text-gray-700">Number of groups</span>
+                    <input
+                      type="number"
+                      min={1}
+                      className={`border rounded p-2 text-sm w-24 ${
+                        isMissingGroupCount ? "border-red-500 bg-red-50" : ""
+                      }`}
+                      value={Math.max(1, Number(item.groupCount) || 1)}
+                      onChange={(e) =>
+                        updateAgendaItem(item.id, {
+                          groupCount: Math.max(1, Number(e.target.value) || 1),
+                        })
+                      }
+                    />
+                  </>
+                ) : (
+                  // Invisible placeholder to keep height stable
+                  <div className="invisible flex items-center gap-2">
+                    <span className="text-sm">Number of groups</span>
+                    <input className="border rounded p-2 text-sm w-24" />
+                  </div>
+                )}
 
-    </div>
+              </div>
+            </div>
+          </div>
+
+{/* Artefacts Section */}
+<div className="space-y-6">
+
+  {/* Header */}
+  <div>
+    <h3 className="text-sm font-semibold text-gray-700">Documents & Artefacts</h3>
+    <p className="text-xs text-gray-500">Slides, links, worksheets, exercises</p>
   </div>
-</div>
 
-          {/* Artefacts */}
-          {(isQuizItem || isIceBreakerItem) && (
-            <div className="space-y-3">
-              <div className="text-sm font-semibold text-gray-700">Linked set</div>
+  {/* Existing Artefacts */}
+  {(item.artefacts || []).length > 0 && (
+    <div className="space-y-3">
+      {item.artefacts.map((a, idx) => (
+        <div
+          key={idx}
+          className="border rounded-lg bg-white p-4 shadow-sm flex justify-between items-start"
+        >
+          {/* Left side */}
+          <div className="flex flex-col gap-2 text-sm w-full">
 
-              {isQuizItem && (
-                <>
-                  <select
-                    className={`border rounded p-3 text-sm w-full ${
-                      isMissingSetLink ? "border-red-500 bg-red-50" : ""
-                    }`}
-                    value={item.linkedQuestionSetId || ""}
-                    onChange={(e) =>
-                      updateAgendaItem(item.id, {
-                        linkedQuestionSetId: e.target.value || null,
-                      })
-                    }
-                  >
-                    <option value="">Select question set...</option>
-                    {questionSets.map((setItem) => (
-                      <option key={setItem.id} value={setItem.id}>
-                        {setItem.name}
-                      </option>
-                    ))}
-                  </select>
-
-                  {linkedQuestionSet && (
-                    <div className="rounded border border-blue-200 bg-blue-50 p-3 text-sm text-blue-900">
-                      Linked to {linkedQuestionSet.name}
-                      {!hasQuizSetQuestions && (
-                        <span className="block mt-1 text-blue-700">Add questions to this set to enable the set artefact link.</span>
-                      )}
-                    </div>
-                  )}
-
-                  {item.linkedQuestionSetId && (
-                    <button
-                      className="px-3 py-2 bg-gray-200 text-gray-700 rounded text-xs hover:bg-gray-300"
-                      onClick={() => updateAgendaItem(item.id, { linkedQuestionSetId: null, artefacts: [] })}
-                    >
-                      Unlink Question Set
-                    </button>
-                  )}
-                </>
-              )}
-
-              {isIceBreakerItem && (
-                <>
-                  <select
-                    className={`border rounded p-3 text-sm w-full ${
-                      isMissingSetLink ? "border-red-500 bg-red-50" : ""
-                    }`}
-                    value={item.linkedIceBreakerSetId || ""}
-                    onChange={(e) =>
-                      updateAgendaItem(item.id, {
-                        linkedIceBreakerSetId: e.target.value || null,
-                      })
-                    }
-                  >
-                    <option value="">Select icebreaker set...</option>
-                    {iceBreakerSets.map((setItem) => (
-                      <option key={setItem.id} value={setItem.id}>
-                        {setItem.name}
-                      </option>
-                    ))}
-                  </select>
-
-                  {linkedIceBreakerSet && (
-                    <div className="rounded border border-blue-200 bg-blue-50 p-3 text-sm text-blue-900">
-                      Linked to {linkedIceBreakerSet.name}
-                      {!hasIceBreakerSelected && (
-                        <span className="block mt-1 text-blue-700">Choose an icebreaker prompt in this set to enable the set artefact link.</span>
-                      )}
-                    </div>
-                  )}
-
-                  {item.linkedIceBreakerSetId && (
-                    <button
-                      className="px-3 py-2 bg-gray-200 text-gray-700 rounded text-xs hover:bg-gray-300"
-                      onClick={() => updateAgendaItem(item.id, { linkedIceBreakerSetId: null, artefacts: [] })}
-                    >
-                      Unlink Icebreaker Set
-                    </button>
-                  )}
-                </>
-              )}
-            </div>
-          )}
-
-          <div className="space-y-3">
-            <div className="text-sm font-semibold text-gray-700">
-              Documents (links, slides, exercises)
+            {/* Name + Icon */}
+            <div className="flex items-center gap-2 font-medium text-gray-800">
+              <FileText size={16} />
+              <span>{a.name}</span>
             </div>
 
-            {(item.artefacts || []).map((a, idx) => (
-              <div
-                key={idx}
-                className="flex items-center justify-between border rounded p-2 bg-gray-50"
-              >
-                <a
-                  href={a.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-2 text-blue-600 underline text-sm"
-                  title={a.name}
-                >
-                  <FileText size={16} />
-                  <span>{a.name}</span>
-                </a>
-                <button
-                  className="text-xs text-red-600"
-                  onClick={() => {
-                    const updated = item.artefacts.filter((_, i) => i !== idx);
+            {/* PDF Range Editor */}
+            {a.type === "pdf-upload" && (
+              <div className="flex items-center gap-3 text-xs">
+                <span className="text-gray-600">Slides:</span>
+
+                <input
+                  type="number"
+                  className="border rounded p-1 w-16"
+                  value={a.from || 1}
+                  onChange={(e) => {
+                    const updated = [...item.artefacts];
+                    updated[idx] = { ...a, from: Number(e.target.value) };
                     updateAgendaItem(item.id, { artefacts: updated });
                   }}
-                >
-                  Remove
-                </button>
+                />
+
+                <span className="text-gray-600">to</span>
+
+                <input
+                  type="number"
+                  className="border rounded p-1 w-16"
+                  value={a.to || a.from || 1}
+                  onChange={(e) => {
+                    const updated = [...item.artefacts];
+                    updated[idx] = { ...a, to: Number(e.target.value) };
+                    updateAgendaItem(item.id, { artefacts: updated });
+                  }}
+                />
               </div>
-            ))}
+            )}
 
-            {/* Add new document URL */}
-            <div className="flex flex-col md:flex-row gap-3">
-              <input
-                className={`border rounded p-3 text-sm w-full ${
-                  isMissingArtefact ? "border-red-500 bg-red-50" : ""
-                }`}
-                placeholder="Friendly name (e.g., Workshop Slides)"
-                value={newArtefactName}
-                onChange={(e) => setNewArtefactName(e.target.value)}
-              />
-
-              <input
-                className={`border rounded p-3 text-sm w-full ${
-                  isMissingArtefact ? "border-red-500 bg-red-50" : ""
-                }`}
-                placeholder="Paste document URL"
-                value={newArtefactUrl}
-                onChange={(e) => setNewArtefactUrl(e.target.value)}
-              />
-
-              <button
-                className="px-3 py-2 bg-indigo-600 text-white rounded text-xs hover:bg-indigo-700"
-                onClick={addArtefact}
+            {/* URL Display */}
+            {a.url && (
+              <a
+                href={a.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-600 underline text-xs"
               >
-                Add
-              </button>
-            </div>
+                Open document
+              </a>
+            )}
 
-            {/* Reuse document URL */}
-            {reusableArtefacts.length > 0 && (
-              <div className="space-y-2">
-                <div className="text-xs text-gray-600">Reuse existing:</div>
-                <div className="flex flex-wrap gap-2">
-                  {reusableArtefacts.map((a, idx) => (
-                    <button
-                      key={idx}
-                      className="px-2 py-1 text-xs bg-gray-200 rounded hover:bg-gray-300"
-                      onClick={() => reuseArtefact(a)}
-                    >
-                      {a.name}
-                    </button>
-                  ))}
-                </div>
+            {/* Hash Display */}
+            {a.hash && (
+              <div className="text-xs text-gray-500">
+                Hash: {a.hash.slice(0, 6)}…{a.hash.slice(-4)}
               </div>
             )}
           </div>
+
+          {/* Remove Button */}
+          <button
+            className="text-xs text-red-600 hover:text-red-800 ml-4"
+            onClick={() => {
+              const updated = item.artefacts.filter((_, i) => i !== idx);
+              updateAgendaItem(item.id, { artefacts: updated });
+            }}
+          >
+            Remove
+          </button>
+        </div>
+      ))}
+    </div>
+  )}
+
+  {/* Add New Artefact */}
+<div className="border rounded-lg bg-white p-4 shadow-sm space-y-3">
+
+  <h4 className="text-sm font-semibold text-gray-700">Add new artefact</h4>
+
+  <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+
+    {/* Friendly name */}
+    <input
+      className={`border rounded p-3 text-sm w-full ${
+        isMissingArtefact ? "border-red-500 bg-red-50" : ""
+      }`}
+      placeholder="Friendly name"
+      value={newArtefactName}
+      onChange={(e) => setNewArtefactName(e.target.value)}
+    />
+
+    {/* Document type */}
+    <select
+      className={`border rounded p-3 text-sm w-full ${
+        isMissingArtefact ? "border-red-500 bg-red-50" : ""
+      }`}
+      value={newArtefactType}
+      onChange={(e) => setNewArtefactType(e.target.value)}
+    >
+      <option value="">Document type</option>
+      <option value="pdf-upload">Upload Slides (PDF)</option>
+      <option value="pdf">PDF from URL</option>
+      <option value="google-slides">Google Slides</option>
+      <option value="miro">Miro Board</option>
+      <option value="worksheet">Worksheet</option>
+      <option value="image">Image</option>
+      <option value="link">General Link</option>
+    </select>
+
+    {/* FROM + TO (only for slide-based PDFs) */}
+    {newArtefactType === "pdf-upload" ? (
+      <div className="flex items-center gap-2 w-full">
+        <input
+          type="number"
+          className={`border rounded p-3 text-sm w-full ${
+            isMissingArtefact ? "border-red-500 bg-red-50" : ""
+          }`}
+          placeholder="From"
+          value={newArtefactFrom}
+          onChange={(e) => setNewArtefactFrom(Number(e.target.value))}
+        />
+
+        <input
+          type="number"
+          className={`border rounded p-3 text-sm w-full ${
+            isMissingArtefact ? "border-red-500 bg-red-50" : ""
+          }`}
+          placeholder="To"
+          value={newArtefactTo}
+          onChange={(e) => setNewArtefactTo(Number(e.target.value))}
+        />
+      </div>
+    ) : (
+      /* Non-PDF artefacts still use single page number */
+      <input
+        type="number"
+        className={`border rounded p-3 text-sm w-full ${
+          isMissingArtefact ? "border-red-500 bg-red-50" : ""
+        }`}
+        placeholder="Page #"
+        value={newArtefactPage}
+        onChange={(e) => setNewArtefactPage(Number(e.target.value))}
+      />
+    )}
+
+    {/* File upload OR URL */}
+    {newArtefactType === "pdf-upload" ? (
+      <input
+        type="file"
+        accept=".pdf"
+        className="border rounded p-3 text-sm w-full"
+        onChange={(e) => setNewArtefactFile(e.target.files[0])}
+      />
+    ) : (
+      <input
+        className={`border rounded p-3 text-sm w-full ${
+          isMissingArtefact ? "border-red-500 bg-red-50" : ""
+        }`}
+        placeholder="Paste document URL"
+        value={newArtefactUrl}
+        onChange={(e) => setNewArtefactUrl(e.target.value)}
+      />
+    )}
+  </div>
+
+  <button
+    className="px-4 py-2 bg-indigo-600 text-white rounded text-xs hover:bg-indigo-700"
+    onClick={addArtefact}
+  >
+    Add Artefact
+  </button>
+</div>
+
+
+  {/* Reuse Existing */}
+  {reusableArtefacts.length > 0 && (
+    <div className="border rounded-lg bg-white p-4 shadow-sm space-y-2">
+      <div className="text-xs text-gray-600">Reuse existing artefact:</div>
+
+      <div className="flex flex-wrap gap-2">
+        {reusableArtefacts.map((a, idx) => {
+          const shortHash = a.hash ? a.hash.slice(0, 6) + "…" + a.hash.slice(-4) : "";
+          return (
+            <button
+              key={idx}
+              className="px-3 py-1 text-xs bg-gray-100 border rounded hover:bg-gray-200"
+              onClick={() => reuseArtefact(a)}
+            >
+              {a.name} {shortHash && <span className="text-gray-500">({shortHash})</span>}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  )}
+
+</div>
+
+  
 
           {/* Notes */}
           <div className="space-y-3">

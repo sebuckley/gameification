@@ -4,6 +4,7 @@ import {
   Droppable,
   Draggable,
 } from "@hello-pangea/dnd";
+import { v4 as uuidv4 } from "uuid";
 
 export default function GroupHistory({ onEdit }) {
   const groupsHistory = usePeople((s) => s.groupsHistory);
@@ -13,7 +14,7 @@ export default function GroupHistory({ onEdit }) {
   // Add stable IDs to each history entry
   const historyWithIds = groupsHistory.map((entry) => ({
     ...entry,
-    _id: entry._id || crypto.randomUUID(),
+    _id: entry._id || uuidv4(),
   }));
 
   const onDragEnd = (result) => {

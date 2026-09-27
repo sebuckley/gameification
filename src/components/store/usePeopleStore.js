@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { agendaTemplates } from "../../data/AgendaTemplates";
 import { agendaTypes, getAgendaDefaultMinutes } from "../../data/AgendaTypes";
 import { nanoid } from "nanoid";
+import { v4 as uuidv4 } from "uuid";
 
 console.log(agendaTemplates)
 
@@ -41,7 +42,7 @@ const DEFAULT_STATE = {
     updatedAt: null,
   },
   quizMode: "standard",
-  quizSettings: { correctPoints: 1, wrongPoints: -1, revealSeconds: 20 }
+  quizSettings: { correctPoints: 1, wrongPoints: -1, revealSeconds: 10 }
   ,
   selectedIceBreaker: null,
   participants: [],
@@ -81,7 +82,7 @@ const normalizeQuestionSets = (rawSets, fallbackQuestions = []) => {
     ? rawSets
         .filter(Boolean)
         .map((setItem, index) => ({
-          id: setItem.id || crypto.randomUUID(),
+          id: setItem.id || uuidv4(),
           name: (setItem.name || `Question Set ${index + 1}`).trim(),
           agendaQuizType: isQuizAgendaType(setItem.agendaQuizType) ? setItem.agendaQuizType : "quiz",
           quizMode: setItem.quizMode || DEFAULT_STATE.quizMode,
@@ -94,7 +95,7 @@ const normalizeQuestionSets = (rawSets, fallbackQuestions = []) => {
 
   return [
     {
-      id: crypto.randomUUID(),
+      id: uuidv4(),
       name: "Question Set 1",
       agendaQuizType: "quiz",
       quizMode: DEFAULT_STATE.quizMode,
@@ -108,7 +109,7 @@ const normalizeIceBreakerSets = (rawSets, fallbackSelected = null) => {
     ? rawSets
         .filter(Boolean)
         .map((setItem, index) => ({
-          id: setItem.id || crypto.randomUUID(),
+          id: setItem.id || uuidv4(),
           name: (setItem.name || `Icebreaker Set ${index + 1}`).trim(),
           selectedIceBreaker: setItem.selectedIceBreaker || null,
         }))
@@ -118,7 +119,7 @@ const normalizeIceBreakerSets = (rawSets, fallbackSelected = null) => {
 
   return [
     {
-      id: crypto.randomUUID(),
+      id: uuidv4(),
       name: "Icebreaker Set 1",
       selectedIceBreaker: fallbackSelected || null,
     },
@@ -209,7 +210,7 @@ const ensureInteractiveSetCoverage = ({ agendaItems, questionSets, iceBreakerSet
   while (nextQuestionSets.length < quizCount) {
     const nextIndex = nextQuestionSets.length + 1;
     nextQuestionSets.push({
-      id: crypto.randomUUID(),
+      id: uuidv4(),
       name: `Question Set ${nextIndex}`,
       agendaQuizType: "quiz",
       quizMode: DEFAULT_STATE.quizMode,
@@ -220,7 +221,7 @@ const ensureInteractiveSetCoverage = ({ agendaItems, questionSets, iceBreakerSet
   while (nextIceBreakerSets.length < iceBreakerCount) {
     const nextIndex = nextIceBreakerSets.length + 1;
     nextIceBreakerSets.push({
-      id: crypto.randomUUID(),
+      id: uuidv4(),
       name: `Icebreaker Set ${nextIndex}`,
       selectedIceBreaker: null,
     });
@@ -388,7 +389,7 @@ const loadInitial = () => {
   try {
     const cloneList = (value) => (Array.isArray(value) ? value.map((item) => ({ ...item })) : []);
 
-    const buildEventFromState = (state, eventId = crypto.randomUUID()) => ({
+    const buildEventFromState = (state, eventId = uuidv4()) => ({
       ...(syncQuestionSetsWithActive({
         questionSets: state.questionSets,
         activeQuestionSetId: state.activeQuestionSetId,
@@ -527,9 +528,9 @@ const loadInitial = () => {
 
     return hydrateFromEvent(merged, selectedEvent, merged.events);
   } catch {
-    const firstEventId = crypto.randomUUID();
-    const firstQuestionSetId = crypto.randomUUID();
-    const firstIceBreakerSetId = crypto.randomUUID();
+    const firstEventId = uuidv4();
+    const firstQuestionSetId = uuidv4();
+    const firstIceBreakerSetId = uuidv4();
     const firstEvent = {
       id: firstEventId,
       title: "",
@@ -688,7 +689,7 @@ const buildAgendaEventRecord = (state, overrides = {}) => {
   });
 
   return {
-    id: overrides.id ?? state.currentEventId ?? crypto.randomUUID(),
+    id: overrides.id ?? state.currentEventId ?? uuidv4(),
     title: ((overrides.title ?? state.agendaEventTitle) || "").trim(),
     date: overrides.date ?? state.agendaEventDate,
     time: overrides.time ?? state.agendaEventTime,
@@ -821,7 +822,7 @@ const usePeople = create((set, get) => ({
         people: [
           ...state.people,
           {
-            id: crypto.randomUUID(),
+            id: uuidv4(),
             fullName: data.fullName.trim(),
             preferredName: data.preferredName.trim(),
             color: data.color,
@@ -1276,7 +1277,7 @@ const usePeople = create((set, get) => ({
 
       const nextIndex = synced.questionSets.length + 1;
       const nextSet = {
-        id: crypto.randomUUID(),
+        id: uuidv4(),
         name: (name || `Question Set ${nextIndex}`).trim(),
         agendaQuizType: "quiz",
         quizMode: DEFAULT_STATE.quizMode,
@@ -1352,7 +1353,7 @@ const usePeople = create((set, get) => ({
         ? remaining
         : [
             {
-              id: crypto.randomUUID(),
+              id: uuidv4(),
               name: "Question Set 1",
               agendaQuizType: "quiz",
               quizMode: DEFAULT_STATE.quizMode,
@@ -1428,7 +1429,7 @@ const usePeople = create((set, get) => ({
 
       const nextIndex = synced.iceBreakerSets.length + 1;
       const nextSet = {
-        id: crypto.randomUUID(),
+        id: uuidv4(),
         name: (name || `Icebreaker Set ${nextIndex}`).trim(),
         selectedIceBreaker: null,
       };
@@ -1499,7 +1500,7 @@ const usePeople = create((set, get) => ({
         ? remaining
         : [
             {
-              id: crypto.randomUUID(),
+              id: uuidv4(),
               name: "Icebreaker Set 1",
               selectedIceBreaker: null,
             },
@@ -1634,7 +1635,7 @@ const usePeople = create((set, get) => ({
       const nextVirtualPlatform = virtualPlatform ?? state.agendaVirtualPlatform;
       const nextVirtualJoinLink = virtualJoinLink ?? state.agendaVirtualJoinLink;
       const nextPhysicalAddress = physicalAddress ?? state.agendaPhysicalAddress;
-      const nextEventId = state.currentEventId || crypto.randomUUID();
+      const nextEventId = state.currentEventId || uuidv4();
 
       const nextLocation = buildAgendaLocationSummary({
         locationType: nextLocationType,
@@ -1678,9 +1679,9 @@ const usePeople = create((set, get) => ({
           )
         : [...(state.events || [])];
 
-      const nextEventId = crypto.randomUUID();
-      const initialQuestionSetId = crypto.randomUUID();
-      const initialIceBreakerSetId = crypto.randomUUID();
+      const nextEventId = uuidv4();
+      const initialQuestionSetId = uuidv4();
+      const initialIceBreakerSetId = uuidv4();
       const nextState = {
         ...state,
         currentEventId: nextEventId,
@@ -1756,7 +1757,7 @@ const usePeople = create((set, get) => ({
 
   addAgendaItem: (item) =>
     set((state) => {
-      const incomingItem = { id: crypto.randomUUID(), ...item };
+      const incomingItem = { id: uuidv4(), ...item };
       const withDefaults = {
         ...incomingItem,
         linkedQuestionSetId: incomingItem.linkedQuestionSetId || null,
@@ -1966,7 +1967,7 @@ const usePeople = create((set, get) => ({
           return item;
         }
 
-        const historyId = crypto.randomUUID();
+        const historyId = uuidv4();
         groupsHistory = [
           {
             _id: historyId,
@@ -2069,7 +2070,7 @@ applyAgendaTemplate: (templateId, startTime) =>
     const finalStartTime = startTime || state.agendaEventTime || template.startTime || "09:00";
 
     const items = template.items.map((t) => ({
-      id: crypto.randomUUID(),
+      id: uuidv4(),
       type: t.type,
       label: agendaTypes.find((x) => x.id === t.type)?.label || "Session",
       minutes: getAgendaDefaultMinutes(t.type),

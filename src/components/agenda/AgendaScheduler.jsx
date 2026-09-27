@@ -14,6 +14,8 @@ import AgendaHeader from "./AgendaHeader";
 import AgendaAddButtons from "./AgendaAddButtons";
 import AgendaItemCard from "./AgendaItemCard";
 
+import { nanoid } from "nanoid";
+
 export default function AgendaScheduler() {
   const {
     agendaStartTime,
@@ -32,7 +34,7 @@ export default function AgendaScheduler() {
 
   const presenters = people.filter((p) => p.isPresenter);
 
-  console.log(agendaItems.map(i => i.id));
+  console.log(agendaItems);
 
   const finishTime = useMemo(() => {
     const [h, m] = agendaStartTime.split(":").map(Number);
@@ -49,49 +51,72 @@ export default function AgendaScheduler() {
     [userProfile?.userType]
   );
 
-  const allArtefacts = useMemo(() => {
-    const seen = new Set();
-    const collected = [];
-    const allAgendaItems = [
-      ...(events || []).flatMap((eventItem) => eventItem?.agendaItems || []),
-      ...(agendaItems || []),
-    ];
+const allArtefacts = useMemo(() => {
+  const seen = new Set();
+  const collected = [];
 
-    allAgendaItems.forEach((agendaItem) => {
-      (agendaItem?.artefacts || []).forEach((artefact) => {
-        const name = (artefact?.name || "").trim();
-        const url = (artefact?.url || "").trim();
-        if (!name || !url) return;
+  const allAgendaItems = [
+    ...(events || []).flatMap((eventItem) => eventItem?.agendaItems || []),
+    ...(agendaItems || []),
+  ];
 
-        const key = `${name.toLowerCase()}::${url.toLowerCase()}`;
-        if (seen.has(key)) return;
+  allAgendaItems.forEach((agendaItem) => {
+    (agendaItem?.artefacts || []).forEach((artefact) => {
+      const name = (artefact?.name || "").trim();
+      const url = (artefact?.url || "").trim();
+      const hash = (artefact?.hash || "").trim();
+      const type = artefact?.type || "";
 
-        seen.add(key);
-        collected.push({ name, url });
+      // Skip if no name
+      if (!name) return;
+
+      // Build dedupe key based on type
+      const key = `${name.toLowerCase()}::${url.toLowerCase()}::${hash.toLowerCase()}`;
+
+      if (seen.has(key)) return;
+      seen.add(key);
+
+      collected.push({
+        name,
+        url: url || null,
+        hash: hash || null,
+        type,
       });
-
-      const legacyUrl = (agendaItem?.artefactUrl || "").trim();
-      if (!legacyUrl) return;
-
-      const legacyName = (agendaItem?.label || "Document").trim() || "Document";
-      const legacyKey = `${legacyName.toLowerCase()}::${legacyUrl.toLowerCase()}`;
-      if (seen.has(legacyKey)) return;
-
-      seen.add(legacyKey);
-      collected.push({ name: legacyName, url: legacyUrl });
     });
 
-    return collected;
-  }, [events, agendaItems]);
+    // Legacy URL support
+    const legacyUrl = (agendaItem?.artefactUrl || "").trim();
+    if (legacyUrl) {
+      const legacyName = (agendaItem?.label || "Document").trim();
+      const legacyKey = `${legacyName.toLowerCase()}::${legacyUrl.toLowerCase()}::`;
+
+      if (!seen.has(legacyKey)) {
+        seen.add(legacyKey);
+        collected.push({
+          name: legacyName,
+          url: legacyUrl,
+          hash: null,
+          type: "legacy-url",
+        });
+      }
+    }
+  });
+
+  return collected;
+}, [events, agendaItems]);
+
 
 const handleAddItem = (type) => {
   addAgendaItem({
+    id: nanoid(),
     type,
     label: type === "other" ? "Session" : type.replace("-", " "),
     minutes: getAgendaDefaultMinutes(type),
     presenterId: presenters[0]?.id ?? null,
     guestPresenter: "",
+    description: "",
     notes: "",
+    thumbnail: null,
     artefactUrl: "",
     artefacts: [],
     linkedQuestionSetId: null,

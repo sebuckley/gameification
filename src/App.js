@@ -20,6 +20,8 @@ import GroupsPage from "./components/pages/GroupsPage";
 import QuizPage from "./components/pages/QuizPage";
 import AgendaPage from "./components/pages/AgendaPage";
 import UserDetailsPage from "./components/pages/UserDetailsPage";
+import AgendaPlayer from "./components/pages/AgendaPlayer";
+import RemoteControl from "./components/agendaplayer/remote";
 
 export default function App() {
 
@@ -29,6 +31,10 @@ export default function App() {
   const currentEventId = usePeople((s) => s.currentEventId);
   const selectEvent = usePeople((s) => s.selectEvent);
   const createEvent = usePeople((s) => s.createEvent);
+
+
+
+  console.log(events, currentEventId)
 
   useEffect(() => {
     if (!Array.isArray(events) || events.length === 0) {
@@ -115,9 +121,11 @@ export default function App() {
           <Route path="/user-details" element={<UserDetailsPage />} />
           <Route path="/agenda" element={<AgendaPage />} />
           <Route path="/icebreaker" element={<IceBreakerPage running={ running } setRunning={ setRunning } />} />
+          <Route path="/agenda-player" element={<AgendaPlayer />} />
           <Route path="/spinner" element={<SpinnerPage />} />
           <Route path="/groups" element={<GroupsPage />} />
           <Route path="/quiz" element={<QuizPage running={ running } setRunning={ setRunning } />} />
+          <Route path="/remote" element={<RemoteControl />} />
         </Routes>
       </main>
     </div>

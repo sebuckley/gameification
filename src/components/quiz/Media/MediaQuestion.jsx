@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import CorrectAnswerModal from "../shared/CorrectAnswerModal";
 import WrongAnswerModal from "../shared/WrongAnswerModal";
 import usePeopleStore from "../../store/usePeopleStore";
+import IncorrectAnswerModal from "../shared/IncorrectAnswerModal";
 
 
 export default function MediaQuizQuestion({ index, total, currentQuestion, quizPeople, onAnswer, onNext }) {
@@ -12,6 +13,7 @@ export default function MediaQuizQuestion({ index, total, currentQuestion, quizP
   const [shuffledOptions, setShuffledOptions] = useState([]);
   const [wrongAnswersBy, setWrongAnswersBy] = useState([]);
   const [showCorrectModal, setShowCorrectModal] = useState(false);
+  const [incorrectAnswerModal, setIncorrectAnswerModal] = useState(false);
   const [showWrongModal, setShowWrongModal] = useState(false);
   const [modalCorrectPerson, setModalCorrectPerson] = useState(null);
   const [modalWrongPerson, setModalWrongPerson] = useState(null);
@@ -20,9 +22,32 @@ export default function MediaQuizQuestion({ index, total, currentQuestion, quizP
   const revealLastTickRef = useRef(null);
   const quizSettings = usePeopleStore((state) => state.quizSettings);
 
+const noOneAnswered = () => {
+  // Unlock UI
+  setLocked(false);
+
+  // Close wrong modal
+  setShowWrongModal(false);
+
+  // Apply penalty to everyone who has NOT answered incorrectly
+  quizPeople.forEach((person) => {
+    const hasAnsweredWrong = wrongAnswersBy.includes(person.id);
+    const hasAnsweredCorrect = modalCorrectPerson?.id === person.id;
+
+    if (!hasAnsweredWrong && !hasAnsweredCorrect) {
+      // Apply wrongPoints penalty using your existing scoring system
+      onAnswer(null, person.id, false);
+    }
+  });
+
+  // Show incorrect modal
+  setIncorrectAnswerModal(true);
+};
+
+
   const wantsReveal = Boolean(currentQuestion?.mediaReveal) && currentQuestion?.contentType === "image";
   const revealPaused = Boolean(selectedPerson) || locked;
-  const revealTotalMs = Math.max(1, Number(quizSettings?.revealSeconds) || 20) * 1000;
+  const revealTotalMs = Math.max(1, Number(quizSettings?.revealSeconds) || 10) * 1000;
 
   useEffect(() => {
     setSelectedPerson(null);
@@ -191,10 +216,11 @@ export default function MediaQuizQuestion({ index, total, currentQuestion, quizP
           </div>
         )}
 
-        <button onClick={onNext} className={`rounded-full px-5 py-2 text-base font-semibold shadow-md ${locked ? "bg-slate-800 text-white" : "bg-slate-200 text-slate-800"}`}>Next Question →</button>
+        <button onClick={noOneAnswered} className={`rounded-full px-5 py-2 text-base font-semibold shadow-md ${locked ? "bg-slate-800 text-white" : "bg-slate-200 text-slate-800"}`}>Next Question →</button>
 
         <CorrectAnswerModal show={showCorrectModal} setShowCorrectModal={setShowCorrectModal} answer={currentQuestion.answer} modalCorrectPerson={modalCorrectPerson} onNext={() => { setShowCorrectModal(false); onNext(); }} />
-        <WrongAnswerModal show={showWrongModal} setLocked={setLocked} setShowWrongModal={setShowWrongModal} wrongPerson={modalWrongPerson} wrongTimer={3} onClear={() => { setLocked(false); setShowWrongModal(false); }} onNoOneAnswered={() => { setLocked(false); setShowWrongModal(false); }} />
+        <WrongAnswerModal show={showWrongModal} setLocked={setLocked} setShowWrongModal={setShowWrongModal} wrongPerson={modalWrongPerson} wrongTimer={3} onClear={() => { setLocked(false); setShowWrongModal(false); }} onNoOneAnswered={noOneAnswered} />
+        <IncorrectAnswerModal show={incorrectAnswerModal} setIncorrectAnswerModal={setIncorrectAnswerModal} answer={currentQuestion.answer} onNext={() => { setIncorrectAnswerModal(false); onNext(); }} />
       </div>
     </div>
   );

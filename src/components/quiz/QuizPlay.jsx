@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import usePeople from "../store/usePeopleStore";
 import Leaderboard from "../shared/Leaderboard";
 
@@ -7,8 +7,12 @@ import StandardQuizPointsEngine from "./StandardQuizPoints/StandardQuizPointsEng
 import GameShowEngine from "./gameshow/GameShowEngine";
 import MediaQuizEngine from "./media/MediaEngine";
 
+import personBadge from "./shared/PersonBadge";
+
 import PodiumModal from "./shared/PodiumModal";
 import PersonBadge from "./shared/PersonBadge";
+
+import { getQuizStats, generateQuizInstructions } from "../../utils/questions";
 
 export default function QuizPlay({ running, setRunning }) {
   const {
@@ -19,7 +23,8 @@ export default function QuizPlay({ running, setRunning }) {
     selectQuestionSet,
     resetQuizScores,
     quizMode,
-    setQuizMode
+    setQuizMode,
+    quizSettings
   } = usePeople();
 
 
@@ -30,15 +35,22 @@ export default function QuizPlay({ running, setRunning }) {
   const hasPeople = quizPeople.length > 0;
 
   const [index, setIndex] = useState(0);
-  const [cycle, setCycle] = useState(1);
+  const [cycle, setCycle] = useState(0);
 
   const [showPodium, setShowPodium] = useState(false);
   const [podium, setPodium] = useState([]);
   const [quizFinished, setQuizFinished] = useState(false);
-
-  console.log(podium);
+  const [players, setPlayers] = useState([]);
 
   const [timerDisplay, setTimerDisplay] = useState([]);
+
+
+
+
+  // Keep players in sync with quizPeople
+  useEffect(() => {
+    setPlayers(quizPeople);
+  }, [quizPeople]);
 
   const currentQuestion = index !== null ? questions[index] : null;
   const quizSets = Array.isArray(questionSets) && questionSets.length > 0
@@ -54,6 +66,8 @@ export default function QuizPlay({ running, setRunning }) {
     quizSets.find((setItem) => setItem.id === activeQuestionSetId)?.quizMode ||
     quizMode ||
     "standard";
+
+  const points = activeSetMode !== "standard";
 
   const getQuizModeLabel = (mode) => {
     if (mode === "standard-points") return "Standard Points";
@@ -133,8 +147,13 @@ export default function QuizPlay({ running, setRunning }) {
     }
   };
 
+  const stats = getQuizStats(questions);
+  const instructions = generateQuizInstructions(stats, quizSettings.revealSeconds , points, quizSettings.correctAnswerPoints, quizSettings.incorrectAnswerPoints, true);
+
   return (
     <>
+
+<div className="h-full flex flex-col">
 {/* FULL-WIDTH HEADER */}
 <div className="w-full grid grid-cols-3 items-center gap-4 border-b border-slate-200 bg-white px-4 py-3 shadow-sm">
 
@@ -201,7 +220,7 @@ export default function QuizPlay({ running, setRunning }) {
           </div>
         )}
       </>
-    ) : (
+    ): (
       <button
         onClick={closeQuiz}
         className="px-4 py-2 bg-red-600 text-white rounded-lg shadow hover:bg-red-700"
@@ -213,7 +232,7 @@ export default function QuizPlay({ running, setRunning }) {
   </div>
 
   {/* CENTER COLUMN — Question Counter */}
-  {running && currentQuestion && (
+  {running && currentQuestion && cycle > 0 ? (
     <div className="flex flex-col items-center justify-start text-center">
 
       <span className="text-lg font-semibold text-gray-700">
@@ -225,7 +244,18 @@ export default function QuizPlay({ running, setRunning }) {
       </div>
 
     </div>
-  )}
+  ):( <div className="flex flex-col items-center justify-start text-center">
+
+      <span className="text-lg font-semibold text-gray-700">
+     
+      </span>
+
+      <div className="text-xs text-gray-400 mt-1">
+        
+      </div>
+
+    </div>
+    )}
 
   {/* RIGHT COLUMN — Quiz title + timer */}
   {running && (
@@ -320,106 +350,188 @@ export default function QuizPlay({ running, setRunning }) {
         </div>
       )}
 
-      {/* TRUE FULLSCREEN QUIZ AREA */}
-      {running && currentQuestion && !showPodium && !quizFinished && (
-        <div
-          className="
-            flex 
-            flex-col 
-            lg:flex-row 
-            w-full 
-            h-[calc(100vh-80px)] 
-            overflow-hidden
-          "
+{running && currentQuestion && !showPodium && !quizFinished && cycle > 0 && (
+  <div className="w-full h-[calc(100vh-80px)] flex flex-row overflow-hidden">
+
+    {/* LEFT: QUESTION AREA */}
+    <div className="flex-1 h-full flex items-center justify-center overflow-hidden">
+
+      {/* Centered content that can scroll */}
+      <div className="
+        w-full
+        max-w-5xl
+        max-h-full
+        overflow-auto
+        flex
+        flex-col
+        items-center
+        justify-center
+        px-6
+        py-6
+      ">
+
+        {/* QUIZ ENGINES */}
+        {quizMode === "standard" && (
+          <StandardQuizEngine
+            currentQuestion={currentQuestion}
+            index={index}
+            questions={questions}
+            quizPeople={quizPeople}
+            nextQuestion={nextQuestion}
+            cycle={cycle}
+          />
+        )}
+
+        {quizMode === "standard-points" && (
+          <StandardQuizPointsEngine
+            currentQuestion={currentQuestion}
+            index={index}
+            questions={questions}
+            quizPeople={quizPeople}
+            nextQuestion={nextQuestion}
+            cycle={cycle}
+          />
+        )}
+
+        {quizMode === "gameshow" && currentQuestion.type === "multi" && (
+          <GameShowEngine
+            currentQuestion={currentQuestion}
+            index={index}
+            questions={questions}
+            quizPeople={quizPeople}
+            nextQuestion={nextQuestion}
+          />
+        )}
+
+        {quizMode === "media" && (
+          <MediaQuizEngine
+            currentQuestion={currentQuestion}
+            index={index}
+            questions={questions}
+            quizPeople={quizPeople}
+            nextQuestion={nextQuestion}
+          />
+        )}
+
+      </div>
+    </div>
+
+    {/* RIGHT: LEADERBOARD (DESKTOP) */}
+    {quizMode !== "standard" && (
+      <div
+        className="
+          hidden
+          lg:flex
+          flex-col
+          items-center
+          justify-center
+          w-[24rem]
+          h-full
+          mx-4
+          bg-white
+          overflow-hidden
+        "
+      >
+        <Leaderboard people={quizPeople} data="quiz" running={running} />
+      </div>
+    )}
+
+    {/* MOBILE LEADERBOARD */}
+    {quizMode !== "standard" && (
+      <div className="lg:hidden w-full bg-white border-t border-gray-300 shadow p-4">
+        <Leaderboard people={quizPeople} data="quiz" running={running} />
+      </div>
+    )}
+
+  </div>
+)}
+
+
+
+
+
+{running && cycle === 0 && (
+  <div className="w-full flex-1 flex flex-row bg-white p-10 gap-10">
+
+    {/* LEFT SIDE — PLAYERS (centered vertically, rows wrap) */}
+    <div className="w-1/2 flex items-center justify-center">
+      <div className="flex flex-col items-center">
+
+        <h1 className="text-4xl font-bold mb-6">Players</h1>
+
+        {/* Players wrap into rows */}
+        <div className="flex flex-wrap gap-4 justify-center">
+          {quizPeople.map((person) => {
+            const isInPlayers = players.some((p) => p.id === person.id);
+
+            return (
+              <div
+                key={person.id}
+                className="flex items-center gap-3 p-3 border rounded-lg bg-gray-50"
+              >
+                <input
+                  type="checkbox"
+                  checked={isInPlayers}
+                  onChange={(e) => {
+                    if (e.target.checked) {
+                      setPlayers((prev) => [...prev, person]);
+                    } else {
+                      setPlayers((prev) =>
+                        prev.filter((p) => p.id !== person.id)
+                      );
+                    }
+                  }}
+                  className="w-5 h-5 cursor-pointer"
+                />
+
+                <PersonBadge person={person} />
+              </div>
+            );
+          })}
+        </div>
+
+      </div>
+    </div>
+
+    {/* RIGHT SIDE — RULES (centered vertically) */}
+    <div className="w-1/2 flex items-center justify-center">
+      <div className="flex flex-col max-w-xl">
+
+        <h1 className="text-4xl font-bold mb-6">Quiz Rules</h1>
+
+        <p className="text-lg text-gray-700 mb-4">
+          Todays quiz will be a {getQuizModeLabel(quizMode)}
+        </p>
+
+        <p className="text-lg text-gray-700 mb-6">
+          Welcome to the quiz! Make sure to read the rules carefully before starting.
+        </p>
+
+        <ul className="text-lg text-gray-700 space-y-3 mb-10">
+          {instructions.map((line, i) => (
+            <li key={i}>• {line}</li>
+          ))}
+          <li>• The quiz will begin immediately after you press Start.</li>
+        </ul>
+
+        <button
+          onClick={() => setCycle(1)}
+          className="px-6 py-3 bg-indigo-600 text-white rounded-lg shadow hover:bg-indigo-700 text-lg font-semibold"
         >
+          Start Quiz
+        </button>
 
-          {/* FULLSCREEN QUESTION ENGINE */}
-          <div
-            className="
-              flex-1 
-              h-full 
-              overflow-auto 
-              px-3 
-              py-4 
-              sm:px-4
-              sm:py-6
-              lg:px-8 
-              lg:py-8
-              w-full
-            "
-          >
-            {quizMode === "standard" && (
-              <StandardQuizEngine
-                currentQuestion={currentQuestion}
-                index={index}
-                questions={questions}
-                quizPeople={quizPeople}
-                nextQuestion={nextQuestion}
-                cycle={cycle}
-              />
-            )}
+      </div>
+    </div>
 
-            {quizMode === "standard-points" && (
-              <StandardQuizPointsEngine
-                currentQuestion={currentQuestion}
-                index={index}
-                questions={questions}
-                quizPeople={quizPeople}
-                nextQuestion={nextQuestion}
-                cycle={cycle}
-              />
-            )}
+  </div>
+)}
 
-            {quizMode === "gameshow" && currentQuestion.type === "multi" && (
-              <GameShowEngine
-                currentQuestion={currentQuestion}
-                index={index}
-                questions={questions}
-                quizPeople={quizPeople}
-                nextQuestion={nextQuestion}
-              />
-            )}
 
-            {quizMode === "media" && (
-              <MediaQuizEngine
-                currentQuestion={currentQuestion}
-                index={index}
-                questions={questions}
-                quizPeople={quizPeople}
-                nextQuestion={nextQuestion}
-              />
-            )}
-          </div>
 
-          {/* RIGHT-SIDE LEADERBOARD (desktop) */}
-      {quizMode !== "standard" && (
-        <div
-          className="
-            hidden 
-            lg:flex 
-            lg:flex-col
-            lg:items-center
-            lg:justify-center
-            w-[24rem]          /* ⭐ wider leaderboard */
-            h-[calc(100vh-80px)] /* ⭐ full height */
-            mx-4        /* ⭐ small margin */
-            overflow-none 
-            bg-white 
-          
-          "
-        >
-          <Leaderboard people={quizPeople} data={"quiz"} running={running}/>
-        </div>
-      )}
 
-      {/* MOBILE LEADERBOARD */}
-      {quizMode !== "standard" && (
-        <div className="lg:hidden w-full bg-white border-t border-gray-300 shadow p-4">
-          <Leaderboard people={quizPeople} data={"quiz"} running={running} />
-        </div>
-      )}
-        </div>
-      )}
+
+
 
       {/* PODIUM */}
       {quizMode !== "standard" && (
@@ -431,6 +543,7 @@ export default function QuizPlay({ running, setRunning }) {
 
       )}
     
+    </div>
     </>
   );
 }

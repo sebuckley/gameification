@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import usePeople from "../store/usePeopleStore";
 import { formatUKDateTime } from "../../utils/formatUKTime";
 
@@ -9,6 +10,7 @@ import AgendaTimeline from "../agenda/AgendaTimeline";
 import { agendaTemplates } from "../../data/AgendaTemplates";
 
 export default function AgendaPage() {
+  const navigate = useNavigate();
   const [showSummary, setShowSummary] = useState(false);
 
   const agendaItems = usePeople((s) => s.agendaItems);
@@ -312,47 +314,57 @@ export default function AgendaPage() {
         </div>
       )}
 
-      {!showEventEditor && hasSavedEventDetails && (
-        <div className="bg-white border rounded-xl p-4 shadow space-y-2">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <h2 className="text-2xl font-bold text-black-800">{agendaEventTitle}</h2>
-  
-            </div>
-            <button
-              onClick={() => setShowEventEditor(true)}
-              className="px-3 py-1.5 text-sm bg-gray-100 text-black-700 rounded hover:bg-gray-200"
-            >
-              Edit
-            </button>
-          </div>
-          <div className="text-sm text-gray-700">
-             {formatUKDateTime(agendaEventDate, agendaEventTime) || "No date · No time"}
-          </div>
-<div className="text-sm text-gray-600">
-  {agendaLocationType === "virtual" ? (
-    agendaVirtualJoinLink ? (
-      <a
-        href={agendaVirtualJoinLink}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="inline-block px-2 py-1 bg-indigo-100 text-indigo-700 font-medium rounded hover:bg-indigo-200"
-      >
-        Start meeting
-      </a>
-    ) : (
-      <span className="inline-block px-2 py-1 bg-yellow-100 text-yellow-800 font-medium rounded">
-        Virtual event — no meeting link added
-      </span>
-    )
-  ) : (
-    <span>{agendaEventLocation || "No location"}</span>
-  )}
-</div>
+{!showEventEditor && hasSavedEventDetails && (
+  <div className="bg-white border rounded-xl p-4 shadow space-y-2">
+    <div className="flex items-start justify-between gap-3">
+      <div>
+        <h2 className="text-2xl font-bold text-black-800">{agendaEventTitle}</h2>
+      </div>
 
+      <div className="flex gap-2">
+        <button
+          onClick={() => navigate("/agenda-player")}
+          className="px-3 py-1.5 text-sm bg-indigo-600 text-white rounded hover:bg-indigo-700"
+        >
+          Launch Slides
+        </button>
 
-        </div>
+        <button
+          onClick={() => setShowEventEditor(true)}
+          className="px-3 py-1.5 text-sm bg-gray-100 text-black-700 rounded hover:bg-gray-200"
+        >
+          Edit
+        </button>
+      </div>
+    </div>
+
+    <div className="text-sm text-gray-700">
+      {formatUKDateTime(agendaEventDate, agendaEventTime) || "No date · No time"}
+    </div>
+
+    <div className="text-sm text-gray-600">
+      {agendaLocationType === "virtual" ? (
+        agendaVirtualJoinLink ? (
+          <a
+            href={agendaVirtualJoinLink}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-block px-2 py-1 bg-indigo-100 text-indigo-700 font-medium rounded hover:bg-indigo-200"
+          >
+            Start meeting
+          </a>
+        ) : (
+          <span className="inline-block px-2 py-1 bg-yellow-100 text-yellow-800 font-medium rounded">
+            Virtual event — no meeting link added
+          </span>
+        )
+      ) : (
+        <span>{agendaEventLocation || "No location"}</span>
       )}
+    </div>
+  </div>
+)}
+
 
       {isEmpty && !showEventEditor && (
         <div className="bg-white border rounded-xl p-4 shadow space-y-3">

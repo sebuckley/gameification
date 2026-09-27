@@ -9,7 +9,8 @@ export function QuestionItem({
   snapshot,
   moveQuestion,
   updateSingleQuestion,
-  removeQuestion
+  removeQuestion,
+  quizSettings,
 }) {
   const [open, setOpen] = useState(false);
   const [mediaPreviewError, setMediaPreviewError] = useState(q.mediaStatus === "failed");
@@ -199,7 +200,7 @@ export function QuestionItem({
                       updateSingleQuestion(q.id, "mediaReveal", e.target.checked)
                     }
                   />
-                  Blurred zoom reveal (30s) — image starts blurred and zoomed, then sharpens
+                  Blurred zoom reveal ({quizSettings.revealSeconds ?? 10}'s) — image starts blurred and zoomed, then sharpens
                 </label>
               )}
 

@@ -9,6 +9,8 @@ import {
 import { nanoid } from "nanoid";
 import { QuestionItem } from "./setup/QuestionItem";
 import { agendaTypes } from "../../data/AgendaTypes";
+import { v4 as uuidv4 } from "uuid";
+
 
 export default function QuizSetup() {
   const {
@@ -85,7 +87,7 @@ export default function QuizSetup() {
     }
 
     addQuestion({
-      id: crypto.randomUUID(),
+      id: uuidv4(),
       question: question.trim(),
       answer: answer.trim(),
       type: questionType,
@@ -543,6 +545,7 @@ export default function QuizSetup() {
                               moveQuestion={moveQuestion}
                               updateSingleQuestion={updateSingleQuestion}
                               removeQuestion={removeQuestion}
+                              quizSettings={quizSettings}
                             />
                           )}
                         </Draggable>
@@ -948,10 +951,10 @@ export default function QuizSetup() {
                   type="number"
                   min={1}
                   className="border p-2 rounded w-full"
-                  value={quizSettings.revealSeconds ?? 20}
+                  value={quizSettings.revealSeconds ?? 10}
                   onChange={(e) =>
                     updateQuizSettings({
-                      revealSeconds: Math.max(1, Number(e.target.value) || 20),
+                      revealSeconds: Math.max(1, Number(e.target.value) || 10),
                     })
                   }
                 />

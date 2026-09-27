@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
+import { v4 as uuidv4 } from "uuid";
 
 const STORAGE_KEY = "people-app";
 
@@ -76,7 +77,7 @@ export function usePeople() {
     const { fullName, preferredName, color } = data;
 
     const newPerson = {
-      id: crypto.randomUUID(),
+      id: uuidv4(),
       fullName: fullName.trim(),
       preferredName: preferredName.trim(),
       color,

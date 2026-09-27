@@ -6,8 +6,10 @@ import {
   Draggable,
 } from "@hello-pangea/dnd";
 
+import { v4 as uuidv4 } from "uuid";
+
 // Lighten colour
-const lighten = (hex, amount = 0.45) => {
+export const lighten = (hex, amount = 0.45) => {
   if (!hex) return "#f3f4f6";
   const c = hex.replace("#", "");
   const r = parseInt(c.substring(0, 2), 16);
@@ -27,7 +29,7 @@ const lighten = (hex, amount = 0.45) => {
 };
 
 // Initials from FULL NAME
-const initials = (fullName) =>
+export const initials = (fullName) =>
   fullName
     .split(" ")
     .filter(Boolean)
@@ -42,7 +44,7 @@ export default function GroupEditor({ index, onClose }) {
 
   const [groups, setGroups] = useState(
     session.groups.map((g) => ({
-      id: crypto.randomUUID(),
+      id: uuidv4(),
       members: g,
     }))
   );
