@@ -2,6 +2,7 @@ import React, { useEffect } from "react";
 import PersonBadge from "./PersonBadge";
 import CountdownRing from "./CountdownRing";
 import usePeople from "../../store/usePeopleStore";
+import { useState } from "react";
 import confetti from "canvas-confetti";
 
 export default function WrongAnswerModal({
@@ -10,15 +11,16 @@ export default function WrongAnswerModal({
   setLocked,
   wrongPerson,
   wrongTimer,
+  setWrongTimer,
   onClear,
   onNoOneAnswered
 }) {
 
   const { quizMode } = usePeople();
-  
-
   const isGameShow = quizMode === "gameshow";
   const isStandardMode = !isGameShow;
+
+
 
   // 🎯 Trigger a red “incorrect burst” when modal opens
   useEffect(() => {
@@ -45,13 +47,33 @@ export default function WrongAnswerModal({
     setLocked(false);
   };
 
+  useEffect(() => {
+
+
+  setWrongTimer(60); // reset timer
+
+  const interval = setInterval(() => {
+    setWrongTimer((t) => {
+      if (t <= 1) {
+        clearInterval(interval);
+        onNoOneAnswered(); // auto-trigger if timer hits zero
+        return 0;
+      }
+      return t - 1;
+    });
+  }, 1000);
+
+  return () => clearInterval(interval);
+}, []);
+
+
   const handleNoOneAnswered = () => {
     setShowWrongModal(false);
     onNoOneAnswered();   // ⭐ This will open your IncorrectAnswerModal
   };
 
   if (!show) return null;
-  
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
       <div

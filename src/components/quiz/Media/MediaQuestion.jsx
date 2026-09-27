@@ -21,6 +21,7 @@ export default function MediaQuizQuestion({ index, total, currentQuestion, quizP
   const revealElapsedRef = useRef(0);
   const revealLastTickRef = useRef(null);
   const quizSettings = usePeopleStore((state) => state.quizSettings);
+  const [wrongTimer, setWrongTimer] = useState(60);
 
 const noOneAnswered = () => {
   // Unlock UI
@@ -219,7 +220,7 @@ const noOneAnswered = () => {
         <button onClick={noOneAnswered} className={`rounded-full px-5 py-2 text-base font-semibold shadow-md ${locked ? "bg-slate-800 text-white" : "bg-slate-200 text-slate-800"}`}>Next Question →</button>
 
         <CorrectAnswerModal show={showCorrectModal} setShowCorrectModal={setShowCorrectModal} answer={currentQuestion.answer} modalCorrectPerson={modalCorrectPerson} onNext={() => { setShowCorrectModal(false); onNext(); }} />
-        <WrongAnswerModal show={showWrongModal} setLocked={setLocked} setShowWrongModal={setShowWrongModal} wrongPerson={modalWrongPerson} wrongTimer={3} onClear={() => { setLocked(false); setShowWrongModal(false); }} onNoOneAnswered={noOneAnswered} />
+        <WrongAnswerModal show={showWrongModal} setLocked={setLocked} setShowWrongModal={setShowWrongModal} wrongPerson={modalWrongPerson} wrongTimer={wrongTimer} setWrongTimer={setWrongTimer} onClear={() => { setLocked(false); setShowWrongModal(false); }} onNoOneAnswered={noOneAnswered} />
         <IncorrectAnswerModal show={incorrectAnswerModal} setIncorrectAnswerModal={setIncorrectAnswerModal} answer={currentQuestion.answer} onNext={() => { setIncorrectAnswerModal(false); onNext(); }} />
       </div>
     </div>

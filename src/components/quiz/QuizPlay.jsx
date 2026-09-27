@@ -44,13 +44,10 @@ export default function QuizPlay({ running, setRunning }) {
 
   const [timerDisplay, setTimerDisplay] = useState([]);
 
-
-
-
   // Keep players in sync with quizPeople
   useEffect(() => {
     setPlayers(quizPeople);
-  }, [quizPeople]);
+  }, []);
 
   const currentQuestion = index !== null ? questions[index] : null;
   const quizSets = Array.isArray(questionSets) && questionSets.length > 0
@@ -67,7 +64,7 @@ export default function QuizPlay({ running, setRunning }) {
     quizMode ||
     "standard";
 
-  const points = activeSetMode !== "standard";
+  
 
   const getQuizModeLabel = (mode) => {
     if (mode === "standard-points") return "Standard Points";
@@ -116,7 +113,7 @@ export default function QuizPlay({ running, setRunning }) {
 
   const finishQuiz = () => {
 
-    const sorted = [...quizPeople].sort((a, b) => b.quizScore - a.quizScore);
+    const sorted = [...players].sort((a, b) => b.quizScore - a.quizScore);
     setPodium(sorted.slice(0, 3));
 
     if (quizMode === "standard" || quizMode === "media") {
@@ -147,8 +144,12 @@ export default function QuizPlay({ running, setRunning }) {
     }
   };
 
+  const removePointsAll = quizSettings.noOneAnsweredPenalty === "remove";
+  const points = activeSetMode !== "standard";
+  const pointsMode = quizSettings.pointMode || "default";
+
   const stats = getQuizStats(questions);
-  const instructions = generateQuizInstructions(stats, quizSettings.revealSeconds , points, quizSettings.correctAnswerPoints, quizSettings.incorrectAnswerPoints, true);
+  const instructions = generateQuizInstructions(stats, quizSettings.revealSeconds , points, quizSettings.correctAnswerPoints, quizSettings.incorrectAnswerPoints, removePointsAll, activeSetMode);
 
   return (
     <>
@@ -376,7 +377,7 @@ export default function QuizPlay({ running, setRunning }) {
             currentQuestion={currentQuestion}
             index={index}
             questions={questions}
-            quizPeople={quizPeople}
+            quizPeople={players}
             nextQuestion={nextQuestion}
             cycle={cycle}
           />
@@ -387,7 +388,7 @@ export default function QuizPlay({ running, setRunning }) {
             currentQuestion={currentQuestion}
             index={index}
             questions={questions}
-            quizPeople={quizPeople}
+            quizPeople={players}
             nextQuestion={nextQuestion}
             cycle={cycle}
           />
@@ -398,7 +399,7 @@ export default function QuizPlay({ running, setRunning }) {
             currentQuestion={currentQuestion}
             index={index}
             questions={questions}
-            quizPeople={quizPeople}
+            quizPeople={players}
             nextQuestion={nextQuestion}
           />
         )}
@@ -408,7 +409,7 @@ export default function QuizPlay({ running, setRunning }) {
             currentQuestion={currentQuestion}
             index={index}
             questions={questions}
-            quizPeople={quizPeople}
+            quizPeople={players}
             nextQuestion={nextQuestion}
           />
         )}
@@ -432,14 +433,14 @@ export default function QuizPlay({ running, setRunning }) {
           overflow-hidden
         "
       >
-        <Leaderboard people={quizPeople} data="quiz" running={running} />
+        <Leaderboard people={players} data="quiz" running={running} />
       </div>
     )}
 
     {/* MOBILE LEADERBOARD */}
     {quizMode !== "standard" && (
       <div className="lg:hidden w-full bg-white border-t border-gray-300 shadow p-4">
-        <Leaderboard people={quizPeople} data="quiz" running={running} />
+        <Leaderboard people={players} data="quiz" running={running} />
       </div>
     )}
 
@@ -453,7 +454,13 @@ export default function QuizPlay({ running, setRunning }) {
 {running && cycle === 0 && (
   <div className="w-full flex-1 flex flex-row bg-white p-10 gap-10">
 
-    {/* LEFT SIDE — PLAYERS (centered vertically, rows wrap) */}
+
+
+      { activeSetMode !== "standard" ? (
+   
+        <>
+
+            {/* LEFT SIDE — PLAYERS (centered vertically, rows wrap) */}
     <div className="w-1/2 flex items-center justify-center">
       <div className="flex flex-col items-center">
 
@@ -462,27 +469,41 @@ export default function QuizPlay({ running, setRunning }) {
         {/* Players wrap into rows */}
         <div className="flex flex-wrap gap-4 justify-center">
           {quizPeople.map((person) => {
-            const isInPlayers = players.some((p) => p.id === person.id);
+
 
             return (
               <div
                 key={person.id}
                 className="flex items-center gap-3 p-3 border rounded-lg bg-gray-50"
               >
-                <input
-                  type="checkbox"
-                  checked={isInPlayers}
-                  onChange={(e) => {
-                    if (e.target.checked) {
-                      setPlayers((prev) => [...prev, person]);
-                    } else {
-                      setPlayers((prev) =>
-                        prev.filter((p) => p.id !== person.id)
-                      );
-                    }
-                  }}
-                  className="w-5 h-5 cursor-pointer"
-                />
+<input
+  type="checkbox"
+  checked={players.some(p => p.id === person.id)}
+  onChange={(e) => {
+    setPlayers(prev => {
+      if (e.target.checked) {
+        if (!prev.some(p => p.id === person.id)) {
+          return [...prev, person];
+        }
+        return prev;
+      } else {
+        return prev.filter(p => p.id !== person.id);
+      }
+    });
+  }}
+  className="
+    w-5 h-5 
+    rounded 
+    border-2 
+    border-slate-400 
+    text-blue-600 
+    focus:ring-blue-500 
+    focus:ring-offset-0 
+    cursor-pointer
+  "
+/>
+
+
 
                 <PersonBadge person={person} />
               </div>
@@ -493,8 +514,14 @@ export default function QuizPlay({ running, setRunning }) {
       </div>
     </div>
 
+    </>
+
+        ): null }
+
+
     {/* RIGHT SIDE — RULES (centered vertically) */}
-    <div className="w-1/2 flex items-center justify-center">
+    <div className={`${activeSetMode === "standard" ? "w-full" : "w-1/2"} flex items-center justify-center`}>
+
       <div className="flex flex-col max-w-xl">
 
         <h1 className="text-4xl font-bold mb-6">Quiz Rules</h1>

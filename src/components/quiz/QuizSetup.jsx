@@ -126,51 +126,71 @@ export default function QuizSetup() {
     return urlMatch ? urlMatch[0].replace(/[.,;]+$/, "") : "";
   };
 
-  const parseBulkQuestions = (text) => {
-    const normalizedText = String(text || "").replace(
-      /\s+(?=(?:Q|TYPE|MEDIA|ALT|O|A):)/gi,
-      "\n"
-    );
-    const lines = normalizedText.split("\n").map((l) => l.trim());
-    const parsedQuestions = [];
+const parseBulkQuestions = (text) => {
+  const normalizedText = String(text || "").replace(
+    /\s+(?=(?:Q|TYPE|MEDIA|DIFFICULTY|QUESTION DIFFICULTY|ALT|O|A):)/gi,
+    "\n"
+  );
 
-    let currentQ = null;
+  const lines = normalizedText.split("\n").map((l) => l.trim());
+  const parsedQuestions = [];
 
-    lines.forEach((line) => {
-      if (line.startsWith("Q:")) {
-        if (currentQ) parsedQuestions.push(currentQ);
+  let currentQ = null;
 
-        currentQ = {
-          id: nanoid(),
-          question: line.substring(2).trim(),
-          options: [],
-          answer: "",
-          type: "single",
-          contentType: "question",
-          mediaUrl: "",
-          mediaAlt: "",
-        };
-      } else if (line.startsWith("TYPE:") && currentQ) {
-        const value = line.substring(5).trim().toLowerCase();
-        currentQ.contentType = ["question", "image", "audio", "video"].includes(value)
-          ? value
-          : "question";
-      } else if (line.startsWith("MEDIA:") && currentQ) {
-        currentQ.mediaUrl = cleanImportedMediaUrl(line.substring(6));
-      } else if (line.startsWith("ALT:") && currentQ) {
-        currentQ.mediaAlt = line.substring(4).trim();
-      } else if (line.startsWith("O:") && currentQ) {
-        currentQ.options.push(line.substring(2).trim());
-        currentQ.type = "multi";
-      } else if (line.startsWith("A:") && currentQ) {
-        currentQ.answer = line.substring(2).trim();
-      }
-    });
+  lines.forEach((line) => {
+    if (line.startsWith("Q:")) {
+      if (currentQ) parsedQuestions.push(currentQ);
 
-    if (currentQ) parsedQuestions.push(currentQ);
+      currentQ = {
+        id: nanoid(),
+        question: line.substring(2).trim(),
+        options: [],
+        answer: "",
+        type: "single",
+        contentType: "question",
+        mediaUrl: "",
+        mediaAlt: "",
+        difficulty: "easy", // default
+      };
 
-    return parsedQuestions;
-  };
+    } else if (line.startsWith("TYPE:") && currentQ) {
+      const value = line.substring(5).trim().toLowerCase();
+      currentQ.contentType = ["question", "image", "audio", "video"].includes(value)
+        ? value
+        : "question";
+
+    } else if (
+      (line.startsWith("DIFFICULTY:") || line.startsWith("QUESTION DIFFICULTY:")) &&
+      currentQ
+    ) {
+      const raw = line.includes("QUESTION DIFFICULTY:")
+        ? line.substring(20).trim().toLowerCase()
+        : line.substring(11).trim().toLowerCase();
+
+      currentQ.difficulty = ["easy", "medium", "hard"].includes(raw)
+        ? raw
+        : "easy";
+
+    } else if (line.startsWith("MEDIA:") && currentQ) {
+      currentQ.mediaUrl = cleanImportedMediaUrl(line.substring(6));
+
+    } else if (line.startsWith("ALT:") && currentQ) {
+      currentQ.mediaAlt = line.substring(4).trim();
+
+    } else if (line.startsWith("O:") && currentQ) {
+      currentQ.options.push(line.substring(2).trim());
+      currentQ.type = "multi";
+
+    } else if (line.startsWith("A:") && currentQ) {
+      currentQ.answer = line.substring(2).trim();
+    }
+  });
+
+  if (currentQ) parsedQuestions.push(currentQ);
+
+  return parsedQuestions;
+};
+
 
   const handleBulkImport = () => {
     const parsed = parseBulkQuestions(bulkText);
@@ -245,6 +265,7 @@ export default function QuizSetup() {
   const imageQuestionCount = questions.filter((q) => q.contentType === "image").length;
 
   const promptFormatInstructions = (() => {
+
     const isMedia = promptContentMode === "media";
     const isOptions = promptAnswerStyle === "options";
 
@@ -286,6 +307,9 @@ export default function QuizSetup() {
 
     formatLines.push("A: [correct answer]");
     keepLabels.push("A:");
+
+    formatLines.push("DIFFICULTY: [easy|medium|hard]");
+    keepLabels.push("DIFFICULTY:");
 
     const rules = [`Keep the ${keepLabels.join(", ")} lines for every item.`];
 
@@ -905,39 +929,163 @@ export default function QuizSetup() {
             )}
           </div>
 
-          {activeSetMode === "standard-points" && (
-            <>
-              <div className="space-y-2">
-                <div className="text-sm font-semibold text-slate-800">Step 4: Configure points</div>
-                <div className="text-xs text-slate-600">Points are only used for Standard Points mode.</div>
-              </div>
-              <div className="space-y-2 rounded-lg border border-slate-200 bg-slate-50 p-4">
-                <label className="font-medium">Correct Answer Points</label>
-                <input
-                  type="number"
-                  className="border p-2 rounded w-full"
-                  value={quizSettings.correctPoints}
-                  onChange={(e) =>
-                    updateQuizSettings({
-                      correctPoints: Number(e.target.value),
-                    })
-                  }
-                />
+{activeSetMode !== "standard" && (
+  <>
+    {/* Header */}
+    <div className="space-y-2">
+      <div className="text-sm font-semibold text-slate-800">
+        Step 4: Configure Points
+      </div>
+      <div className="text-xs text-slate-600">
+        Points are only used for Standard Points mode.
+      </div>
+    </div>
 
-                <label className="font-medium">Wrong Answer Points</label>
-                <input
-                  type="number"
-                  className="border p-2 rounded w-full"
-                  value={quizSettings.wrongPoints}
-                  onChange={(e) =>
-                    updateQuizSettings({
-                      wrongPoints: Number(e.target.value),
-                    })
-                  }
-                />
-              </div>
-            </>
-          )}
+    <div className="space-y-6 rounded-lg border border-slate-200 bg-slate-50 p-4">
+
+      {/* 1️⃣ SAME POINTS OR DIFFICULTY POINTS */}
+      <div className="space-y-2">
+        <label className="font-medium">Use same points for all questions?</label>
+        <select
+          className="border p-2 rounded w-full bg-white"
+          value={quizSettings.useSamePoints ?? "yes"}
+          onChange={(e) =>
+            updateQuizSettings({
+              useSamePoints: e.target.value, // "yes" or "no"
+            })
+          }
+        >
+          <option value="yes">Yes — same points for all questions</option>
+          <option value="no">No — set points by difficulty</option>
+        </select>
+      </div>
+
+      {/* SAME POINTS MODE */}
+      {quizSettings.useSamePoints === "yes" && (
+        <div className="space-y-2">
+          <label className="font-medium">Points per question</label>
+          <input
+            type="number"
+            className="border p-2 rounded w-full"
+            value={quizSettings.samePoints ?? 1}
+            onChange={(e) =>
+              updateQuizSettings({
+                samePoints: Number(e.target.value),
+              })
+            }
+          />
+        </div>
+      )}
+
+      {/* DIFFICULTY POINTS MODE */}
+      {quizSettings.useSamePoints === "no" && (
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <label className="font-medium">Easy Question Points</label>
+            <input
+              type="number"
+              className="border p-2 rounded w-full"
+              value={quizSettings.easyPoints ?? 1}
+              onChange={(e) =>
+                updateQuizSettings({
+                  easyPoints: Number(e.target.value),
+                })
+              }
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label className="font-medium">Medium Question Points</label>
+            <input
+              type="number"
+              className="border p-2 rounded w-full"
+              value={quizSettings.mediumPoints ?? 2}
+              onChange={(e) =>
+                updateQuizSettings({
+                  mediumPoints: Number(e.target.value),
+                })
+              }
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label className="font-medium">Hard Question Points</label>
+            <input
+              type="number"
+              className="border p-2 rounded w-full"
+              value={quizSettings.hardPoints ?? 3}
+              onChange={(e) =>
+                updateQuizSettings({
+                  hardPoints: Number(e.target.value),
+                })
+              }
+            />
+          </div>
+        </div>
+      )}
+
+      {/* 2️⃣ REMOVE POINTS FOR WRONG ANSWERS? */}
+      <div className="space-y-2">
+        <label className="font-medium">Remove points for wrong answers?</label>
+        <select
+          className="border p-2 rounded w-full bg-white"
+          value={quizSettings.removeWrongPoints ?? "yes"}
+          onChange={(e) =>
+            updateQuizSettings({
+              removeWrongPoints: e.target.value,
+              wrongPoints: e.target.value === "yes" ? quizSettings.wrongPoints ?? -1 : 0,
+            })
+          }
+        >
+          <option value="yes">Yes — remove points</option>
+          <option value="no">No — do not remove points</option>
+        </select>
+      </div>
+
+      {/* WRONG POINTS INPUT */}
+      {quizSettings.removeWrongPoints === "yes" && (
+        <div className="space-y-2">
+          <label className="font-medium">Wrong Answer Points</label>
+          <input
+            type="number"
+            className="border p-2 rounded w-full"
+            value={quizSettings.wrongPoints ?? -1}
+            onChange={(e) =>
+              updateQuizSettings({
+                wrongPoints: Number(e.target.value),
+              })
+            }
+          />
+        </div>
+      )}
+
+      {/* 3️⃣ REMOVE POINTS FROM ALL IF NO ONE ANSWERS */}
+      {quizSettings.removeWrongPoints === "yes" && (
+        <div className="space-y-2">
+          <label className="font-medium">
+            Remove points from all players if no correct answer is given?
+          </label>
+          <select
+            className="border p-2 rounded w-full bg-white"
+            value={quizSettings.noOneAnsweredPenalty ?? "remove"}
+            onChange={(e) =>
+              updateQuizSettings({
+                noOneAnsweredPenalty: e.target.value, // "remove" or "none"
+              })
+            }
+          >
+            <option value="remove">Yes — remove points from all</option>
+            <option value="none">No — do nothing</option>
+          </select>
+        </div>
+      )}
+
+    </div>
+  </>
+)}
+
+{console.log(quizSettings)}
+
 
           {activeSetMode === "media" && questions.some((q) => q.mediaReveal) && (
             <>

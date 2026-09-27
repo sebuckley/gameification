@@ -12,6 +12,8 @@ export function QuestionItem({
   removeQuestion,
   quizSettings,
 }) {
+
+  console.log(q)
   const [open, setOpen] = useState(false);
   const [mediaPreviewError, setMediaPreviewError] = useState(q.mediaStatus === "failed");
   const [mediaPreviewLoaded, setMediaPreviewLoaded] = useState(q.mediaStatus === "loaded");
