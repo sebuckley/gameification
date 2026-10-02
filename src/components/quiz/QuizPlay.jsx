@@ -1,6 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import usePeople from "../store/usePeopleStore";
 import Leaderboard from "../shared/Leaderboard";
+import StandaloneActivityRunner from "../shared/StandaloneActivityRunner";
+import useQuizController from "../hooks/quizController";
+import { formatTime } from "../../utils/formatUKTime";
 
 import StandardQuizEngine from "./StandardQuiz/StandardQuizEngine";
 import StandardQuizPointsEngine from "./StandardQuizPoints/StandardQuizPointsEngine";
@@ -13,10 +16,12 @@ import PodiumModal from "./shared/PodiumModal";
 import PersonBadge from "./shared/PersonBadge";
 
 import { getQuizStats, generateQuizInstructions } from "../../utils/questions";
+import { getPeopleSetRoster } from "../../utils/peopleSetMembers";
 
 export default function QuizPlay({ running, setRunning }) {
   const {
     people,
+    peopleSets = [],
     questions,
     questionSets,
     activeQuestionSetId,
@@ -29,42 +34,99 @@ export default function QuizPlay({ running, setRunning }) {
 
 
 
- const quizPeople = people.filter(
+
+const presenterLaunchMap = usePeople(state => state.presenterLaunchMap);
+const setPresenterLaunchMap = usePeople(state => state.setPresenterLaunchMap);
+
+const [presenterWindow, setPresenterWindow] = useState(null);
+
+const activeQuestionSet = (questionSets || []).find((setItem) => setItem.id === activeQuestionSetId);
+const activePeopleSet = peopleSets.find((setItem) => setItem.id === activeQuestionSet?.peopleSetId);
+const allQuizPeople = getPeopleSetRoster(people, activePeopleSet).filter(
     (p) => p?.inSpinner !== false && p?.isPresenter !== true
   );
-  const hasPeople = quizPeople.length > 0;
 
   const [index, setIndex] = useState(0);
   const [cycle, setCycle] = useState(0);
+  const [showAnswer, setShowAnswer] = useState(false);
+  const revealAnswer = () => setShowAnswer(true);
+  const resetAnswer = () => setShowAnswer(false);
 
   const [showPodium, setShowPodium] = useState(false);
   const [podium, setPodium] = useState([]);
   const [quizFinished, setQuizFinished] = useState(false);
-  const [players, setPlayers] = useState([]);
+  const [players, setPlayers] = useState(allQuizPeople);
 
-  const [timerDisplay, setTimerDisplay] = useState([]);
+  const [timerDisplay, setTimerDisplay] = useState(0);
+  const [elapsed, setElapsed] = useState(0);
+  const timeoutHandledRef = useRef(false);
 
-  // Keep players in sync with quizPeople
   useEffect(() => {
-    setPlayers(quizPeople);
-  }, []);
+    setPlayers((previousPlayers) => {
+      const selectedIds = new Set(previousPlayers.map((person) => person.id));
+      return allQuizPeople.filter((person) => selectedIds.has(person.id));
+    });
+  }, [people, peopleSets, activePeopleSet?.id]);
+
+  useEffect(() => {
+  if (!running) return;
+
+  const interval = setInterval(() => {
+    setTimerDisplay(prev => prev + 1);
+  }, 1000);
+
+  return () => clearInterval(interval);
+}, [running]);
+
+
 
   const currentQuestion = index !== null ? questions[index] : null;
   const quizSets = Array.isArray(questionSets) && questionSets.length > 0
     ? questionSets
     : [{ id: "default", name: "Question Set 1", questions: questions || [] }];
   const hasAnyQuestions = quizSets.some((setItem) => Array.isArray(setItem.questions) && setItem.questions.length > 0);
+  const quizPeople = allQuizPeople;
+  const hasPeople = quizPeople.length > 0;
+  const quizPlayerIds = new Set(quizPeople.map((person) => person.id));
+  const quizPlayers = players.filter((person) => quizPlayerIds.has(person.id));
+  const activeSetSettings = { ...quizSettings, ...(activeQuestionSet?.settings || {}) };
   const activeSetName =
-    quizSets.find((setItem) => setItem.id === activeQuestionSetId)?.name ||
+    activeQuestionSet?.name ||
     quizSets[0]?.name ||
     "Quiz";
+
+  const questionTimeLimitSeconds = Math.max(
+    0,
+    Number(activeSetSettings.questionTimeLimitSeconds) || Number(activeQuestionSet?.timeLimit) || 0
+  );
 
   const activeSetMode =
     quizSets.find((setItem) => setItem.id === activeQuestionSetId)?.quizMode ||
     quizMode ||
     "standard";
 
-  
+  useEffect(() => {
+    setElapsed(0);
+    timeoutHandledRef.current = false;
+    if (!running || cycle === 0) return undefined;
+
+    let interval = setInterval(() => {
+      setElapsed((previousElapsed) => {
+        const nextElapsed = previousElapsed + 1;
+        if (questionTimeLimitSeconds > 0 && nextElapsed >= questionTimeLimitSeconds) {
+          clearInterval(interval);
+          if (!timeoutHandledRef.current && activeSetSettings.autoRevealOnTimeout && activeSetMode === "standard" && cycle === 2) {
+            timeoutHandledRef.current = true;
+            setShowAnswer(true);
+          }
+        }
+        return nextElapsed;
+      });
+
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [index, currentQuestion, running, questionTimeLimitSeconds, activeSetSettings.autoRevealOnTimeout, activeSetMode, cycle]);
 
   const getQuizModeLabel = (mode) => {
     if (mode === "standard-points") return "Standard Points";
@@ -84,26 +146,38 @@ export default function QuizPlay({ running, setRunning }) {
     }
   };
 
-  const startQuizForSet = (setItem) => {
-    if (!setItem || !Array.isArray(setItem.questions) || setItem.questions.length === 0) return;
-    if (setItem.id && setItem.id !== activeQuestionSetId) {
-      selectQuestionSet(setItem.id);
-    }
-    const hasMulti = setItem.questions.some((q) => q.type === "multi");
-    const modeForSet = setItem.quizMode || "standard";
-    const safeMode = modeForSet === "gameshow" && !hasMulti ? "standard" : modeForSet;
-    setQuizMode(safeMode);
-    resetQuizScores();
-    setCycle(1);
-    setQuizFinished(false);
-    setShowPodium(false);
-    setRunning(true);
-    setIndex(0);
-    enterFullscreen();
-  };
+const startQuizForSet = (setItem) => {
+  if (!setItem || !Array.isArray(setItem.questions) || setItem.questions.length === 0) return;
+
+  // Load set
+  if (setItem.id && setItem.id !== activeQuestionSetId) {
+    selectQuestionSet(setItem.id);
+  }
+
+  const hasMulti = setItem.questions.some((q) => q.type === "multi");
+  const modeForSet = setItem.quizMode || "standard";
+  const safeMode = modeForSet === "gameshow" && !hasMulti ? "standard" : modeForSet;
+  setQuizMode(safeMode);
+
+  setQuizFinished(false);
+  setShowPodium(false);
+  setIndex(0);
+
+  // Running first
+  setRunning(true);
+
+  // Fullscreen must happen BEFORE opening presenter window
+  enterFullscreen();
+
+};
+
+
+
+
 
   const closeQuiz = () => {
     setRunning(false);
+    setPresenterWindow(null);
     setIndex(0);
     setCycle(1);
     setQuizFinished(false);
@@ -113,7 +187,7 @@ export default function QuizPlay({ running, setRunning }) {
 
   const finishQuiz = () => {
 
-    const sorted = [...players].sort((a, b) => b.quizScore - a.quizScore);
+    const sorted = [...quizPlayers].sort((a, b) => b.quizScore - a.quizScore);
     setPodium(sorted.slice(0, 3));
 
     if (quizMode === "standard" || quizMode === "media") {
@@ -144,12 +218,114 @@ export default function QuizPlay({ running, setRunning }) {
     }
   };
 
-  const removePointsAll = quizSettings.noOneAnsweredPenalty === "remove";
+  const removePointsAll = activeSetSettings.noOneAnsweredPenalty === "remove";
   const points = activeSetMode !== "standard";
-  const pointsMode = quizSettings.pointMode || "default";
+  const pointsMode = activeSetSettings.pointMode || "default";
 
   const stats = getQuizStats(questions);
-  const instructions = generateQuizInstructions(stats, quizSettings.revealSeconds , points, quizSettings.correctAnswerPoints, quizSettings.incorrectAnswerPoints, removePointsAll, activeSetMode);
+  const instructions = generateQuizInstructions(stats, activeSetSettings.revealSeconds, points, activeSetSettings.samePoints ?? activeSetSettings.correctPoints, activeSetSettings.wrongPoints, removePointsAll, activeSetMode);
+
+  const openPresenterWindow = () => {
+    const win = window.open("", "QuizPresenter", "popup=yes,width=1200,height=900");
+    if (!win) return;
+
+    setPresenterWindow(win);
+
+    if (typeof window.getScreenDetails === "function") {
+      try {
+        window.getScreenDetails().then(({ screens }) => {
+          const secondaryScreen = screens.find((screen) => !screen.isPrimary);
+          if (!secondaryScreen || win.closed) return;
+
+          win.moveTo(secondaryScreen.availLeft + 16, secondaryScreen.availTop + 16);
+          win.resizeTo(
+            Math.max(640, secondaryScreen.availWidth - 32),
+            Math.max(480, secondaryScreen.availHeight - 32)
+          );
+        }).catch(() => {});
+      } catch {
+      }
+    }
+  };
+
+const {
+  presenterProgress,
+} = useQuizController({
+  quizMode: activeSetMode,
+  cycle,
+  nextQuestion,
+  index,
+  questions,
+  showAnswer,
+  revealAnswer,
+  resetAnswer
+});
+
+
+const dispatchControllerAction = (action) => {
+  const mainDocument = presenterWindow?.opener?.document;
+  if (!mainDocument) return;
+
+  const buttons = Array.from(mainDocument.querySelectorAll("[data-controller-action]"));
+  const target = buttons.find((button) => {
+    if (action.type === "select-player") {
+      return button.dataset.controllerPlayer === String(action.playerId);
+    }
+    if (action.type === "option") {
+      return button.dataset.controllerOption === action.option;
+    }
+    if (action.type === "result") {
+      return button.dataset.controllerPlayer === String(action.playerId) &&
+        button.dataset.controllerResult === action.result;
+    }
+    if (action.type === "next") {
+      return button.dataset.controllerAction === "advance" ||
+        (activeSetMode === "gameshow" && button.dataset.controllerAction === "next");
+    }
+    return false;
+  });
+
+  if (action.type === "no-one-answered") {
+    if (activeSetSettings.allowNoOneAnswered === false) return false;
+    if (mainDocument.querySelector('[data-controller-modal="correct-answer"], [data-controller-modal="answer-reveal"]')) {
+      return false;
+    }
+
+    const wrongModalOpen = mainDocument.querySelector('[data-controller-modal="wrong-answer"]');
+    const noOneAnsweredTarget = buttons.find((button) => button.dataset.controllerAction === "modal-no-one-answered") ||
+      (wrongModalOpen && activeSetMode === "gameshow"
+        ? buttons.find((button) => button.dataset.controllerAction === "advance")
+        : null) ||
+      buttons.find((button) => button.dataset.controllerAction === "no-one-answered") ||
+      (activeSetMode === "gameshow"
+        ? buttons.find((button) => button.dataset.controllerAction === "next")
+        : null);
+    noOneAnsweredTarget?.click();
+    return Boolean(noOneAnsweredTarget && !noOneAnsweredTarget.disabled);
+  }
+
+  if (!target || target.disabled) return false;
+  target?.click();
+  return true;
+};
+
+const handlePresenterNext = () => {
+  if (activeSetMode === "standard") {
+    presenterProgress();
+    return;
+  }
+
+  dispatchControllerAction({ type: "next" });
+};
+
+const handlePresenterNoOneAnswered = () => {
+  if (activeSetSettings.allowNoOneAnswered === false) return false;
+  return dispatchControllerAction({ type: "no-one-answered" });
+};
+
+
+
+
 
   return (
     <>
@@ -169,7 +345,10 @@ export default function QuizPlay({ running, setRunning }) {
             ? setItem.questions.length
             : 0;
 
-          const canStartSet = hasPeople && setQuestionCount > 0;
+          const setAudience = setItem.peopleSetId
+            ? allQuizPeople.filter((person) => peopleSets.find((peopleSet) => peopleSet.id === setItem.peopleSetId)?.personIds.includes(person.id))
+            : allQuizPeople;
+          const canStartSet = setAudience.length > 0 && setQuestionCount > 0;
           const isActiveSet = setItem.id === activeQuestionSetId;
           const setHasMultiChoice = Array.isArray(setItem.questions)
             ? setItem.questions.some((q) => q.type === "multi")
@@ -182,36 +361,53 @@ export default function QuizPlay({ running, setRunning }) {
               : setMode;
 
           return (
-            <div
-              key={setItem.id || `quiz-set-${index}`}
-              className={`rounded-lg border p-3 flex flex-col gap-3 w-full
-                ${isActiveSet ? "border-indigo-300 bg-indigo-50" : "border-gray-200 bg-white"}
-              `}
-            >
-              <div className="flex items-start justify-between gap-2">
-                <div className="font-semibold text-gray-800">{setName}</div>
-                <div className="text-xs font-medium text-indigo-700 rounded-full bg-indigo-100 px-2 py-1 whitespace-nowrap">
-                  {getQuizModeLabel(safeSetMode)}
-                </div>
-              </div>
+<div
+  key={setItem.id || `quiz-set-${index}`}
+  className={`rounded-lg border p-3 flex flex-col gap-3 w-full
+    ${isActiveSet ? "border-indigo-300 bg-indigo-50" : "border-gray-200 bg-white"}
+  `}
+>
+  <div className="flex items-start justify-between gap-2">
+    <div className="font-semibold text-gray-800">{setName}</div>
+    <div className="text-xs font-medium text-indigo-700 rounded-full bg-indigo-100 px-2 py-1 whitespace-nowrap">
+      {getQuizModeLabel(safeSetMode)}
+    </div>
+  </div>
 
-              <div className="text-xs text-gray-600">
-                {setQuestionCount} {setQuestionCount === 1 ? "question" : "questions"}
-                {isActiveSet ? " • Active" : ""}
-              </div>
+  <div className="text-xs text-gray-600">
+    {setQuestionCount} {setQuestionCount === 1 ? "question" : "questions"}
+    {isActiveSet ? " • Active" : ""}
+  </div>
 
-              <button
-                onClick={() => startQuizForSet(setItem)}
-                disabled={!canStartSet}
-                className={`w-full sm:w-auto px-4 py-2 rounded-lg text-sm font-medium shadow
-                  ${canStartSet
-                    ? "bg-indigo-600 text-white hover:bg-indigo-700"
-                    : "bg-gray-400 text-white cursor-not-allowed"}
-                `}
-              >
-                Start {setName}
-              </button>
-            </div>
+  {/* ⭐ NEW: Presenter Window Checkbox */}
+<label className="flex items-center gap-2 text-sm text-gray-700">
+  <input
+    type="checkbox"
+    checked={presenterLaunchMap[setItem.id] || false}
+    onChange={(e) => {
+      setPresenterLaunchMap(prev => ({
+        ...prev,
+        [setItem.id]: e.target.checked
+      }));
+    }}
+    className="h-4 w-4"
+  />
+  Launch Presenter Window
+</label>
+
+
+<button
+  onClick={() => {
+    startQuizForSet(setItem);
+  }}
+  disabled={!canStartSet}
+  className="w-full sm:w-auto px-4 py-2 rounded-lg text-sm font-medium shadow
+    bg-indigo-600 text-white hover:bg-indigo-700"
+>
+  Start {setName}
+</button>
+</div>
+
           );
         })}
 
@@ -266,7 +462,7 @@ export default function QuizPlay({ running, setRunning }) {
         <div className="text-xl font-black text-indigo-700">{activeSetName}</div>
       </div>
       <div className="text-lg font-bold text-gray-700 bg-gray-100 px-4 py-2 rounded-lg shadow">
-        {timerDisplay}
+        {formatTime(timerDisplay)}
       </div>
     </div>
   )}
@@ -280,176 +476,15 @@ export default function QuizPlay({ running, setRunning }) {
         </div>
       )}
 
-      {running && quizFinished && !showPodium && (
-        <div className="flex h-[calc(100vh-80px)] w-full items-center justify-center px-4 py-8">
-
-          <div className="flex w-full max-w-3xl flex-col items-center justify-center rounded-[32px] border border-indigo-200 bg-white p-10 text-center shadow-[0_30px_80px_rgba(79,70,229,0.12)] space-y-10">
-
-            {/* Podium Section (only for non-standard mode) */}
-            {quizMode !== "standard" && (
-              <>
-                <div className="space-y-6">
-                  <h3 className="text-2xl font-bold">Final Scores</h3>
-
-                  <div className="flex justify-center gap-6 items-end">
-
-                    {/* 2nd Place */}
-                    {podium[1] && (
-                      <div className="flex flex-col items-center space-y-2">
-                        <PersonBadge person={podium[1]} />
-                        <div className="font-semibold text-gray-700">2nd Place</div>
-                        <div className="text-sm text-gray-600">{podium[1].quizScore} pts</div>
-                      </div>
-                    )}
-
-                    {/* 1st Place */}
-                    {podium[0] && (
-                      <div className="flex flex-col items-center space-y-2 border-4 border-yellow-400 rounded-xl p-2">
-                        <PersonBadge person={podium[0]} />
-                        <div className="font-bold text-yellow-600 text-xl">1st Place</div>
-                        <div className="text-sm text-gray-600">{podium[0].quizScore} pts</div>
-                      </div>
-                    )}
-
-                    {/* 3rd Place */}
-                    {podium[2] && (
-                      <div className="flex flex-col items-center space-y-2">
-                        <PersonBadge person={podium[2]} />
-                        <div className="font-semibold text-gray-700">3rd Place</div>
-                        <div className="text-sm text-gray-600">{podium[2].quizScore} pts</div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Divider */}
-                <div className="h-px w-full bg-slate-200"></div>
-              </>
-            )}
-
-            {/* Quiz Ended Section */}
-            <div className="flex flex-col items-center space-y-4">
-              <div className="text-xs font-bold uppercase tracking-[0.35em] text-indigo-500">
-                Complete
-              </div>
-
-              <h2 className="text-4xl font-black text-slate-900">Quiz ended</h2>
-
-              <p className="text-base text-slate-600">
-                The quiz has finished. You can close this screen when you’re ready.
-              </p>
-
-              <button
-                onClick={closeQuiz}
-                className="mt-4 rounded-full bg-red-600 px-8 py-3 text-lg font-semibold text-white shadow-md transition hover:bg-red-700"
-              >
-                Close
-              </button>
-            </div>
-
-          </div>
-        </div>
-      )}
-
-{running && currentQuestion && !showPodium && !quizFinished && cycle > 0 && (
-  <div className="w-full h-[calc(100vh-80px)] flex flex-row overflow-hidden">
-
-    {/* LEFT: QUESTION AREA */}
-    <div className="flex-1 h-full flex items-center justify-center overflow-hidden">
-
-      {/* Centered content that can scroll */}
-      <div className="
-        w-full
-        max-w-5xl
-        max-h-full
-        overflow-auto
-        flex
-        flex-col
-        items-center
-        justify-center
-        px-6
-        py-6
-      ">
-
-        {/* QUIZ ENGINES */}
-        {quizMode === "standard" && (
-          <StandardQuizEngine
-            currentQuestion={currentQuestion}
-            index={index}
-            questions={questions}
-            quizPeople={players}
-            nextQuestion={nextQuestion}
-            cycle={cycle}
-          />
-        )}
-
-        {quizMode === "standard-points" && (
-          <StandardQuizPointsEngine
-            currentQuestion={currentQuestion}
-            index={index}
-            questions={questions}
-            quizPeople={players}
-            nextQuestion={nextQuestion}
-            cycle={cycle}
-          />
-        )}
-
-        {quizMode === "gameshow" && currentQuestion.type === "multi" && (
-          <GameShowEngine
-            currentQuestion={currentQuestion}
-            index={index}
-            questions={questions}
-            quizPeople={players}
-            nextQuestion={nextQuestion}
-          />
-        )}
-
-        {quizMode === "media" && (
-          <MediaQuizEngine
-            currentQuestion={currentQuestion}
-            index={index}
-            questions={questions}
-            quizPeople={players}
-            nextQuestion={nextQuestion}
-          />
-        )}
-
-      </div>
-    </div>
-
-    {/* RIGHT: LEADERBOARD (DESKTOP) */}
-    {quizMode !== "standard" && (
-      <div
-        className="
-          hidden
-          lg:flex
-          flex-col
-          items-center
-          justify-center
-          w-[24rem]
-          h-full
-          mx-4
-          bg-white
-          overflow-hidden
-        "
-      >
-        <Leaderboard people={players} data="quiz" running={running} />
-      </div>
-    )}
-
-    {/* MOBILE LEADERBOARD */}
-    {quizMode !== "standard" && (
-      <div className="lg:hidden w-full bg-white border-t border-gray-300 shadow p-4">
-        <Leaderboard people={players} data="quiz" running={running} />
-      </div>
-    )}
-
-  </div>
+      {running && cycle > 0 && (
+  <StandaloneActivityRunner
+    kind="quiz"
+    questionSet={{ ...activeQuestionSet, quizMode: activeSetMode, questions, settings: activeSetSettings }}
+    participants={quizPlayers}
+    initialSpeakerWindow={presenterWindow}
+    onClose={closeQuiz}
+  />
 )}
-
-
-
-
 
 {running && cycle === 0 && (
   <div className="w-full flex-1 flex flex-row bg-white p-10 gap-10">
@@ -476,32 +511,32 @@ export default function QuizPlay({ running, setRunning }) {
                 key={person.id}
                 className="flex items-center gap-3 p-3 border rounded-lg bg-gray-50"
               >
-<input
-  type="checkbox"
-  checked={players.some(p => p.id === person.id)}
-  onChange={(e) => {
-    setPlayers(prev => {
-      if (e.target.checked) {
-        if (!prev.some(p => p.id === person.id)) {
-          return [...prev, person];
-        }
-        return prev;
-      } else {
-        return prev.filter(p => p.id !== person.id);
-      }
-    });
-  }}
-  className="
-    w-5 h-5 
-    rounded 
-    border-2 
-    border-slate-400 
-    text-blue-600 
-    focus:ring-blue-500 
-    focus:ring-offset-0 
-    cursor-pointer
-  "
-/>
+                <input
+                  type="checkbox"
+                  checked={players.some(p => p.id === person.id)}
+                  onChange={(e) => {
+                    setPlayers(prev => {
+                      if (e.target.checked) {
+                        if (!prev.some(p => p.id === person.id)) {
+                          return [...prev, person];
+                        }
+                        return prev;
+                      } else {
+                        return prev.filter(p => p.id !== person.id);
+                      }
+                    });
+                  }}
+                  className="
+                    w-5 h-5 
+                    rounded 
+                    border-2 
+                    border-slate-400 
+                    text-blue-600 
+                    focus:ring-blue-500 
+                    focus:ring-offset-0 
+                    cursor-pointer
+                  "
+                />
 
 
 
@@ -541,12 +576,24 @@ export default function QuizPlay({ running, setRunning }) {
           <li>• The quiz will begin immediately after you press Start.</li>
         </ul>
 
-        <button
-          onClick={() => setCycle(1)}
-          className="px-6 py-3 bg-indigo-600 text-white rounded-lg shadow hover:bg-indigo-700 text-lg font-semibold"
-        >
-          Start Quiz
-        </button>
+<button
+  onClick={() => {
+    setPlayers((previousPlayers) => quizPeople.filter((person) => previousPlayers.some((selected) => selected.id === person.id)));
+    resetQuizScores();
+    // 1️⃣ Start the quiz properly
+    setCycle(1);
+    // 3️⃣ After fullscreen completes, open presenter window
+    if(presenterLaunchMap[activeQuestionSetId]){
+        openPresenterWindow();
+  
+    }
+
+    
+  }}
+  className="px-6 py-3 bg-indigo-600 text-white rounded-lg shadow hover:bg-indigo-700 text-lg font-semibold"
+>
+  Start Quiz
+</button>
 
       </div>
     </div>
@@ -555,21 +602,6 @@ export default function QuizPlay({ running, setRunning }) {
 )}
 
 
-
-
-
-
-
-      {/* PODIUM */}
-      {quizMode !== "standard" && (
-        <PodiumModal
-          show={showPodium}
-          podium={podium}
-          onClose={() => setShowPodium(false)}
-        />
-
-      )}
-    
     </div>
     </>
   );

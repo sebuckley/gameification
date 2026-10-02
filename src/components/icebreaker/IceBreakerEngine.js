@@ -96,6 +96,7 @@ export function useIceBreakerEngine(iceBreaker, participants) {
     currentParticipant,
     currentIndex,
     totalParticipants: orderedParticipants.length,
+    orderedParticipants,
     answer,
     randomPrompt,
 

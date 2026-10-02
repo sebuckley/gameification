@@ -7,6 +7,7 @@ import NotesSection from "./PersonCard/Notes";
 import AccessibilityRequirementsSection from "./PersonCard/Accessibility";
 import DietaryRequirementsSection from "./PersonCard/Dietry";
 import { PERSON_TYPE_OPTIONS } from "../../data/PersonOptions";
+import { getPersonForPeopleSet } from "../../utils/peopleSetMembers";
 
 import {
   User,
@@ -16,7 +17,7 @@ import {
 } from "lucide-react";
 
 
-export default function PersonCard({ person, index, dragHandleProps }) {
+export default function PersonCard({ person, index, dragHandleProps, purpose = "all", peopleSetId = null }) {
   const { updatePerson, people, removePerson } = usePeople();
   const [open, setOpen] = useState(false);
   const [dietOpen, setDietOpen] = useState(false);
@@ -43,6 +44,7 @@ export default function PersonCard({ person, index, dragHandleProps }) {
     fullName: "",
     preferredName: "",
     email: "",
+    organization: "",
     personType: "",
     dietaryRequirements: [],
     accessibilityRequirements: [],
@@ -54,21 +56,40 @@ export default function PersonCard({ person, index, dragHandleProps }) {
     inGroups: true,
     ...person
   };
+  const engagementNotes = peopleSetId
+    ? safePerson.peopleSetDetails?.[peopleSetId]?.engagementNotes || []
+    : [];
+  const membershipPerson = getPersonForPeopleSet(safePerson, peopleSetId);
+  const updateContextPerson = (updates) => {
+    if (!peopleSetId) {
+      updatePerson(safePerson.id, updates);
+      return;
+    }
+
+    updatePerson(safePerson.id, {
+      peopleSetDetails: {
+        ...(safePerson.peopleSetDetails || {}),
+        [peopleSetId]: {
+          ...(safePerson.peopleSetDetails?.[peopleSetId] || {}),
+          ...updates,
+        },
+      },
+    });
+  };
+  const displayedNotes = purpose === "stakeholders" && peopleSetId
+    ? engagementNotes
+    : safePerson.notesHistory;
 
 
 
   /* ---------------------------------------------------------
      COMPLETION LOGIC
   --------------------------------------------------------- */
-  const fields = [
-    safePerson.fullName,
-    safePerson.preferredName,
-    safePerson.email,
-    safePerson.personType,
-    safePerson.dietaryRequirements?.length,
-    safePerson.accessibilityRequirements?.length,
-    safePerson.notesHistory?.length
-  ];
+  const fields = purpose === "stakeholders"
+    ? [safePerson.fullName, safePerson.preferredName, safePerson.email, safePerson.organization, membershipPerson.personType]
+    : purpose === "team"
+      ? [safePerson.fullName, safePerson.preferredName, membershipPerson.personType]
+      : [safePerson.fullName, safePerson.preferredName, safePerson.email, membershipPerson.personType];
 
   const completion = Math.round(
     (fields.filter(Boolean).length / fields.length) * 100
@@ -197,12 +218,22 @@ export default function PersonCard({ person, index, dragHandleProps }) {
       month: "short"
     });
 
-    updatePerson(safePerson.id, {
-      notesHistory: [
-        ...(safePerson.notesHistory || []),
-        `${noteDraft} — ${timestamp}`
-      ]
-    });
+    const note = `${noteDraft} — ${timestamp}`;
+    if (purpose === "stakeholders" && peopleSetId) {
+      updatePerson(safePerson.id, {
+        peopleSetDetails: {
+          ...(safePerson.peopleSetDetails || {}),
+          [peopleSetId]: {
+            ...(safePerson.peopleSetDetails?.[peopleSetId] || {}),
+            engagementNotes: [...engagementNotes, note],
+          },
+        },
+      });
+    } else {
+      updatePerson(safePerson.id, {
+        notesHistory: [...(safePerson.notesHistory || []), note],
+      });
+    }
 
     setNoteDraft("");
   };
@@ -311,7 +342,7 @@ export default function PersonCard({ person, index, dragHandleProps }) {
           />
 
 {/* Email */}
-<InputField
+{purpose !== "team" && <InputField
   label="Email Address"
   icon={<Mail size={16} />}
   value={safePerson.email || ""}
@@ -321,12 +352,19 @@ export default function PersonCard({ person, index, dragHandleProps }) {
     updatePerson(safePerson.id, { email: v });
   }}
 />
+}
+
+{purpose === "stakeholders" && <InputField
+  label="Organization / Department"
+  value={safePerson.organization || ""}
+  onChange={(v) => updatePerson(safePerson.id, { organization: v })}
+/>}
 
 
           <SelectField
-            label="Select Person Type"
+            label={purpose === "stakeholders" ? "Stakeholder Role" : "Person Type"}
             options={PERSON_TYPE_OPTIONS}
-            value={safePerson.personType}
+            value={membershipPerson.personType}
             onSelect={(item) => {
               const nextType = typeof item === "string" ? item : item?.value;
               if (!nextType) return;
@@ -334,9 +372,8 @@ export default function PersonCard({ person, index, dragHandleProps }) {
               const isPresenterType = nextType === "presenter" || nextType === "keynote-speaker";
               const isParticipantType = nextType === "participant";
 
-              updatePerson(safePerson.id, {
+              updateContextPerson({
                 personType: nextType,
-                isPresenter: isPresenterType,
                 inSpinner: !isPresenterType,
                 inGroups: isParticipantType,
               });
@@ -347,18 +384,19 @@ export default function PersonCard({ person, index, dragHandleProps }) {
           <div className="space-y-2">
             <Toggle
               label="Include in Spinner"
-              value={safePerson.inSpinner}
-              onChange={(v) => updatePerson(safePerson.id, { inSpinner: v })}
+              value={membershipPerson.inSpinner !== false}
+              onChange={(v) => updateContextPerson({ inSpinner: v })}
             />
 
             <Toggle
               label="Include in Groups"
-              value={safePerson.inGroups}
-              onChange={(v) => updatePerson(safePerson.id, { inGroups: v })}
+              value={membershipPerson.inGroups !== false}
+              onChange={(v) => updateContextPerson({ inGroups: v })}
             />
           </div>
 
           {/* Dietary Requirements */}
+          {purpose !== "stakeholders" && <>
           <DietaryRequirementsSection
             safePerson={safePerson}
             updatePerson={updatePerson}
@@ -375,23 +413,27 @@ export default function PersonCard({ person, index, dragHandleProps }) {
             setAccessOpen={setAccessOpen}
          
           />
+          </>}
 
           <NotesSection
-            notesHistory={safePerson.notesHistory}
+            notesHistory={displayedNotes}
             olderNotesOpen={olderNotesOpen}
             setOlderNotesOpen={setOlderNotesOpen}
             noteDraft={noteDraft}
             setNoteDraft={setNoteDraft}
             addNote={addNote}
+            title={purpose === "stakeholders" ? "Interview / Observation Notes" : "Notes"}
           />
 
           {/* Colour Picker */}
+          {purpose !== "stakeholders" && <>
           <ColourPicker
             person={safePerson}
             availableColors={availableColors}
             fallbackColor={fallbackColor}
             handleColorChange={handleColorChange}
           />
+          </>}
 
           {/* History */}
           <div className="text-sm text-gray-600 bg-gray-50 p-3 rounded-lg border border-gray-200">

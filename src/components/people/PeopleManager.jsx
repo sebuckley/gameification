@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import usePeople from "../store/usePeopleStore";
 import AddPersonForm from "./AddPersonForm";
 import PersonCard from "./PersonCard";
 import { PERSON_TYPE_OPTIONS } from "../../data/PersonOptions";
+import { getPersonForPeopleSet } from "../../utils/peopleSetMembers";
 
 import {
   DragDropContext,
@@ -11,8 +12,17 @@ import {
 } from "@hello-pangea/dnd";
 
 export default function PeopleManager() {
-  const { people, reorderPeople } = usePeople();
+  const { people, peopleSets = [], reorderPeople } = usePeople();
+  const [activePeopleSetId, setActivePeopleSetId] = useState(() => peopleSets[0]?.id || "all");
   const [activeTypeFilter, setActiveTypeFilter] = useState("all");
+  const activeSet = peopleSets.find((setItem) => setItem.id === activePeopleSetId) || null;
+  const listPeople = activeSet
+    ? people.filter((person) => activeSet.personIds.includes(person.id))
+    : people;
+
+  useEffect(() => {
+    setActiveTypeFilter("all");
+  }, [activePeopleSetId]);
 
   const typeLabelMap = PERSON_TYPE_OPTIONS.reduce((acc, option) => {
     acc[option.value] = option.label;
@@ -20,8 +30,9 @@ export default function PeopleManager() {
   }, {});
 
   const getPersonType = (person) => {
-    if (person?.personType) return String(person.personType);
-    if (person?.isPresenter) return "presenter";
+    const contextualPerson = getPersonForPeopleSet(person, activeSet?.id);
+    if (contextualPerson?.personType) return String(contextualPerson.personType);
+    if (contextualPerson?.isPresenter) return "presenter";
     return "participant";
   };
 
@@ -39,21 +50,15 @@ export default function PeopleManager() {
 
   const getTypeLabel = (type) => personTypeLabels[type] || typeLabelMap[type] || type;
 
-  const typeCounts = people.reduce((acc, person) => {
+  const typeCounts = listPeople.reduce((acc, person) => {
     const type = getPersonType(person);
     acc[type] = (acc[type] || 0) + 1;
     return acc;
   }, {});
 
-  const dynamicTypes = Object.keys(typeCounts)
-    .filter((type) => !["participant", "presenter"].includes(type) && typeCounts[type] > 0)
-    .sort((a, b) => getTypeLabel(a).localeCompare(getTypeLabel(b)));
-
   const filterCards = [
-    { key: "all", label: "All People", count: people.length },
-    { key: "participant", label: "Participants", count: typeCounts.participant || 0 },
-    { key: "presenter", label: "Presenters", count: typeCounts.presenter || 0 },
-    ...dynamicTypes.map((type) => ({
+    { key: "all", label: activeSet ? "All in Set" : "All People", count: listPeople.length },
+    ...Object.keys(typeCounts).sort((a, b) => getTypeLabel(a).localeCompare(getTypeLabel(b))).map((type) => ({
       key: type,
       label: getTypeLabel(type),
       count: typeCounts[type] || 0,
@@ -62,34 +67,33 @@ export default function PeopleManager() {
 
   const filteredPeople =
     activeTypeFilter === "all"
-      ? people
-      : people.filter((person) => getPersonType(person) === activeTypeFilter);
+      ? listPeople
+      : listPeople.filter((person) => getPersonType(person) === activeTypeFilter);
 
   // Counts
-  const totalPeople = people.length;
-  const totalDietary = people.reduce(
+  const totalPeople = listPeople.length;
+  const showRequirements = activeSet?.type !== "stakeholders";
+  const totalDietary = listPeople.reduce(
     (sum, p) => sum + (p.dietaryRequirements?.length || 0),
     0
   );
-  const totalAccessibility = people.reduce(
+  const totalAccessibility = listPeople.reduce(
     (sum, p) => sum + (p.accessibilityRequirements?.length || 0),
     0
   );
-  const totalIncomplete = people.filter((p) => {
-    const fields = [
-      p.fullName,
-      p.preferredName,
-      p.email,
-      p.dietaryRequirements?.length,
-      p.accessibilityRequirements?.length,
-      p.notesHistory?.length,
-    ];
+  const totalIncomplete = listPeople.filter((p) => {
+    const contextualPerson = getPersonForPeopleSet(p, activeSet?.id);
+    const fields = activeSet?.type === "stakeholders"
+      ? [p.fullName, p.preferredName, p.email, p.organization, contextualPerson.personType]
+      : activeSet?.type === "team"
+        ? [p.fullName, p.preferredName, contextualPerson.personType]
+        : [p.fullName, p.preferredName, p.email, contextualPerson.personType];
     return fields.filter(Boolean).length !== fields.length;
   }).length;
 
   // Drag handler
   const handleDragEnd = (result) => {
-    if (activeTypeFilter !== "all") return;
+    if (activeTypeFilter !== "all" || activeSet) return;
     if (!result.destination) return;
 
     reorderPeople(result.source.index, result.destination.index);
@@ -99,24 +103,43 @@ export default function PeopleManager() {
     <div className="space-y-6">
 
       {/* Add Person */}
-      <AddPersonForm />
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <label className="flex min-w-64 flex-1 flex-col gap-1 text-sm font-semibold text-slate-700">
+          People list
+          <select
+            value={activePeopleSetId}
+            onChange={(event) => setActivePeopleSetId(event.target.value)}
+            className="rounded border border-slate-300 bg-white px-3 py-2"
+          >
+            <option value="all">Full people list</option>
+            {peopleSets.map((setItem) => (
+              <option key={setItem.id} value={setItem.id}>
+                {setItem.type === "stakeholders" ? "Stakeholders" : setItem.type === "training-event" ? "Training / Event" : "Team"}: {setItem.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        {activeSet && <div className="pb-2 text-sm text-slate-500">Showing {listPeople.length} people in {activeSet.name}</div>}
+      </div>
+
+      <AddPersonForm peopleSetId={activeSet?.id} purpose={activeSet?.type || "all"} />
 
       {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+      <div className={`grid grid-cols-2 gap-4 text-sm ${showRequirements ? "md:grid-cols-4" : "md:grid-cols-2"}`}>
         <div className="p-3 bg-white border rounded-lg shadow-sm">
           <div className="font-semibold text-gray-700">People Added</div>
           <div className="text-xl font-bold">{totalPeople}</div>
         </div>
 
-        <div className="p-3 bg-white border rounded-lg shadow-sm">
+        {showRequirements && <div className="p-3 bg-white border rounded-lg shadow-sm">
           <div className="font-semibold text-gray-700">Dietary Items</div>
           <div className="text-xl font-bold">{totalDietary}</div>
-        </div>
+        </div>}
 
-        <div className="p-3 bg-white border rounded-lg shadow-sm">
+        {showRequirements && <div className="p-3 bg-white border rounded-lg shadow-sm">
           <div className="font-semibold text-gray-700">Accessibility Items</div>
           <div className="text-xl font-bold">{totalAccessibility}</div>
-        </div>
+        </div>}
 
         <div className="p-3 bg-white border rounded-lg shadow-sm">
           <div className="font-semibold text-gray-700">Not Complete</div>
@@ -170,6 +193,8 @@ export default function PeopleManager() {
       <PersonCard
         person={p}
         index={index}
+                purpose={activeSet?.type || "all"}
+                peopleSetId={activeSet?.id || null}
         dragHandleProps={provided.dragHandleProps}
       />
     </div>

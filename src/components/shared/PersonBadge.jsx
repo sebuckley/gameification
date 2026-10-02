@@ -1,5 +1,6 @@
-export default function PersonBadge({ person }) {
+export default function PersonBadge({ person, size = "md" }) {
   if (!person) return null;
+  const large = size === "xl";
 
   const nameForInitials =
     person.fullName?.trim() || person.preferredName || "";
@@ -14,15 +15,15 @@ export default function PersonBadge({ person }) {
 
   return (
     <div
-      className="flex items-center gap-3 p-3 rounded-lg border"
+      className={`flex items-center rounded-lg border ${large ? "gap-5 p-5" : "gap-3 p-3"}`}
       style={{
-        width: "240px", // ⭐ fixed width based on “Alexandra”
+        width: large ? "min(100%, 480px)" : "240px", // ⭐ fixed width based on “Alexandra”
         backgroundColor: (person.color || "#888") + "22",
         borderColor: person.color || "#888"
       }}
     >
       <div
-        className="w-12 h-12 rounded-full flex items-center justify-center font-bold text-white shadow"
+        className={`${large ? "h-24 w-24 text-4xl" : "h-12 w-12"} shrink-0 rounded-full flex items-center justify-center font-bold text-white shadow`}
         style={{
           backgroundColor: person.color || "#888",
           border: `3px solid ${person.color || "#888"}`
@@ -31,7 +32,7 @@ export default function PersonBadge({ person }) {
         {initials}
       </div>
 
-      <div className="font-semibold text-gray-800 truncate">
+      <div className={`font-semibold text-gray-800 truncate ${large ? "text-4xl" : ""}`}>
         {displayName}
       </div>
     </div>

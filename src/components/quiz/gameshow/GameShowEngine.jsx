@@ -9,6 +9,7 @@ export default function GameShowEngine({
   questions,
   nextQuestion,
   quizPeople,
+  quizSettings,
   
 }) {
 
@@ -16,7 +17,7 @@ export default function GameShowEngine({
   const { applyQuizResult } = usePeople();
 
   const handleAnswer = (option, personId, correct) => {
-    applyQuizResult(personId, correct);
+    applyQuizResult(personId, correct, quizSettings, currentQuestion);
   };
 
   return (

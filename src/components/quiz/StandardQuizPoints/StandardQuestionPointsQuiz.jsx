@@ -19,6 +19,7 @@ export default function StandardQuizPointsQuestion({
   handleWrong,
   handleNoOneAnswered,
   handleClearWrongModal,
+  showNoOneAnswered = true,
   nextQuestion
 }) {
   if (!currentQuestion) return null;
@@ -73,6 +74,9 @@ export default function StandardQuizPointsQuestion({
                 <div className="flex gap-2">
                   <button
                     disabled={disabled}
+                    data-controller-action="result"
+                    data-controller-player={p.id}
+                    data-controller-result="correct"
                     onClick={() => handleCorrect(p.id)}
                     className={`px-3 py-1 rounded text-white ${
                       disabled
@@ -85,6 +89,9 @@ export default function StandardQuizPointsQuestion({
 
                   <button
                     disabled={disabled}
+                    data-controller-action="result"
+                    data-controller-player={p.id}
+                    data-controller-result="wrong"
                     onClick={() => handleWrong(p.id)}
                     className={`px-3 py-1 rounded text-white ${
                       disabled
@@ -102,8 +109,9 @@ export default function StandardQuizPointsQuestion({
       )}
 
       {/* No One Answered */}
-      {!showAnswerModal && !showWrongModal && (
+      {!showAnswerModal && !showWrongModal && showNoOneAnswered && (
         <button
+          data-controller-action="no-one-answered"
           onClick={handleNoOneAnswered}
           className="px-4 py-2 bg-gray-700 text-white rounded hover:bg-gray-800 w-full"
         >
@@ -123,6 +131,7 @@ export default function StandardQuizPointsQuestion({
         show={showWrongModal}
         wrongPerson={wrongPerson}
         wrongTimer={wrongTimer}
+        showNoOneAnswered={showNoOneAnswered}
         onClear={handleClearWrongModal}
         onNoOneAnswered={handleNoOneAnswered}
       />

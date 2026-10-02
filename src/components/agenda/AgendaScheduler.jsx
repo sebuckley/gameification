@@ -5,9 +5,9 @@ import {
 } from "@hello-pangea/dnd";
 
 import { agendaTypes, getAgendaDefaultMinutes  } from "../../data/AgendaTypes";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import usePeople from "../store/usePeopleStore";
-import { getAgendaTypesForUserType } from "../../data/UserTypes";
+import { AGENDA_FOCUS_OPTIONS, AGENDA_TYPES_BY_FOCUS } from "../../data/AgendaFocus";
 
 // NEW COMPONENT IMPORTS
 import AgendaHeader from "./AgendaHeader";
@@ -16,20 +16,25 @@ import AgendaItemCard from "./AgendaItemCard";
 
 import { nanoid } from "nanoid";
 
-export default function AgendaScheduler() {
+export default function AgendaScheduler({ eventType }) {
+  const [showAllActivities, setShowAllActivities] = useState(false);
   const {
     agendaStartTime,
+    agendaEventType = "all",
     agendaItems,
     events,
     questionSets,
     iceBreakerSets,
+    peopleSets,
     setAgendaStartTime,
     addAgendaItem,
     updateAgendaItemsOrder,
     updateAgendaItem,
     removeAgendaItem,
+    applyAgendaTemplate,
+    addPersonToPeopleSet,
+    removePersonFromPeopleSet,
     people,
-    userProfile,
   } = usePeople();
 
   const presenters = people.filter((p) => p.isPresenter);
@@ -46,10 +51,12 @@ export default function AgendaScheduler() {
     return `${hh}:${mm}`;
   }, [agendaStartTime, agendaItems]);
 
-  const availableAgendaTypes = useMemo(
-    () => getAgendaTypesForUserType(userProfile?.userType, agendaTypes),
-    [userProfile?.userType]
-  );
+  const activeEventType = AGENDA_FOCUS_OPTIONS.some((focus) => focus.id === agendaEventType)
+    ? agendaEventType
+    : "all";
+  const filteredAgendaTypes = !showAllActivities && AGENDA_TYPES_BY_FOCUS[activeEventType]
+    ? agendaTypes.filter((type) => AGENDA_TYPES_BY_FOCUS[activeEventType].includes(type.id))
+    : agendaTypes;
 
 const allArtefacts = useMemo(() => {
   const seen = new Set();
@@ -105,6 +112,32 @@ const allArtefacts = useMemo(() => {
   return collected;
 }, [events, agendaItems]);
 
+const starterSchedules = [
+  {
+    id: "interviewSession",
+    title: "Interview Schedule",
+    detail: "Structured · 60 minutes",
+    type: "interview",
+    style: "border-cyan-700 bg-cyan-50 text-cyan-950 hover:bg-cyan-100",
+  },
+  {
+    id: "observationDay",
+    title: "Observation Day",
+    detail: "Full day · Multiple methods",
+    type: "observation",
+    style: "border-emerald-700 bg-emerald-50 text-emerald-950 hover:bg-emerald-100",
+  },
+  {
+    id: "teamMeeting",
+    title: "Team Meeting",
+    detail: "Structured · 60 minutes",
+    type: "team-updates",
+    style: "border-blue-700 bg-blue-50 text-blue-950 hover:bg-blue-100",
+  },
+];
+
+
+
 
 const handleAddItem = (type) => {
   addAgendaItem({
@@ -121,6 +154,7 @@ const handleAddItem = (type) => {
     artefacts: [],
     linkedQuestionSetId: null,
     linkedIceBreakerSetId: null,
+    linkedPeopleSetId: null,
     enableGroupSetup: false,
     groupCount: 2,
     groupHistoryEntryId: null,
@@ -147,8 +181,51 @@ const handleAddItem = (type) => {
         setAgendaStartTime={ setAgendaStartTime }
       />
 
-      {/* Add buttons */}
-      <AgendaAddButtons onAdd={handleAddItem} typeList={ availableAgendaTypes } />
+      {/* Add buttons
+      <section className="space-y-2">
+        <h2 className="text-sm font-bold text-slate-800">Starter schedules</h2>
+        <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
+          {starterSchedules.map((schedule) => {
+            const Icon = agendaTypes.find((type) => type.id === schedule.type)?.icon;
+            return (
+              <button
+                key={schedule.id}
+                type="button"
+                onClick={() => handleStarterSchedule(schedule.id)}
+                className={`flex min-h-20 items-center gap-3 rounded-md border-2 px-4 py-3 text-left transition-colors ${schedule.style}`}
+              >
+                {Icon && <Icon size={22} aria-hidden="true" />}
+                <span>
+                  <span className="block font-bold">{schedule.title}</span>
+                  <span className="block text-xs opacity-75">{schedule.detail}</span>
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </section> */}
+      <div className="space-y-2">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="text-sm font-medium text-slate-700">
+            Event type: <span className="font-bold">{AGENDA_FOCUS_OPTIONS.find((focus) => focus.id === activeEventType)?.label || "All Activities"}</span>
+          </div>
+          <div className="inline-flex rounded-md border border-slate-300 bg-white p-1" role="group" aria-label="Activity button filter">
+            <button
+              type="button"
+              aria-pressed={!showAllActivities}
+              onClick={() => setShowAllActivities(false)}
+              className={`rounded px-3 py-1.5 text-sm font-semibold ${!showAllActivities ? "bg-indigo-600 text-white" : "text-slate-700 hover:bg-slate-100"}`}
+            >Filter to event type</button>
+            <button
+              type="button"
+              aria-pressed={showAllActivities}
+              onClick={() => setShowAllActivities(true)}
+              className={`rounded px-3 py-1.5 text-sm font-semibold ${showAllActivities ? "bg-indigo-600 text-white" : "text-slate-700 hover:bg-slate-100"}`}
+            >Show all activities</button>
+          </div>
+        </div>
+        <AgendaAddButtons onAdd={handleAddItem} typeList={filteredAgendaTypes} />
+      </div>
 
       {/* Drag & Drop Agenda */}
       <DragDropContext onDragEnd={onDragEnd}>
@@ -170,12 +247,17 @@ const handleAddItem = (type) => {
                     <AgendaItemCard
                       item={item}
                       presenters={presenters}
-                      agendaTypeOptions={availableAgendaTypes}
+                      agendaTypeOptions={filteredAgendaTypes}
                       questionSets={questionSets}
                       iceBreakerSets={iceBreakerSets}
+                      peopleSets={peopleSets}
+                      people={people}
                       updateAgendaItem={updateAgendaItem}
                       removeAgendaItem={removeAgendaItem}
+                      addPersonToPeopleSet={addPersonToPeopleSet}
+                      removePersonFromPeopleSet={removePersonFromPeopleSet}
                       allArtefacts={allArtefacts}
+                      eventType={eventType}
                     />
                   </div>
                 )}

@@ -16,6 +16,7 @@ export default function QuizSetup() {
   const {
     questions,
     questionSets,
+    peopleSets = [],
     activeQuestionSetId,
     addQuestion,
     importQuestions,
@@ -27,8 +28,9 @@ export default function QuizSetup() {
     clearQuestionsInActiveSet,
     updateQuestionSetAgendaType,
     updateQuestionSetQuizMode,
+    updateQuestionSetPeopleSet,
+    updateQuestionSetSettings,
     quizSettings,
-    updateQuizSettings,
     promptCustomRules,
     addPromptCustomRule,
     removePromptCustomRule,
@@ -60,6 +62,10 @@ export default function QuizSetup() {
   const activeSet =
     questionSets.find((setItem) => setItem.id === activeQuestionSetId) || null;
   const activeSetMode = activeSet?.quizMode || "standard";
+  const activeSetSettings = { ...quizSettings, ...(activeSet?.settings || {}) };
+  const updateActiveSetSettings = (settings) => {
+    if (activeSet) updateQuestionSetSettings(activeSet.id, settings);
+  };
 
   useEffect(() => {
     setSetNameDraft(activeSet?.name || "");
@@ -441,6 +447,24 @@ const parseBulkQuestions = (text) => {
 
             {activeSet && (
               <>
+                <div className="text-sm font-semibold text-slate-700">People list for this quiz</div>
+                <select
+                  className="w-full rounded border p-2 text-sm"
+                  value={activeSet.peopleSetId || ""}
+                  onChange={(event) => updateQuestionSetPeopleSet(activeSet.id, event.target.value || null)}
+                >
+                  <option value="">Use everyone in the roster</option>
+                  {peopleSets.map((peopleSet) => (
+                    <option key={peopleSet.id} value={peopleSet.id}>
+                      {peopleSet.type === "stakeholders" ? "Stakeholders" : peopleSet.type === "training-event" ? "Training / Event" : "Team"}: {peopleSet.name}
+                    </option>
+                  ))}
+                </select>
+              </>
+            )}
+
+            {activeSet && (
+              <>
               <div className="text-sm font-semibold text-slate-700">Question set type</div>
               <div className="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-2">
                 
@@ -569,7 +593,7 @@ const parseBulkQuestions = (text) => {
                               moveQuestion={moveQuestion}
                               updateSingleQuestion={updateSingleQuestion}
                               removeQuestion={removeQuestion}
-                              quizSettings={quizSettings}
+                              quizSettings={activeSetSettings}
                             />
                           )}
                         </Draggable>
@@ -948,11 +972,9 @@ const parseBulkQuestions = (text) => {
         <label className="font-medium">Use same points for all questions?</label>
         <select
           className="border p-2 rounded w-full bg-white"
-          value={quizSettings.useSamePoints ?? "yes"}
+          value={activeSetSettings.useSamePoints ?? "yes"}
           onChange={(e) =>
-            updateQuizSettings({
-              useSamePoints: e.target.value, // "yes" or "no"
-            })
+            updateActiveSetSettings({ useSamePoints: e.target.value })
           }
         >
           <option value="yes">Yes — same points for all questions</option>
@@ -961,35 +983,31 @@ const parseBulkQuestions = (text) => {
       </div>
 
       {/* SAME POINTS MODE */}
-      {quizSettings.useSamePoints === "yes" && (
+      {activeSetSettings.useSamePoints === "yes" && (
         <div className="space-y-2">
           <label className="font-medium">Points per question</label>
           <input
             type="number"
             className="border p-2 rounded w-full"
-            value={quizSettings.samePoints ?? 1}
+            value={activeSetSettings.samePoints ?? 1}
             onChange={(e) =>
-              updateQuizSettings({
-                samePoints: Number(e.target.value),
-              })
+              updateActiveSetSettings({ samePoints: Number(e.target.value) })
             }
           />
         </div>
       )}
 
       {/* DIFFICULTY POINTS MODE */}
-      {quizSettings.useSamePoints === "no" && (
+      {activeSetSettings.useSamePoints === "no" && (
         <div className="space-y-4">
           <div className="space-y-2">
             <label className="font-medium">Easy Question Points</label>
             <input
               type="number"
               className="border p-2 rounded w-full"
-              value={quizSettings.easyPoints ?? 1}
+              value={activeSetSettings.easyPoints ?? 1}
               onChange={(e) =>
-                updateQuizSettings({
-                  easyPoints: Number(e.target.value),
-                })
+                updateActiveSetSettings({ easyPoints: Number(e.target.value) })
               }
             />
           </div>
@@ -999,11 +1017,9 @@ const parseBulkQuestions = (text) => {
             <input
               type="number"
               className="border p-2 rounded w-full"
-              value={quizSettings.mediumPoints ?? 2}
+              value={activeSetSettings.mediumPoints ?? 2}
               onChange={(e) =>
-                updateQuizSettings({
-                  mediumPoints: Number(e.target.value),
-                })
+                updateActiveSetSettings({ mediumPoints: Number(e.target.value) })
               }
             />
           </div>
@@ -1013,11 +1029,9 @@ const parseBulkQuestions = (text) => {
             <input
               type="number"
               className="border p-2 rounded w-full"
-              value={quizSettings.hardPoints ?? 3}
+              value={activeSetSettings.hardPoints ?? 3}
               onChange={(e) =>
-                updateQuizSettings({
-                  hardPoints: Number(e.target.value),
-                })
+                updateActiveSetSettings({ hardPoints: Number(e.target.value) })
               }
             />
           </div>
@@ -1029,11 +1043,11 @@ const parseBulkQuestions = (text) => {
         <label className="font-medium">Remove points for wrong answers?</label>
         <select
           className="border p-2 rounded w-full bg-white"
-          value={quizSettings.removeWrongPoints ?? "yes"}
+          value={activeSetSettings.removeWrongPoints ?? "yes"}
           onChange={(e) =>
-            updateQuizSettings({
+            updateActiveSetSettings({
               removeWrongPoints: e.target.value,
-              wrongPoints: e.target.value === "yes" ? quizSettings.wrongPoints ?? -1 : 0,
+              wrongPoints: e.target.value === "yes" ? activeSetSettings.wrongPoints ?? -1 : 0,
             })
           }
         >
@@ -1043,35 +1057,43 @@ const parseBulkQuestions = (text) => {
       </div>
 
       {/* WRONG POINTS INPUT */}
-      {quizSettings.removeWrongPoints === "yes" && (
+      {activeSetSettings.removeWrongPoints === "yes" && (
         <div className="space-y-2">
           <label className="font-medium">Wrong Answer Points</label>
           <input
             type="number"
             className="border p-2 rounded w-full"
-            value={quizSettings.wrongPoints ?? -1}
+            value={activeSetSettings.wrongPoints ?? -1}
             onChange={(e) =>
-              updateQuizSettings({
-                wrongPoints: Number(e.target.value),
-              })
+              updateActiveSetSettings({ wrongPoints: Number(e.target.value) })
             }
           />
         </div>
       )}
 
       {/* 3️⃣ REMOVE POINTS FROM ALL IF NO ONE ANSWERS */}
-      {quizSettings.removeWrongPoints === "yes" && (
+      <div className="space-y-2">
+        <label className="font-medium">Show the No One Answered button?</label>
+        <select
+          className="border p-2 rounded w-full bg-white"
+          value={activeSetSettings.allowNoOneAnswered === false ? "no" : "yes"}
+          onChange={(e) => updateActiveSetSettings({ allowNoOneAnswered: e.target.value === "yes" })}
+        >
+          <option value="yes">Yes</option>
+          <option value="no">No</option>
+        </select>
+      </div>
+
+      {activeSetSettings.allowNoOneAnswered && (
         <div className="space-y-2">
           <label className="font-medium">
-            Remove points from all players if no correct answer is given?
+            Remove points from everyone who did not answer correctly?
           </label>
           <select
             className="border p-2 rounded w-full bg-white"
-            value={quizSettings.noOneAnsweredPenalty ?? "remove"}
+            value={activeSetSettings.noOneAnsweredPenalty ?? "remove"}
             onChange={(e) =>
-              updateQuizSettings({
-                noOneAnsweredPenalty: e.target.value, // "remove" or "none"
-              })
+              updateActiveSetSettings({ noOneAnsweredPenalty: e.target.value })
             }
           >
             <option value="remove">Yes — remove points from all</option>
@@ -1080,12 +1102,49 @@ const parseBulkQuestions = (text) => {
         </div>
       )}
 
+      {activeSetSettings.allowNoOneAnswered && activeSetSettings.noOneAnsweredPenalty === "remove" && (
+        <div className="space-y-2">
+          <label className="font-medium">Points removed when nobody answers correctly</label>
+          <input
+            type="number"
+            className="border p-2 rounded w-full"
+            value={activeSetSettings.noOneAnsweredPoints ?? -1}
+            onChange={(e) => updateActiveSetSettings({ noOneAnsweredPoints: Number(e.target.value) })}
+          />
+        </div>
+      )}
+
     </div>
   </>
 )}
 
-{console.log(quizSettings)}
-
+{activeSet && (
+  <div className="space-y-4 rounded-lg border border-slate-200 bg-slate-50 p-4">
+    <div className="space-y-1">
+      <div className="text-sm font-semibold text-slate-800">Question timing</div>
+      <div className="text-xs text-slate-600">Applies independently to each question in this set.</div>
+    </div>
+    <div className="space-y-2">
+      <label className="font-medium">Time limit per question (seconds, 0 for none)</label>
+      <input
+        type="number"
+        min={0}
+        className="border p-2 rounded w-full bg-white"
+        value={activeSetSettings.questionTimeLimitSeconds ?? 0}
+        onChange={(e) => updateActiveSetSettings({ questionTimeLimitSeconds: Math.max(0, Number(e.target.value) || 0) })}
+      />
+    </div>
+    <label className="flex items-center gap-2 font-medium">
+      <input
+        type="checkbox"
+        checked={activeSetSettings.autoRevealOnTimeout === true}
+        disabled={Number(activeSetSettings.questionTimeLimitSeconds) <= 0}
+        onChange={(e) => updateActiveSetSettings({ autoRevealOnTimeout: e.target.checked })}
+      />
+      Automatically reveal standard answers when time expires
+    </label>
+  </div>
+)}
 
           {activeSetMode === "media" && questions.some((q) => q.mediaReveal) && (
             <>
@@ -1099,9 +1158,9 @@ const parseBulkQuestions = (text) => {
                   type="number"
                   min={1}
                   className="border p-2 rounded w-full"
-                  value={quizSettings.revealSeconds ?? 10}
+                  value={activeSetSettings.revealSeconds ?? 10}
                   onChange={(e) =>
-                    updateQuizSettings({
+                    updateActiveSetSettings({
                       revealSeconds: Math.max(1, Number(e.target.value) || 10),
                     })
                   }

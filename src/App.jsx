@@ -65,7 +65,7 @@ export default function App() {
       <button
         onClick={() => setMenuOpen((prev) => !prev)}
         className="text-white focus:outline-none"
-        t
+        
       >
         <svg
           className="w-7 h-7"

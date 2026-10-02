@@ -1,11 +1,12 @@
-import { useState, useRef, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useState, useRef, useEffect, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import AgendaRunner from "../agendaplayer/angendarunner";
 import usePeople from "../store/usePeopleStore";
 
 export default function AgendaPlayer() {
   const navigate = useNavigate();
   const playerRef = useRef(null);
+  const activityControlsRef = useRef(null);
 
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -13,17 +14,26 @@ export default function AgendaPlayer() {
   const [autoAdvance, setAutoAdvance] = useState(false);
   const [autoAdvanceSeconds, setAutoAdvanceSeconds] = useState(20);
   const [showMenuBar, setShowMenuBar] = useState(true);
+  const [activityNavigation, setActivityNavigation] = useState(null);
 
-  const people = usePeople((s) => s.people);
   const currentEventId = usePeople((s) => s.currentEventId);
   const events = usePeople((s) => s.events);
+  const resetQuizScores = usePeople((s) => s.resetQuizScores);
 
+  // Start every agenda player launch with a clean scoreboard.
+  useEffect(() => {
+    resetQuizScores();
+  }, []);
   const activeEvent = events.find((event) => event.id === currentEventId);
   const agenda = activeEvent?.agendaItems || [];
+  const currentItem = agenda[currentIndex];
+  const hasLinkedActivity = Boolean(currentItem?.linkedQuestionSetId || currentItem?.linkedIceBreakerSetId);
 
-  const hasPeople = people.some((p) => p?.inGroups !== false);
+  useEffect(() => {
+    setActivityNavigation(null);
+  }, [currentIndex]);
 
-  const toggleFullscreen = () => {
+  const toggleFullscreen = useCallback(() => {
     if (!document.fullscreenElement) {
       playerRef.current?.requestFullscreen();
       setIsFullscreen(true);
@@ -31,13 +41,29 @@ export default function AgendaPlayer() {
       document.exitFullscreen();
       setIsFullscreen(false);
     }
-  };
+  }, []);
 
 
-  const exitPlayer = () => {
+  const exitPlayer = useCallback(() => {
     if (document.fullscreenElement) document.exitFullscreen();
     navigate("/agenda");
-  };
+  }, [navigate]);
+
+  const advanceAgendaPlayer = useCallback(() => {
+    const activity = activityControlsRef.current;
+    if (!activity || activity.advance()) {
+      setActivityNavigation(null);
+      window.postMessage({ action: "NEXT_SLIDE" }, "*");
+    }
+  }, []);
+
+  const goBackAgendaPlayer = useCallback(() => {
+    const activity = activityControlsRef.current;
+    if (!activity || activity.previous()) {
+      setActivityNavigation(null);
+      window.postMessage({ action: "PREV_SLIDE" }, "*");
+    }
+  }, []);
 
   // Auto-hide menu bar in fullscreen
   useEffect(() => {
@@ -56,10 +82,10 @@ export default function AgendaPlayer() {
   useEffect(() => {
     const handler = (e) => {
       if (e.key === "ArrowRight" || e.key === " ") {
-        window.postMessage({ action: "NEXT_SLIDE" }, "*");
+        advanceAgendaPlayer();
       }
       if (e.key === "ArrowLeft") {
-        window.postMessage({ action: "PREV_SLIDE" }, "*");
+        goBackAgendaPlayer();
       }
       if (e.key === "f") {
         toggleFullscreen();
@@ -73,7 +99,7 @@ export default function AgendaPlayer() {
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, []);
+  }, [advanceAgendaPlayer, goBackAgendaPlayer, toggleFullscreen, exitPlayer]);
 
   useEffect(() => {
   function handleFullscreenChange() {
@@ -96,31 +122,12 @@ export default function AgendaPlayer() {
 
   // Auto‑advance timer
   useEffect(() => {
-    if (!autoAdvance) return;
-    const timer = setTimeout(() => window.postMessage({ action: "NEXT_SLIDE" }, "*"), autoAdvanceSeconds * 1000);
+    if (!autoAdvance || hasLinkedActivity) return;
+    const timer = setTimeout(advanceAgendaPlayer, autoAdvanceSeconds * 1000);
     return () => clearTimeout(timer);
-  }, [currentIndex, autoAdvance, autoAdvanceSeconds]);
+  }, [currentIndex, autoAdvance, autoAdvanceSeconds, hasLinkedActivity, advanceAgendaPlayer]);
 
 
-
-  if (!hasPeople) {
-    return (
-      <div className="max-w-4xl mx-auto p-4 space-y-4">
-        <h1 className="text-2xl font-bold">Groups</h1>
-        <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-amber-900">
-          <p className="text-sm">No people loaded for this event yet.</p>
-          <Link
-            to="/people"
-            className="inline-block mt-3 px-3 py-2 rounded bg-indigo-600 text-white text-sm hover:bg-indigo-700"
-          >
-            Go to People
-          </Link>
-        </div>
-      </div>
-    );
-  }
-
-  const currentItem = agenda[currentIndex];
 
   // Fixed bar style for fullscreen
   const fixedBarStyle = {
@@ -168,19 +175,19 @@ const Controls = (
       Exit Presentation
     </button>
 
-    <button onClick={() => window.postMessage({ action: "PREV_SLIDE" }, "*")} className={`${buttonStyle} mr-4`}>
+    <button onClick={goBackAgendaPlayer} className={`${buttonStyle} mr-4`}>
       Previous
     </button>
 
-    <button onClick={() => window.postMessage({ action: "NEXT_SLIDE" }, "*")} className={`${buttonStyle} mr-4`}>
-      Next
+    <button onClick={advanceAgendaPlayer} className={`${buttonStyle} mr-4`}>
+      {activityNavigation?.nextLabel || "Next"}
     </button>
   </>
 );
 
 
   return (
-    <div ref={playerRef} className="max-w-4xl mx-auto p-4 space-y-6">
+    <div ref={playerRef} className={isFullscreen ? "h-screen w-full bg-black" : "max-w-6xl mx-auto p-2 sm:p-4 space-y-3"}>
 
       {/* FULLSCREEN FIXED AUTO-HIDE BAR */}
       {isFullscreen && showMenuBar && (
@@ -215,6 +222,8 @@ const Controls = (
         setCurrentIndex={setCurrentIndex}
         fullScreen={isFullscreen}
         setFullScreen={setIsFullscreen}
+        activityControlsRef={activityControlsRef}
+        onActivityNavigationChange={setActivityNavigation}
       />
 
       {/* Speaker notes */}

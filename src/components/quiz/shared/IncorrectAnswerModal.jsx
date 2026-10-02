@@ -30,7 +30,7 @@ export default function IncorrectAnswerModal({
   if (!show) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+    <div data-controller-modal="answer-reveal" className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
       <div
         id="incorrect-modal"
         className="
@@ -52,6 +52,7 @@ export default function IncorrectAnswerModal({
         </div>
 
         <button
+          data-controller-action="advance"
           onClick={onNext}
           className="w-full px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
         >

@@ -102,6 +102,8 @@ export default function GameShowQuestion({
             <button
               key={p.id}
               disabled={disabled}
+              data-controller-action="select-player"
+              data-controller-player={p.id}
               onClick={() => setSelectedPerson(p.id)}
               className={`flex items-center gap-3 rounded-full px-5 py-3 text-lg font-bold shadow-md transition hover:-translate-y-0.5 ${
                 disabled
@@ -135,6 +137,8 @@ export default function GameShowQuestion({
           <button
             key={i}
             disabled={!selectedPerson}
+            data-controller-action="option"
+            data-controller-option={String(option)}
             onClick={() => handleSelectOption(option)}
             className={`rounded-full px-6 py-3 text-lg font-bold shadow-md transition hover:-translate-y-0.5 ${
               locked &&
@@ -157,6 +161,7 @@ export default function GameShowQuestion({
 
       {/* Manual Skip */}
       <button
+        data-controller-action="next"
         onClick={onNext}
         className={`rounded-full px-6 py-3 text-lg font-semibold shadow-md transition hover:-translate-y-0.5 ${
           locked

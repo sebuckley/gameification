@@ -15,9 +15,14 @@ export default function AgendaItemCard({
   agendaTypeOptions = agendaTypes,
   questionSets = [],
   iceBreakerSets = [],
+  peopleSets = [],
+  people = [],
   updateAgendaItem,
   removeAgendaItem,
-  allArtefacts = []
+  addPersonToPeopleSet,
+  removePersonFromPeopleSet,
+  allArtefacts = [],
+  eventType
 }) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
@@ -30,6 +35,7 @@ export default function AgendaItemCard({
   const [newArtefactTo, setNewArtefactTo] = useState(1);
   const [newNote, setNewNote] = useState("");
   const [showNotes, setShowNotes] = useState(false);
+  const [peopleSearch, setPeopleSearch] = useState("");
 
 
   const Icon = getAgendaIcon(item.type);
@@ -40,6 +46,9 @@ export default function AgendaItemCard({
     presenters.find((p) => p.id === item.presenterId)?.fullName ||
     null;
 
+    console.log(eventType);
+  const presenterList = eventType === "team" ? people : presenters;
+
   const presenterName = selectedPresenter || item.guestPresenter || "No presenter";
   const isGuestSelected = item.presenterId === "guest";
   const isOtherItem = String(item.type || "") === "other";
@@ -47,6 +56,18 @@ export default function AgendaItemCard({
   const isIceBreakerItem = String(item.type || "") === "ice-breaker";
   const linkedQuestionSet = questionSets.find((setItem) => setItem.id === item.linkedQuestionSetId) || null;
   const linkedIceBreakerSet = iceBreakerSets.find((setItem) => setItem.id === item.linkedIceBreakerSetId) || null;
+  const linkedPeopleSet = peopleSets.find((setItem) => setItem.id === item.linkedPeopleSetId) || null;
+  const linkedPeople = linkedPeopleSet
+    ? linkedPeopleSet.personIds.map((personId) => people.find((person) => person.id === personId)).filter(Boolean)
+    : [];
+  const linkedPeopleIds = new Set(linkedPeopleSet?.personIds || []);
+  const matchingPeople = peopleSearch.trim()
+    ? people.filter((person) => {
+        if (linkedPeopleIds.has(person.id)) return false;
+        const searchText = [person.preferredName, person.fullName, person.email].filter(Boolean).join(" ").toLowerCase();
+        return searchText.includes(peopleSearch.trim().toLowerCase());
+      }).slice(0, 8)
+    : [];
   const hasQuizSetQuestions = !!(linkedQuestionSet?.questions?.length);
   const hasIceBreakerSelected = !!linkedIceBreakerSet?.selectedIceBreaker;
 
@@ -222,6 +243,12 @@ const reusableArtefacts = allArtefacts.filter((a) => {
               {presenterName}
             </div>
 
+            {linkedPeopleSet && (
+              <div className="px-2 py-1 text-xs font-semibold rounded-md bg-indigo-50 text-indigo-800 border border-indigo-200">
+                {linkedPeopleSet.name} · {linkedPeople.length} people
+              </div>
+            )}
+
             {/* ARTEFACTS */}
             {(item.artefacts || []).length > 0 && (
               <div  className="px-2 py-1 text-xs font-semibold rounded-md bg-gray-100 text-gray-700">
@@ -333,6 +360,55 @@ const reusableArtefacts = allArtefacts.filter((a) => {
             />
           </div>
 
+          {isQuizItem && (
+            <div className="space-y-2">
+              <label className="block text-sm font-semibold text-gray-700" htmlFor={`quiz-set-${item.id}`}>
+                Linked quiz set
+              </label>
+              <select
+                id={`quiz-set-${item.id}`}
+                className={`w-full rounded border p-3 text-sm ${isMissingSetLink ? "border-red-500 bg-red-50" : ""}`}
+                value={item.linkedQuestionSetId || ""}
+                onChange={(event) => updateAgendaItem(item.id, { linkedQuestionSetId: event.target.value || null })}
+              >
+                <option value="">Select a quiz set</option>
+                {questionSets.map((setItem) => (
+                  <option key={setItem.id} value={setItem.id}>{setItem.name}</option>
+                ))}
+              </select>
+              {linkedQuestionSet && (
+                <p className="text-xs text-slate-500">
+                  {linkedQuestionSet.questions?.length || 0} questions
+                  {linkedQuestionSet.peopleSetId ? ` · Audience: ${peopleSets.find((set) => set.id === linkedQuestionSet.peopleSetId)?.name || "Linked people set"}` : " · Event audience"}
+                </p>
+              )}
+            </div>
+          )}
+
+          {isIceBreakerItem && (
+            <div className="space-y-2">
+              <label className="block text-sm font-semibold text-gray-700" htmlFor={`icebreaker-set-${item.id}`}>
+                Linked icebreaker set
+              </label>
+              <select
+                id={`icebreaker-set-${item.id}`}
+                className={`w-full rounded border p-3 text-sm ${isMissingSetLink ? "border-red-500 bg-red-50" : ""}`}
+                value={item.linkedIceBreakerSetId || ""}
+                onChange={(event) => updateAgendaItem(item.id, { linkedIceBreakerSetId: event.target.value || null })}
+              >
+                <option value="">Select an icebreaker set</option>
+                {iceBreakerSets.map((setItem) => (
+                  <option key={setItem.id} value={setItem.id}>{setItem.name}</option>
+                ))}
+              </select>
+              {linkedIceBreakerSet && (
+                <p className="text-xs text-slate-500">
+                  {linkedIceBreakerSet.selectedIceBreaker?.label || "No prompt selected in this set"}
+                </p>
+              )}
+            </div>
+          )}
+
           {/* Minutes + Presenter */}
           <div className="flex flex-col md:flex-row gap-3">
 
@@ -374,7 +450,7 @@ const reusableArtefacts = allArtefacts.filter((a) => {
             >
               <option value="">Select presenter...</option>
 
-              {presenters.map((p) => (
+              {presenterList.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.preferredName || p.fullName}
                 </option>
@@ -399,6 +475,69 @@ const reusableArtefacts = allArtefacts.filter((a) => {
                   })
                 }
               />
+            )}
+          </div>
+
+          {/* Group Setup */}
+          <div className="space-y-2">
+            <label className="block text-sm font-semibold text-gray-700" htmlFor={`people-set-${item.id}`}>
+              Audience list
+            </label>
+            <select
+              id={`people-set-${item.id}`}
+              className="w-full rounded border p-3 text-sm"
+              value={item.linkedPeopleSetId || ""}
+              onChange={(event) => updateAgendaItem(item.id, { linkedPeopleSetId: event.target.value || null })}
+            >
+              <option value="">No linked people set</option>
+              {peopleSets.map((peopleSet) => (
+                <option key={peopleSet.id} value={peopleSet.id}>
+                  {peopleSet.type === "stakeholders" ? "Stakeholders" : peopleSet.type === "training-event" ? "Training / Event" : "Team"}: {peopleSet.name}
+                </option>
+              ))}
+            </select>
+            {linkedPeopleSet && (
+              <div className="space-y-3 rounded border border-slate-200 bg-slate-50 p-3">
+                <div className="font-semibold text-slate-800">People in {linkedPeopleSet.name}</div>
+                <input
+                  value={peopleSearch}
+                  onChange={(event) => setPeopleSearch(event.target.value)}
+                  placeholder="Search people to add"
+                  className="w-full rounded border border-slate-300 bg-white px-3 py-2 text-sm"
+                />
+                {matchingPeople.length > 0 && (
+                  <div className="divide-y divide-slate-200 rounded border border-slate-200 bg-white">
+                    {matchingPeople.map((person) => (
+                      <button
+                        key={person.id}
+                        type="button"
+                        onClick={() => {
+                          addPersonToPeopleSet(linkedPeopleSet.id, person.id);
+                          setPeopleSearch("");
+                        }}
+                        className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm hover:bg-slate-50"
+                      >
+                        <span>{person.preferredName || person.fullName}</span>
+                        <span className="text-indigo-700">Add</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+                <div className="flex flex-wrap gap-2">
+                  {linkedPeople.map((person) => (
+                    <div key={person.id} className="flex items-center gap-2 rounded border border-slate-200 bg-white px-2 py-1 text-sm">
+                      <span>{person.preferredName || person.fullName}</span>
+                      <button
+                        type="button"
+                        aria-label={`Remove ${person.preferredName || person.fullName} from ${linkedPeopleSet.name}`}
+                        onClick={() => removePersonFromPeopleSet(linkedPeopleSet.id, person.id)}
+                        className="font-bold text-slate-500 hover:text-rose-700"
+                      >×</button>
+                    </div>
+                  ))}
+                  {linkedPeople.length === 0 && <span className="text-sm text-slate-500">This set has no people in the current event roster.</span>}
+                </div>
+              </div>
             )}
           </div>
 
@@ -462,7 +601,7 @@ const reusableArtefacts = allArtefacts.filter((a) => {
             </div>
           </div>
 
-{/* Artefacts Section */}
+{!isQuizItem && !isIceBreakerItem && <>{/* Artefacts Section */}
 <div className="space-y-6">
 
   {/* Header */}
@@ -677,6 +816,7 @@ const reusableArtefacts = allArtefacts.filter((a) => {
   )}
 
 </div>
+  </>}
 
   
 

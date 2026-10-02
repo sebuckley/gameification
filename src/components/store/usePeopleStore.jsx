@@ -3,10 +3,14 @@ import { agendaTemplates } from "../../data/AgendaTemplates";
 import { agendaTypes, getAgendaDefaultMinutes } from "../../data/AgendaTypes";
 import { nanoid } from "nanoid";
 import { v4 as uuidv4 } from "uuid";
+import { AGENDA_EVENT_TYPE_OPTIONS } from "../../data/AgendaFocus";
 
 console.log(agendaTemplates)
 
 const STORAGE_KEY = "people-app";
+
+const normalizeAgendaEventType = (type) =>
+  AGENDA_EVENT_TYPE_OPTIONS.some((option) => option.id === type) ? type : "workshop";
 
 const DEFAULT_PROMPT_RULES = [
   "Do not claim to have opened, tested, or verified URLs. Use trusted direct asset URLs or leave MEDIA: blank.",
@@ -16,6 +20,7 @@ const DEFAULT_PROMPT_RULES = [
 
 const DEFAULT_STATE = {
   people: [],
+  peopleSets: [],
   groupsHistory: [],
   questions: [],
   questionSets: [],
@@ -34,6 +39,8 @@ const DEFAULT_STATE = {
   agendaVirtualJoinLink: "",
   agendaPhysicalAddress: "",
   agendaEventLocation: "",
+  agendaEventType: "workshop",
+  agendaLinkedPeopleSetId: null,
   userProfile: {
     fullName: "",
     preferredName: "",
@@ -49,6 +56,69 @@ const DEFAULT_STATE = {
   collectFreeTextAnswers: false,
   promptCustomRules: [...DEFAULT_PROMPT_RULES],
   promptRulesInitialized: true
+};
+
+const DEFAULT_QUESTION_SET_SETTINGS = {
+  ...DEFAULT_STATE.quizSettings,
+  useSamePoints: "yes",
+  samePoints: 1,
+  easyPoints: 1,
+  mediumPoints: 2,
+  hardPoints: 3,
+  removeWrongPoints: "yes",
+  noOneAnsweredPenalty: "remove",
+  noOneAnsweredPoints: -1,
+  allowNoOneAnswered: true,
+  questionTimeLimitSeconds: 0,
+  autoRevealOnTimeout: false,
+};
+
+const normalizePeopleSets = (rawSets) =>
+  (Array.isArray(rawSets) ? rawSets : [])
+    .filter(Boolean)
+    .map((setItem) => ({
+      id: setItem.id || uuidv4(),
+      type: ["team", "stakeholders", "training-event"].includes(setItem.type) ? setItem.type : "team",
+      name: String(setItem.name || "").trim(),
+      personIds: [...new Set(Array.isArray(setItem.personIds) ? setItem.personIds.filter(Boolean) : [])],
+    }))
+    .filter((setItem) => setItem.name);
+
+const mergePeopleSetSnapshots = (rootSets, events = []) => {
+  const mergedSets = new Map();
+  const snapshotSets = [
+    ...(Array.isArray(events) ? events.flatMap((eventItem) => eventItem?.peopleSets || []) : []),
+    ...(Array.isArray(rootSets) ? rootSets : []),
+  ];
+
+  normalizePeopleSets(snapshotSets).forEach((setItem) => {
+    const previous = mergedSets.get(setItem.id);
+    mergedSets.set(setItem.id, previous
+      ? { ...previous, ...setItem, personIds: [...new Set([...previous.personIds, ...setItem.personIds])] }
+      : setItem);
+  });
+
+  return [...mergedSets.values()];
+};
+
+const mergePeopleSnapshots = (rootPeople, events = [], rootParticipants = []) => {
+  const mergedPeople = new Map();
+  const addPeople = (list) => {
+    (Array.isArray(list) ? list : []).forEach((person) => {
+      if (!person) return;
+      const id = person.id || uuidv4();
+      mergedPeople.set(id, { ...(mergedPeople.get(id) || {}), ...person, id });
+    });
+  };
+
+  (Array.isArray(events) ? events : []).forEach((eventItem) => {
+    addPeople(eventItem?.people);
+    addPeople(eventItem?.participants);
+  });
+  addPeople(rootParticipants);
+  addPeople(rootPeople);
+
+  return [...mergedPeople.values()];
 };
 
 /* ---------------------------------------------------------
@@ -77,7 +147,11 @@ const normalizeImportedQuestions = (rawList) => {
   }));
 };
 
-const normalizeQuestionSets = (rawSets, fallbackQuestions = []) => {
+const normalizeQuestionSets = (rawSets, fallbackQuestions = [], fallbackSettings = {}) => {
+  const setSettings = {
+    ...DEFAULT_QUESTION_SET_SETTINGS,
+    ...(fallbackSettings || {}),
+  };
   const sets = Array.isArray(rawSets)
     ? rawSets
         .filter(Boolean)
@@ -87,6 +161,15 @@ const normalizeQuestionSets = (rawSets, fallbackQuestions = []) => {
           agendaQuizType: isQuizAgendaType(setItem.agendaQuizType) ? setItem.agendaQuizType : "quiz",
           quizMode: setItem.quizMode || DEFAULT_STATE.quizMode,
           quizModeManuallySet: Boolean(setItem.quizModeManuallySet),
+          peopleSetId: setItem.peopleSetId || null,
+          settings: {
+            ...setSettings,
+            ...(setItem.settings || {}),
+            questionTimeLimitSeconds:
+              setItem.settings?.questionTimeLimitSeconds ??
+              setItem.timeLimit ??
+              setSettings.questionTimeLimitSeconds,
+          },
           questions: normalizeImportedQuestions(setItem.questions || [])
         }))
     : [];
@@ -99,6 +182,7 @@ const normalizeQuestionSets = (rawSets, fallbackQuestions = []) => {
       name: "Question Set 1",
       agendaQuizType: "quiz",
       quizMode: DEFAULT_STATE.quizMode,
+      settings: { ...setSettings },
       questions: normalizeImportedQuestions(fallbackQuestions)
     }
   ];
@@ -328,6 +412,8 @@ const assignAgendaItemSetLinks = ({ agendaItems, questionSets, iceBreakerSets })
   });
 };
 
+
+
 const getQuestionSetMode = (questionSets, activeQuestionSetId, fallbackMode) =>
   questionSets.find((setItem) => setItem.id === activeQuestionSetId)?.quizMode || fallbackMode || DEFAULT_STATE.quizMode;
 
@@ -337,8 +423,8 @@ const selectActiveQuestionSetId = (questionSets, currentActiveId) => {
   return exists ? currentActiveId : questionSets[0].id;
 };
 
-const syncQuestionSetsWithActive = ({ questionSets, activeQuestionSetId, questions }) => {
-  const normalizedSets = normalizeQuestionSets(questionSets, questions);
+const syncQuestionSetsWithActive = ({ questionSets, activeQuestionSetId, questions, fallbackSettings }) => {
+  const normalizedSets = normalizeQuestionSets(questionSets, questions, fallbackSettings);
   const activeId = selectActiveQuestionSetId(normalizedSets, activeQuestionSetId);
 
   const mergedSets = normalizedSets.map((setItem) =>
@@ -409,9 +495,10 @@ const loadInitial = () => {
       virtualJoinLink: state.agendaVirtualJoinLink || "",
       physicalAddress: state.agendaPhysicalAddress || "",
       location: state.agendaEventLocation || "",
+      agendaEventType: normalizeAgendaEventType(state.agendaEventType),
+      linkedPeopleSetId: state.agendaLinkedPeopleSetId || null,
       agendaStartTime: state.agendaStartTime || state.agendaEventTime || "09:00",
       agendaItems: cloneList(state.agendaItems),
-      people: cloneList(state.people),
       groupsHistory: cloneList(state.groupsHistory),
       quizMode: state.quizMode || DEFAULT_STATE.quizMode,
       quizSettings: { ...DEFAULT_STATE.quizSettings, ...(state.quizSettings || {}) },
@@ -423,11 +510,11 @@ const loadInitial = () => {
 
     const hydrateFromEvent = (base, event, events) => {
       const eventQuizSettings = { ...DEFAULT_STATE.quizSettings, ...(event.quizSettings || {}) };
-      const eventPeople = cloneList(event.people);
       const questionState = syncQuestionSetsWithActive({
         questionSets: event.questionSets,
         activeQuestionSetId: event.activeQuestionSetId,
-        questions: event.questions
+        questions: event.questions,
+        fallbackSettings: eventQuizSettings,
       });
       const iceBreakerState = syncIceBreakerSetsWithActive({
         iceBreakerSets: event.iceBreakerSets,
@@ -460,9 +547,10 @@ const loadInitial = () => {
         agendaVirtualJoinLink: event.virtualJoinLink || "",
         agendaPhysicalAddress: event.physicalAddress || "",
         agendaEventLocation: event.location || "",
+        agendaEventType: normalizeAgendaEventType(event.agendaEventType),
+        agendaLinkedPeopleSetId: event.linkedPeopleSetId || null,
         agendaStartTime: event.agendaStartTime || event.time || "09:00",
         agendaItems: syncedAgendaItems,
-        people: eventPeople,
         groupsHistory: cloneList(event.groupsHistory),
         questions: cloneList(questionState.questions),
         questionSets: cloneList(questionState.questionSets),
@@ -472,7 +560,7 @@ const loadInitial = () => {
         quizMode: activeQuestionSetMode,
         quizSettings: eventQuizSettings,
         selectedIceBreaker: iceBreakerState.selectedIceBreaker || null,
-        participants: event.participants ? cloneList(event.participants) : cloneList(eventPeople),
+        participants: cloneList(base.people),
         collectFreeTextAnswers: !!event.collectFreeTextAnswers
       };
     };
@@ -491,6 +579,8 @@ const loadInitial = () => {
     const merged = {
       ...DEFAULT_STATE,
       ...parsed,
+      people: mergePeopleSnapshots(parsed?.people, parsed?.events, parsed?.participants),
+      peopleSets: mergePeopleSetSnapshots(parsed?.peopleSets, parsed?.events),
       quizSettings: {
         ...DEFAULT_STATE.quizSettings,
         ...(parsed?.quizSettings || {})
@@ -552,6 +642,7 @@ const loadInitial = () => {
           name: "Question Set 1",
           agendaQuizType: "quiz",
           quizMode: DEFAULT_STATE.quizMode,
+          settings: { ...DEFAULT_QUESTION_SET_SETTINGS },
           questions: []
         }
       ],
@@ -589,17 +680,21 @@ const save = (get) => {
   // not the pre-update snapshot from inside the setter callback.
   queueMicrotask(() => {
     const state = get();
+    const eventsWithoutPeopleSets = (state.events || []).map((eventItem) => {
+      const { peopleSets, people, participants, ...eventRecord } = eventItem;
+      return eventRecord;
+    });
     // Always rebuild the active event snapshot here so any action that
     // forgets to sync it can never persist stale questions/sets on reload.
     const finalState = state.currentEventId
       ? {
           ...state,
           events: upsertAgendaEvent(
-            state.events,
+            eventsWithoutPeopleSets,
             buildAgendaEventRecord(state, { id: state.currentEventId })
           )
         }
-      : state;
+      : { ...state, events: eventsWithoutPeopleSets };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(finalState));
   });
 };
@@ -698,9 +793,12 @@ const buildAgendaEventRecord = (state, overrides = {}) => {
     virtualJoinLink,
     physicalAddress,
     location,
+    agendaEventType: overrides.agendaEventType ?? state.agendaEventType ?? "all",
+    linkedPeopleSetId: overrides.linkedPeopleSetId !== undefined
+      ? overrides.linkedPeopleSetId
+      : (state.agendaLinkedPeopleSetId || null),
     agendaStartTime: overrides.agendaStartTime ?? state.agendaStartTime,
     agendaItems: linkedAgendaItems,
-    people: cloneList(overrides.people ?? state.people),
     groupsHistory: cloneList(overrides.groupsHistory ?? state.groupsHistory),
     questions: cloneList(questionState.questions),
     questionSets: cloneList(questionState.questionSets),
@@ -710,7 +808,6 @@ const buildAgendaEventRecord = (state, overrides = {}) => {
     quizMode: overrides.quizMode ?? state.quizMode,
     quizSettings: cloneObject(overrides.quizSettings ?? state.quizSettings, DEFAULT_STATE.quizSettings),
     selectedIceBreaker: iceBreakerState.selectedIceBreaker || null,
-    participants: cloneList(overrides.participants ?? state.participants),
     collectFreeTextAnswers:
       overrides.collectFreeTextAnswers ?? state.collectFreeTextAnswers ?? DEFAULT_STATE.collectFreeTextAnswers,
     updatedAt: Date.now()
@@ -731,11 +828,11 @@ const syncCurrentEventSnapshot = (state) => {
 
 const hydrateStateFromEvent = (state, selected) => {
   const startTime = selected.agendaStartTime || selected.time || "09:00";
-  const people = cloneList(selected.people);
   const questionState = syncQuestionSetsWithActive({
     questionSets: selected.questionSets,
     activeQuestionSetId: selected.activeQuestionSetId,
-    questions: selected.questions
+    questions: selected.questions,
+    fallbackSettings: selected.quizSettings,
   });
   const iceBreakerState = syncIceBreakerSetsWithActive({
     iceBreakerSets: selected.iceBreakerSets,
@@ -764,9 +861,10 @@ const hydrateStateFromEvent = (state, selected) => {
     agendaVirtualJoinLink: selected.virtualJoinLink || "",
     agendaPhysicalAddress: selected.physicalAddress || "",
     agendaEventLocation: selected.location || "",
+    agendaEventType: normalizeAgendaEventType(selected.agendaEventType),
+    agendaLinkedPeopleSetId: selected.linkedPeopleSetId || null,
     agendaStartTime: startTime,
     agendaItems,
-    people,
     groupsHistory: cloneList(selected.groupsHistory),
     questions: cloneList(questionState.questions),
     questionSets: cloneList(questionState.questionSets),
@@ -776,7 +874,7 @@ const hydrateStateFromEvent = (state, selected) => {
     quizMode: activeQuestionSetMode,
     quizSettings: cloneObject(selected.quizSettings, DEFAULT_STATE.quizSettings),
     selectedIceBreaker: iceBreakerState.selectedIceBreaker || null,
-    participants: selected.participants ? cloneList(selected.participants) : cloneList(people),
+    participants: cloneList(state.people),
     collectFreeTextAnswers: !!selected.collectFreeTextAnswers
   };
 };
@@ -815,26 +913,45 @@ const usePeople = create((set, get) => ({
   --------------------------------------------------------- */
   addPerson: (data) =>
     set((state) => {
-      const personType = (data.personType || "participant").trim();
+      const peopleSet = state.peopleSets.find((setItem) => setItem.id === data.peopleSetId);
+      const defaultPersonType = peopleSet?.type === "stakeholders" ? "observer" : "participant";
+      const personType = (data.personType || defaultPersonType).trim();
       const presenterTypes = new Set(["presenter", "keynote-speaker"]);
+      const membershipSettings = {
+        personType,
+        inSpinner: peopleSet?.type === "stakeholders" ? false : !presenterTypes.has(personType),
+        inGroups: peopleSet?.type !== "stakeholders" && personType === "participant",
+        ...(data.peopleSetSettings || {}),
+      };
+      const personId = uuidv4();
       const nextState = {
         ...state,
         people: [
           ...state.people,
           {
-            id: uuidv4(),
+            id: personId,
             fullName: data.fullName.trim(),
             preferredName: data.preferredName.trim(),
+            email: String(data.email || "").trim(),
+            organization: String(data.organization || "").trim(),
             color: data.color,
             personType,
             isPresenter: presenterTypes.has(personType),
             inSpinner: true,
             inGroups: personType === "participant",
+            peopleSetDetails: data.peopleSetId ? { [data.peopleSetId]: membershipSettings } : {},
             answers: 0,
             quizScore: 0,
             history: []
           }
-        ]
+        ],
+        peopleSets: data.peopleSetId
+          ? state.peopleSets.map((setItem) =>
+              setItem.id === data.peopleSetId
+                ? { ...setItem, personIds: [...new Set([...(setItem.personIds || []), personId])] }
+                : setItem
+            )
+          : state.peopleSets
       };
       const updated = state.currentEventId
         ? {
@@ -924,7 +1041,11 @@ const usePeople = create((set, get) => ({
               answers: Number.isFinite(person?.answers) ? person.answers : 0,
               quizScore: Number.isFinite(person?.quizScore) ? person.quizScore : 0
             }))
-          : []
+          : [],
+        peopleSets: normalizePeopleSets(state.peopleSets).map((setItem) => ({
+          ...setItem,
+          personIds: setItem.personIds.filter((id) => (Array.isArray(list) ? list : []).some((person) => person?.id === id)),
+        }))
       };
       const updated = state.currentEventId
         ? {
@@ -938,6 +1059,92 @@ const usePeople = create((set, get) => ({
             )
           }
         : nextState;
+      save(get);
+      return updated;
+    }),
+
+  createPeopleSet: (type, name) => {
+    const trimmedName = String(name || "").trim();
+    if (!trimmedName) return null;
+
+    const setId = uuidv4();
+    set((state) => {
+      const nextState = {
+        ...state,
+        peopleSets: [
+          ...normalizePeopleSets(state.peopleSets),
+          {
+            id: setId,
+            type: ["team", "stakeholders", "training-event"].includes(type) ? type : "team",
+            name: trimmedName,
+            personIds: [],
+          },
+        ],
+      };
+      const updated = syncCurrentEventSnapshot(nextState);
+      save(get);
+      return updated;
+    });
+    return setId;
+  },
+
+  updatePeopleSet: (setId, updates) =>
+    set((state) => {
+      const updatedSets = normalizePeopleSets(state.peopleSets).map((setItem) =>
+        setItem.id === setId
+          ? {
+              ...setItem,
+              type: ["team", "stakeholders", "training-event"].includes(updates?.type) ? updates.type : setItem.type,
+              name: String(updates?.name ?? setItem.name).trim() || setItem.name,
+            }
+          : setItem
+      );
+      const updated = syncCurrentEventSnapshot({ ...state, peopleSets: updatedSets });
+      save(get);
+      return updated;
+    }),
+
+  deletePeopleSet: (setId) =>
+    set((state) => {
+      const updated = syncCurrentEventSnapshot({
+        ...state,
+        peopleSets: normalizePeopleSets(state.peopleSets).filter((setItem) => setItem.id !== setId),
+        agendaLinkedPeopleSetId: state.agendaLinkedPeopleSetId === setId ? null : state.agendaLinkedPeopleSetId,
+        events: state.events.map((eventItem) => ({
+          ...eventItem,
+          linkedPeopleSetId: eventItem.linkedPeopleSetId === setId ? null : eventItem.linkedPeopleSetId,
+        })),
+        questionSets: state.questionSets.map((setItem) =>
+          setItem.peopleSetId === setId ? { ...setItem, peopleSetId: null } : setItem
+        ),
+        agendaItems: state.agendaItems.map((item) =>
+          item.linkedPeopleSetId === setId ? { ...item, linkedPeopleSetId: null } : item
+        ),
+      });
+      save(get);
+      return updated;
+    }),
+
+  addPersonToPeopleSet: (setId, personId) =>
+    set((state) => {
+      const updatedSets = normalizePeopleSets(state.peopleSets).map((setItem) =>
+        setItem.id === setId && state.people.some((person) => person.id === personId)
+          ? { ...setItem, personIds: [...new Set([...setItem.personIds, personId])] }
+          : setItem
+      );
+      const updated = syncCurrentEventSnapshot({ ...state, peopleSets: updatedSets });
+      save(get);
+      return updated;
+    }),
+
+  removePersonFromPeopleSet: (setId, personId) =>
+    set((state) => {
+      const updatedSets = normalizePeopleSets(state.peopleSets).map((setItem) =>
+        setItem.id === setId
+          ? { ...setItem, personIds: setItem.personIds.filter((id) => id !== personId) }
+          : setItem
+      );
+      const updated = syncCurrentEventSnapshot({ ...state, peopleSets: updatedSets });
       save(get);
       return updated;
     }),
@@ -977,7 +1184,11 @@ const usePeople = create((set, get) => ({
   set((state) => {
     const nextState = {
       ...state,
-      people: state.people.filter((p) => p.id !== id)
+      people: state.people.filter((p) => p.id !== id),
+      peopleSets: normalizePeopleSets(state.peopleSets).map((setItem) => ({
+        ...setItem,
+        personIds: setItem.personIds.filter((personId) => personId !== id),
+      }))
     };
     const updated = state.currentEventId
       ? {
@@ -1056,7 +1267,7 @@ const usePeople = create((set, get) => ({
  
  saveGroups: (groups, sessionName = null) =>
   set((state) => {
-    const updated = {
+    const nextState = {
       ...state,
       groupsHistory: [
         {
@@ -1068,7 +1279,8 @@ const usePeople = create((set, get) => ({
       ]
     };
 
-    localStorage.setItem("people-app", JSON.stringify(updated));
+    const updated = syncCurrentEventSnapshot(nextState);
+    save(get);
     return updated;
   }),
 
@@ -1154,19 +1366,28 @@ const usePeople = create((set, get) => ({
       return updated;
     }),
 
-  applyQuizResult: (personId, isCorrect) =>
+  applyQuizResult: (personId, isCorrect, settings, question, pointsOverride) =>
     set((state) => {
+      const scoreSettings = {
+        ...DEFAULT_QUESTION_SET_SETTINGS,
+        ...(state.quizSettings || {}),
+        ...(settings || {}),
+      };
+      const difficulty = ["easy", "medium", "hard"].includes(question?.difficulty)
+        ? question.difficulty
+        : "easy";
+      const correctPoints = scoreSettings.useSamePoints === "no"
+        ? scoreSettings[`${difficulty}Points`]
+        : (scoreSettings.samePoints ?? scoreSettings.correctPoints);
+      const rawPoints = pointsOverride ?? (isCorrect ? correctPoints : scoreSettings.wrongPoints);
+      const points = Number.isFinite(Number(rawPoints)) ? Number(rawPoints) : 0;
       const updated = {
         ...state,
         people: state.people.map((p) =>
           p.id === personId
             ? {
                 ...p,
-                quizScore:
-                  p.quizScore +
-                  (isCorrect
-                    ? state.quizSettings.correctPoints
-                    : state.quizSettings.wrongPoints)
+                quizScore: (Number(p.quizScore) || 0) + points
               }
             : p
         )
@@ -1209,8 +1430,14 @@ const usePeople = create((set, get) => ({
   /* ---------------------------------------------------------
      QUESTIONS
   --------------------------------------------------------- */
+  presenterLaunchMap: {},
+
+  setPresenterLaunchMap: (fn) => set(state => ({
+    presenterLaunchMap: fn(state.presenterLaunchMap)
+  })),
+
   addQuestion: (q) =>
-    set((state) => {
+    set((state) => {s
       const nextQuestions = [...state.questions, q];
       const synced = syncQuestionSetsWithActive({
         questionSets: state.questionSets,
@@ -1282,6 +1509,8 @@ const usePeople = create((set, get) => ({
         agendaQuizType: "quiz",
         quizMode: DEFAULT_STATE.quizMode,
         quizModeManuallySet: false,
+        peopleSetId: null,
+        settings: { ...DEFAULT_QUESTION_SET_SETTINGS },
         questions: []
       };
 
@@ -1357,6 +1586,7 @@ const usePeople = create((set, get) => ({
               name: "Question Set 1",
               agendaQuizType: "quiz",
               quizMode: DEFAULT_STATE.quizMode,
+              settings: { ...DEFAULT_QUESTION_SET_SETTINGS },
               questions: []
             }
           ];
@@ -1588,6 +1818,44 @@ const usePeople = create((set, get) => ({
       return updated;
     }),
 
+  updateQuestionSetPeopleSet: (setId, peopleSetId) =>
+    set((state) => {
+      const validSetId = peopleSetId && state.peopleSets.some((setItem) => setItem.id === peopleSetId)
+        ? peopleSetId
+        : null;
+      const updated = syncCurrentEventSnapshot({
+        ...state,
+        questionSets: state.questionSets.map((setItem) =>
+          setItem.id === setId ? { ...setItem, peopleSetId: validSetId } : setItem
+        ),
+      });
+      save(get);
+      return updated;
+    }),
+
+  updateQuestionSetSettings: (setId, settings) =>
+    set((state) => {
+      const updatedSets = state.questionSets.map((setItem) =>
+        setItem.id === setId
+          ? {
+              ...setItem,
+              settings: {
+                ...DEFAULT_QUESTION_SET_SETTINGS,
+                ...(setItem.settings || {}),
+                ...(settings || {}),
+              },
+            }
+          : setItem
+      );
+
+      const updated = syncCurrentEventSnapshot({
+        ...state,
+        questionSets: updatedSets,
+      });
+      save(get);
+      return updated;
+    }),
+
 
   /* ---------------------------------------------------------
      AGENDA
@@ -1627,7 +1895,9 @@ const usePeople = create((set, get) => ({
     locationType,
     virtualPlatform,
     virtualJoinLink,
-    physicalAddress
+    physicalAddress,
+    linkedPeopleSetId,
+    agendaEventType
   }) =>
     set((state) => {
       const nextTime = time || state.agendaEventTime || state.agendaStartTime || "09:00";
@@ -1635,6 +1905,10 @@ const usePeople = create((set, get) => ({
       const nextVirtualPlatform = virtualPlatform ?? state.agendaVirtualPlatform;
       const nextVirtualJoinLink = virtualJoinLink ?? state.agendaVirtualJoinLink;
       const nextPhysicalAddress = physicalAddress ?? state.agendaPhysicalAddress;
+      const nextPeopleSetId = linkedPeopleSetId === undefined
+        ? state.agendaLinkedPeopleSetId
+        : (state.peopleSets.some((setItem) => setItem.id === linkedPeopleSetId) ? linkedPeopleSetId : null);
+      const nextAgendaEventType = normalizeAgendaEventType(agendaEventType === undefined ? state.agendaEventType : agendaEventType);
       const nextEventId = state.currentEventId || uuidv4();
 
       const nextLocation = buildAgendaLocationSummary({
@@ -1656,6 +1930,8 @@ const usePeople = create((set, get) => ({
         agendaVirtualJoinLink: nextVirtualJoinLink,
         agendaPhysicalAddress: nextPhysicalAddress,
         agendaEventLocation: nextLocation,
+        agendaEventType: nextAgendaEventType,
+        agendaLinkedPeopleSetId: nextPeopleSetId,
         agendaStartTime: nextTime,
         agendaItems: recalcAgendaTimes(nextTime, state.agendaItems)
       };
@@ -1663,7 +1939,13 @@ const usePeople = create((set, get) => ({
         ...nextState,
         events: upsertAgendaEvent(
           state.events,
-          buildAgendaEventRecord(nextState, { id: nextEventId, time: nextTime, location: nextLocation })
+          buildAgendaEventRecord(nextState, {
+            id: nextEventId,
+            time: nextTime,
+            location: nextLocation,
+            agendaEventType: nextAgendaEventType,
+            linkedPeopleSetId: nextPeopleSetId,
+          })
         )
       };
       save(get);
@@ -1693,9 +1975,10 @@ const usePeople = create((set, get) => ({
         agendaVirtualJoinLink: "",
         agendaPhysicalAddress: "",
         agendaEventLocation: "",
+        agendaEventType: "workshop",
+        agendaLinkedPeopleSetId: null,
         agendaStartTime: "09:00",
         agendaItems: [],
-        people: [],
         groupsHistory: [],
         questions: [],
         questionSets: [
@@ -1719,7 +2002,6 @@ const usePeople = create((set, get) => ({
         quizMode: DEFAULT_STATE.quizMode,
         quizSettings: { ...DEFAULT_STATE.quizSettings },
         selectedIceBreaker: null,
-        participants: [],
         collectFreeTextAnswers: false
       };
 
@@ -1762,6 +2044,7 @@ const usePeople = create((set, get) => ({
         ...incomingItem,
         linkedQuestionSetId: incomingItem.linkedQuestionSetId || null,
         linkedIceBreakerSetId: incomingItem.linkedIceBreakerSetId || null,
+        linkedPeopleSetId: incomingItem.linkedPeopleSetId || null,
         enableGroupSetup: !!incomingItem.enableGroupSetup,
         groupCount: Number(incomingItem.groupCount) > 0 ? Number(incomingItem.groupCount) : 2,
         groupHistoryEntryId: incomingItem.groupHistoryEntryId || null,
@@ -2072,14 +2355,15 @@ applyAgendaTemplate: (templateId, startTime) =>
     const items = template.items.map((t) => ({
       id: uuidv4(),
       type: t.type,
-      label: agendaTypes.find((x) => x.id === t.type)?.label || "Session",
-      minutes: getAgendaDefaultMinutes(t.type),
+      label: t.label || agendaTypes.find((x) => x.id === t.type)?.label || "Session",
+      minutes: Number(t.minutes) > 0 ? Number(t.minutes) : getAgendaDefaultMinutes(t.type),
       presenterId: null,
       guestPresenter: "",
       notes: "",
       artefactUrl: "",
       linkedQuestionSetId: null,
       linkedIceBreakerSetId: null,
+      linkedPeopleSetId: state.agendaLinkedPeopleSetId || null,
       enableGroupSetup: false,
       groupCount: 2,
       groupHistoryEntryId: null,
@@ -2427,7 +2711,7 @@ exportAgendaPowerPointTable: () => {
           )
         }
       : nextState;
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+    save(get);
     return updated;
   }),
 

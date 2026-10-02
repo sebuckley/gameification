@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import usePeople from "../store/usePeopleStore";
+import { getPeopleSetRoster } from "../../utils/peopleSetMembers";
 import { Settings } from "lucide-react";
 
 /* -------------------------------------------------------
@@ -32,6 +33,7 @@ const smartCombinations = (n) => {
 ------------------------------------------------------- */
 export default function GroupGenerator() {
   const people = usePeople((s) => s.people);
+  const peopleSets = usePeople((s) => s.peopleSets || []);
   const saveGroups = usePeople((s) => s.saveGroups);
 
   const [size, setSize] = useState(2);
@@ -39,9 +41,11 @@ export default function GroupGenerator() {
   const [sessionNameError, setSessionNameError] = useState(false);
   const [mode, setMode] = useState("random");
   const [open, setOpen] = useState(false);
+  const [activePeopleSetId, setActivePeopleSetId] = useState(() => peopleSets[0]?.id || "all");
 
-  const eligible = people.filter(
-    (p) => p?.inGroups !== false && p?.isPresenter !== true
+  const activePeopleSet = peopleSets.find((setItem) => setItem.id === activePeopleSetId);
+  const eligible = getPeopleSetRoster(people, activePeopleSet).filter(
+    (person) => person?.inGroups !== false && person?.isPresenter !== true
   );
 
   const smartSuggestions = useMemo(() => {
@@ -121,6 +125,18 @@ export default function GroupGenerator() {
           <p className="text-sm text-gray-600">
             Create a session name, choose group size, and generate groups.
           </p>
+
+          <label className="flex flex-col gap-1 text-sm font-semibold text-gray-700">
+            People set
+            <select
+              value={activePeopleSetId}
+              onChange={(event) => setActivePeopleSetId(event.target.value)}
+              className="w-full rounded border border-gray-300 bg-white p-2"
+            >
+              <option value="all">Full people list</option>
+              {peopleSets.map((peopleSet) => <option key={peopleSet.id} value={peopleSet.id}>{peopleSet.name}</option>)}
+            </select>
+          </label>
 
           {/* SESSION NAME */}
           <div className="space-y-1">

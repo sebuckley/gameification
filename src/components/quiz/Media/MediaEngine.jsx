@@ -7,12 +7,16 @@ export default function MediaEngine({
   index,
   questions,
   nextQuestion,
-  quizPeople
+  quizPeople,
+  quizSettings
 }) {
   const { applyQuizResult } = usePeople();
 
   const handleAnswer = (option, personId, correct) => {
-    applyQuizResult(personId, correct);
+    const noAnswerPenalty = option == null && !correct && quizSettings.noOneAnsweredPenalty === "remove"
+      ? quizSettings.noOneAnsweredPoints
+      : undefined;
+    applyQuizResult(personId, correct, quizSettings, currentQuestion, noAnswerPenalty);
   };
 
   return (
@@ -21,6 +25,7 @@ export default function MediaEngine({
       total={questions.length}
       currentQuestion={currentQuestion}
       quizPeople={quizPeople}
+      quizSettings={quizSettings}
       onAnswer={handleAnswer}
       onNext={nextQuestion}
     />

@@ -24,7 +24,7 @@ export default function CorrectAnswerModal({
   const isStandardMode = modalCorrectPerson !== null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+    <div data-controller-modal="correct-answer" className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
       <div className="bg-white rounded-xl shadow-lg p-6 w-150 min-w-[500px] space-y-6 border animate-pop">
 
         <h3 className="text-xl font-bold text-center">Correct Answer</h3>
@@ -63,6 +63,7 @@ export default function CorrectAnswerModal({
         )}
 
         <button
+          data-controller-action="advance"
           onClick={onNext}
           className="w-full px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700"
         >

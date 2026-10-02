@@ -9,6 +9,7 @@ export default function StandardQuizPointsEngine({
   index,
   questions,
   quizPeople,
+  quizSettings,
   nextQuestion
 }) {
   const { applyQuizResult } = usePeople();
@@ -56,10 +57,11 @@ export default function StandardQuizPointsEngine({
     confetti({ particleCount: 120, spread: 70, origin: { y: 0.6 } });
   };
 
-  const penaliseRemaining = () => {
+  const penaliseRemaining = (attemptedPlayers = attempted) => {
+    if (quizSettings.noOneAnsweredPenalty !== "remove") return;
     quizPeople.forEach((p) => {
-      if (!attempted.includes(p.id)) {
-        applyQuizResult(p.id, false);
+      if (!attemptedPlayers.includes(p.id)) {
+        applyQuizResult(p.id, false, quizSettings, currentQuestion, quizSettings.noOneAnsweredPoints);
       }
     });
   };
@@ -82,7 +84,7 @@ export default function StandardQuizPointsEngine({
     const person = quizPeople.find((p) => p.id === personId);
     setModalCorrectPerson(person);
 
-    applyQuizResult(personId, true);
+    applyQuizResult(personId, true, quizSettings, currentQuestion);
     triggerConfetti();
 
     setAttempted((prev) => [...prev, personId]);
@@ -105,14 +107,14 @@ export default function StandardQuizPointsEngine({
     const person = quizPeople.find((p) => p.id === personId);
     setWrongPerson(person);
 
-    applyQuizResult(personId, false);
+    applyQuizResult(personId, false, quizSettings, currentQuestion);
 
     const newAttempted = [...attempted, personId];
     setAttempted(newAttempted);
 
     // everyone has attempted → finish question
     if (newAttempted.length === quizPeople.length) {
-      penaliseRemaining();
+      penaliseRemaining(newAttempted);
       setModalCorrectPerson(null);
       setShowWrongModal(false);
       setWrongCountdownActive(false);
@@ -158,6 +160,7 @@ export default function StandardQuizPointsEngine({
       handleNoOneAnswered={handleNoOneAnswered}
       handleClearWrongModal={handleClearWrongModal}
       nextQuestion={nextQuestion}
+      showNoOneAnswered={quizSettings.allowNoOneAnswered !== false}
     />
   );
 }

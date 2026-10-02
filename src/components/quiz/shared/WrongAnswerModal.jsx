@@ -12,6 +12,7 @@ export default function WrongAnswerModal({
   wrongPerson,
   wrongTimer,
   setWrongTimer,
+  showNoOneAnswered = true,
   onClear,
   onNoOneAnswered
 }) {
@@ -48,23 +49,22 @@ export default function WrongAnswerModal({
   };
 
   useEffect(() => {
+    if (!show || isGameShow || !showNoOneAnswered) return;
 
+    setWrongTimer(60);
+    const interval = setInterval(() => {
+      setWrongTimer((timeLeft) => {
+        if (timeLeft <= 1) {
+          clearInterval(interval);
+          onNoOneAnswered();
+          return 0;
+        }
+        return timeLeft - 1;
+      });
+    }, 1000);
 
-  setWrongTimer(60); // reset timer
-
-  const interval = setInterval(() => {
-    setWrongTimer((t) => {
-      if (t <= 1) {
-        clearInterval(interval);
-        onNoOneAnswered(); // auto-trigger if timer hits zero
-        return 0;
-      }
-      return t - 1;
-    });
-  }, 1000);
-
-  return () => clearInterval(interval);
-}, []);
+    return () => clearInterval(interval);
+  }, [show, isGameShow, showNoOneAnswered, onNoOneAnswered, setWrongTimer]);
 
 
   const handleNoOneAnswered = () => {
@@ -75,7 +75,7 @@ export default function WrongAnswerModal({
   if (!show) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+    <div data-controller-modal="wrong-answer" className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
       <div
         id="wrong-modal"
         className="
@@ -113,6 +113,7 @@ export default function WrongAnswerModal({
             </button>
 
             <button
+              data-controller-action="advance"
               onClick={onClear}
               className="w-full px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700"
             >
@@ -140,12 +141,15 @@ export default function WrongAnswerModal({
               Continue – Next Player
             </button>
 
-            <button
-              onClick={handleNoOneAnswered}
-              className="w-full px-4 py-2 bg-gray-700 text-white rounded hover:bg-gray-800 mt-2"
-            >
-              No One Answered
-            </button>
+            {showNoOneAnswered && (
+              <button
+                data-controller-action="modal-no-one-answered"
+                onClick={handleNoOneAnswered}
+                className="w-full px-4 py-2 bg-gray-700 text-white rounded hover:bg-gray-800 mt-2"
+              >
+                No One Answered
+              </button>
+            )}
           </>
         )}
       </div>

@@ -4,7 +4,7 @@ import usePeople from "../store/usePeopleStore";
 import SelectField from "./PersonCard/SelectField";
 import { PERSON_TYPE_OPTIONS } from "../../data/PersonOptions";
 
-export default function AddPersonForm() {
+export default function AddPersonForm({ peopleSetId, purpose = "all" }) {
   const people = usePeople((s) => s.people);
   const addPerson = usePeople((s) => s.addPerson);
 
@@ -31,8 +31,14 @@ export default function AddPersonForm() {
 
   const [fullName, setFullName] = useState("");
   const [preferredName, setPreferredName] = useState("");
-  const [personType, setPersonType] = useState("participant");
+  const [personType, setPersonType] = useState(purpose === "stakeholders" ? "observer" : "participant");
+  const [email, setEmail] = useState("");
+  const [organization, setOrganization] = useState("");
   const [message, setMessage] = useState("");
+
+  useEffect(() => {
+    setPersonType(purpose === "stakeholders" ? "observer" : "participant");
+  }, [purpose]);
 
 
   const usedColors = people.map(p => p.color?.toLowerCase()).filter(Boolean);
@@ -94,11 +100,23 @@ export default function AddPersonForm() {
       preferredName: preferredName.trim(),
       color: customColor || color,
       personType,
+      email: purpose === "team" ? "" : email.trim(),
+      organization: purpose === "stakeholders" ? organization.trim() : "",
+      peopleSetId,
+      peopleSetSettings: peopleSetId
+        ? {
+            personType,
+            inSpinner: purpose !== "stakeholders" && personType !== "presenter" && personType !== "keynote-speaker",
+            inGroups: purpose !== "stakeholders" && personType === "participant",
+          }
+        : undefined,
     });
 
     setFullName("");
     setPreferredName("");
-    setPersonType("participant");
+    setPersonType(purpose === "stakeholders" ? "observer" : "participant");
+    setEmail("");
+    setOrganization("");
     setCustomColor(null);
     setMessage("");
   };
@@ -151,6 +169,31 @@ export default function AddPersonForm() {
               placeholder="e.g. Stephen Johnson"
             />
           </label>
+
+          {purpose !== "team" && (
+            <label className="flex flex-col gap-1">
+              <span className="text-sm font-medium text-gray-700">Email Address</span>
+              <input
+                type="email"
+                className="border p-2 rounded w-full"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="name@example.com"
+              />
+            </label>
+          )}
+
+          {purpose === "stakeholders" && (
+            <label className="flex flex-col gap-1">
+              <span className="text-sm font-medium text-gray-700">Organization</span>
+              <input
+                className="border p-2 rounded w-full"
+                value={organization}
+                onChange={(e) => setOrganization(e.target.value)}
+                placeholder="Organization or department"
+              />
+            </label>
+          )}
 
           {/* Preferred Name */}
           <label className="flex flex-col gap-1">

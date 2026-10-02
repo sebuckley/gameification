@@ -6,16 +6,21 @@ export default function StandardQuizEngine({
   index,
   questions,
   nextQuestion,
-  cycle        // 1 = question cycle, 2 = reveal cycle
+  cycle,     // 1 = question cycle, 2 = reveal cycle
+  showAnswer,
+  revealAnswer,
+  resetAnswer,
 }) {
 
+  console.log("Quiz engine", index, cycle);
   const isLastQuestion = index === questions.length - 1;
 
   const isRevealMode = cycle === 2;
 
   // ⭐ Reset any per-question UI state when question changes
   useEffect(() => {
-    // Nothing needed now, but keep the hook for future expansion
+    // Reset the answer visibility whenever the question or cycle changes
+
   }, [index, cycle]);
 
   // ⭐ Cycle + finish logic only
@@ -39,12 +44,17 @@ export default function StandardQuizEngine({
   };
 
   return (
+
     <StandardQuizQuestion
       index={index}
       currentQuestion={currentQuestion}
       isRevealMode={isRevealMode}
+      cycle={cycle}
       nextQuestion={advanceQuestion}
       isLastQuestion={isLastQuestion}
+      showAnswer={showAnswer}
+      revealAnswer={revealAnswer}
+      resetAnswer={resetAnswer}
     />
   );
 }

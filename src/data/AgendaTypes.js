@@ -185,6 +185,105 @@ export const agendaTypes = [
     description: "One-on-one or group interviews to understand stakeholder needs."
   },
   {
+    id: "research-briefing",
+    label: "Research Briefing & Consent",
+    color: "#155E75",
+    textColor: "#FFFFFF",
+    defaultMinutes: 10,
+    icon: ClipboardList,
+    description: "Explain the research purpose, session plan, privacy, recording, and obtain informed consent."
+  },
+  {
+    id: "interview-prep",
+    label: "Interview Preparation",
+    color: "#0E7490",
+    textColor: "#FFFFFF",
+    defaultMinutes: 10,
+    icon: ListChecks,
+    description: "Review research questions, participant context, and the interview discussion guide."
+  },
+  {
+    id: "interview",
+    label: "Interview",
+    color: "#0891B2",
+    textColor: "#FFFFFF",
+    defaultMinutes: 60,
+    icon: Users,
+    description: "A scheduled one-to-one or group interview, typically one hour."
+  },
+  {
+    id: "direct-observation",
+    label: "Direct Observation",
+    color: "#115E59",
+    textColor: "#FFFFFF",
+    defaultMinutes: 60,
+    icon: ClipboardList,
+    description: "Observe normal activity with minimal interruption; capture what people do and the context."
+  },
+  {
+    id: "ethnographic-observation",
+    label: "Ethnographic Field Study",
+    color: "#134E4A",
+    textColor: "#FFFFFF",
+    defaultMinutes: 180,
+    icon: Users,
+    description: "Spend sustained time in the natural setting to understand practices, relationships, and culture."
+  },
+  {
+    id: "contextual-inquiry",
+    label: "Contextual Inquiry",
+    color: "#0F766E",
+    textColor: "#FFFFFF",
+    defaultMinutes: 60,
+    icon: Workflow,
+    description: "Observe people doing real work and ask focused questions to understand why and how."
+  },
+  {
+    id: "observation",
+    label: "Observation",
+    color: "#0F766E",
+    textColor: "#FFFFFF",
+    defaultMinutes: 60,
+    icon: ClipboardList,
+    description: "Observe people carrying out their normal activities."
+  },
+  {
+    id: "job-shadowing",
+    label: "Job Shadowing",
+    color: "#047857",
+    textColor: "#FFFFFF",
+    defaultMinutes: 90,
+    icon: Users,
+    description: "Follow a participant through their work to understand context and workflow."
+  },
+  {
+    id: "contextual-observation",
+    label: "Contextual Observation",
+    color: "#0D9488",
+    textColor: "#FFFFFF",
+    defaultMinutes: 60,
+    icon: Workflow,
+    description: "Observe and ask questions in the participant's usual environment."
+  },
+  {
+    id: "debrief",
+    label: "Debrief & Synthesis",
+    color: "#0E7490",
+    textColor: "#FFFFFF",
+    defaultMinutes: 30,
+    icon: MessageSquare,
+    description: "Capture observations, themes, and follow-up questions."
+  },
+  {
+    id: "research-analysis",
+    label: "Research Analysis & Synthesis",
+    color: "#155E75",
+    textColor: "#FFFFFF",
+    defaultMinutes: 60,
+    icon: Brain,
+    description: "Review notes, separate observations from interpretations, identify themes, and agree findings and actions."
+  },
+  {
     id: "visioning",
     label: "Visioning",
     color: "#0891B2",
@@ -212,6 +311,51 @@ export const agendaTypes = [
     defaultMinutes: 30,
     icon: BookOpen,
     description: "Teach participants new tools, processes, or methodologies."
+  },
+  {
+    id: "hands-on-practice",
+    label: "Hands-on Practice",
+    color: "#0F766E",
+    textColor: "#FFFFFF",
+    defaultMinutes: 30,
+    icon: BookOpen,
+    description: "Give participants time to apply the training with a supported exercise."
+  },
+  {
+    id: "panel-discussion",
+    label: "Panel Discussion",
+    color: "#6D28D9",
+    textColor: "#FFFFFF",
+    defaultMinutes: 45,
+    icon: MessageSquare,
+    description: "Host a moderated discussion with multiple speakers and audience questions."
+  },
+  {
+    id: "workshop",
+    label: "Workshop Activity",
+    color: "#7C3AED",
+    textColor: "#FFFFFF",
+    defaultMinutes: 60,
+    icon: Lightbulb,
+    description: "Facilitate a practical group exercise toward a defined outcome."
+  },
+  {
+    id: "team-updates",
+    label: "Team Updates",
+    color: "#2563EB",
+    textColor: "#FFFFFF",
+    defaultMinutes: 15,
+    icon: Users,
+    description: "Share progress, blockers, and important updates across the team."
+  },
+  {
+    id: "action-planning",
+    label: "Action Planning",
+    color: "#1D4ED8",
+    textColor: "#FFFFFF",
+    defaultMinutes: 15,
+    icon: ListChecks,
+    description: "Agree owners, actions, and next steps."
   },
   {
     id: "discussion",

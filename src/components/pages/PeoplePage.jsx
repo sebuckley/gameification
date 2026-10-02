@@ -1,6 +1,7 @@
 import { useRef } from "react";
 import usePeople from "../store/usePeopleStore";
 import PeopleManager from "../people/PeopleManager";
+import PeopleSetsManager from "../people/PeopleSetsManager";
 
 export default function PeoplePage() {
   const people = usePeople((s) => s.people);
@@ -124,6 +125,7 @@ export default function PeoplePage() {
 </div>
 
 
+      <PeopleSetsManager />
       <PeopleManager />
     </div>
   );

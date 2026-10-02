@@ -1,16 +1,21 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import usePeople from "../store/usePeopleStore";
+import { getPeopleSetRoster } from "../../utils/peopleSetMembers";
 
 import SpinnerWheel from "../spinner/SpinnerWheel";
 import Leaderboard from "../shared/Leaderboard";
 import ResultModal from "../spinner/ResultModal";
 
 export default function SpinnerPage() {
-  const { people, incrementAnswers, addHistory, removePerson } = usePeople();
+  const { people, peopleSets = [], incrementAnswers, addHistory } = usePeople();
   const [winner, setWinner] = useState(null);
   const [autoRemove, setAutoRemove] = useState(false);
-  const spinnerPeople = people.filter((p) => p?.inSpinner !== false);
+  const [activePeopleSetId, setActivePeopleSetId] = useState(() => peopleSets[0]?.id || "all");
+  const activePeopleSet = peopleSets.find((setItem) => setItem.id === activePeopleSetId);
+  const spinnerPeople = getPeopleSetRoster(people, activePeopleSet).filter((person) =>
+    person?.inSpinner !== false && person?.isPresenter !== true
+  );
   const hasPeople = spinnerPeople.length > 0;
 
   const handleResult = (person) => {
@@ -44,6 +49,18 @@ export default function SpinnerPage() {
   return (
     <div className="max-w-4xl mx-auto p-4 space-y-8">
       <h1 className="text-2xl font-bold">Spinner</h1>
+
+      <label className="flex max-w-xl flex-col gap-1 text-sm font-semibold text-slate-700">
+        People set
+        <select
+          value={activePeopleSetId}
+          onChange={(event) => setActivePeopleSetId(event.target.value)}
+          className="rounded border border-slate-300 bg-white px-3 py-2"
+        >
+          <option value="all">Full people list</option>
+          {peopleSets.map((peopleSet) => <option key={peopleSet.id} value={peopleSet.id}>{peopleSet.name}</option>)}
+        </select>
+      </label>
 
       <SpinnerWheel people={spinnerPeople} onResult={handleResult} autoRemove={autoRemove} setAutoRemove={setAutoRemove}/>
 

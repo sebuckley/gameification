@@ -1,11 +1,10 @@
 import React, { useEffect, useRef, useState } from "react";
 import CorrectAnswerModal from "../shared/CorrectAnswerModal";
 import WrongAnswerModal from "../shared/WrongAnswerModal";
-import usePeopleStore from "../../store/usePeopleStore";
 import IncorrectAnswerModal from "../shared/IncorrectAnswerModal";
 
 
-export default function MediaQuizQuestion({ index, total, currentQuestion, quizPeople, onAnswer, onNext }) {
+export default function MediaQuizQuestion({ index, total, currentQuestion, quizPeople, quizSettings, onAnswer, onNext }) {
   
   const [selectedPerson, setSelectedPerson] = useState(null);
   const [selectedOption, setSelectedOption] = useState(null);
@@ -20,7 +19,6 @@ export default function MediaQuizQuestion({ index, total, currentQuestion, quizP
   const [revealProgress, setRevealProgress] = useState(0);
   const revealElapsedRef = useRef(0);
   const revealLastTickRef = useRef(null);
-  const quizSettings = usePeopleStore((state) => state.quizSettings);
   const [wrongTimer, setWrongTimer] = useState(60);
 
 const noOneAnswered = () => {
@@ -31,15 +29,16 @@ const noOneAnswered = () => {
   setShowWrongModal(false);
 
   // Apply penalty to everyone who has NOT answered incorrectly
-  quizPeople.forEach((person) => {
-    const hasAnsweredWrong = wrongAnswersBy.includes(person.id);
-    const hasAnsweredCorrect = modalCorrectPerson?.id === person.id;
+  if (quizSettings?.noOneAnsweredPenalty === "remove") {
+    quizPeople.forEach((person) => {
+      const hasAnsweredWrong = wrongAnswersBy.includes(person.id);
+      const hasAnsweredCorrect = modalCorrectPerson?.id === person.id;
 
-    if (!hasAnsweredWrong && !hasAnsweredCorrect) {
-      // Apply wrongPoints penalty using your existing scoring system
-      onAnswer(null, person.id, false);
-    }
-  });
+      if (!hasAnsweredWrong && !hasAnsweredCorrect) {
+        onAnswer(null, person.id, false);
+      }
+    });
+  }
 
   // Show incorrect modal
   setIncorrectAnswerModal(true);
@@ -185,7 +184,15 @@ const noOneAnswered = () => {
               <button
                 key={person.id}
                 disabled={disabled}
-                onClick={() => setSelectedPerson(person.id)}
+                data-controller-action="select-player"
+                data-controller-player={person.id}
+                onClick={() => {
+                  setSelectedPerson(person.id);
+                  if (showWrongModal) {
+                    setShowWrongModal(false);
+                    setLocked(false);
+                  }
+                }}
                 className={`flex items-center gap-2 rounded-full px-4 py-2 text-base font-bold shadow-md transition hover:-translate-y-0.5 ${disabled ? "cursor-not-allowed bg-red-200 text-red-700" : selectedPerson === person.id ? "bg-emerald-500 text-white" : "bg-white text-slate-800 hover:bg-slate-100"}`}
               >
                 <span className="flex h-8 w-8 items-center justify-center rounded-full text-sm font-bold text-white shadow" style={{ backgroundColor: person.color }}>{initials}</span>
@@ -204,6 +211,8 @@ const noOneAnswered = () => {
                 <button
                   key={`${option}-${optionIndex}`}
                   disabled={!selectedPerson || locked}
+                  data-controller-action="option"
+                  data-controller-option={String(option)}
                   onClick={() => recordAnswer(normalizeAnswer(option) === normalizedAnswer, option)}
                   className={`rounded-full border-2 px-5 py-2 text-base font-bold shadow-md ${locked && isCorrect ? "border-green-600 bg-green-600 text-white" : locked && isSelected ? "border-red-600 bg-red-600 text-white" : !selectedPerson ? "cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400" : locked ? "cursor-not-allowed border-slate-300 bg-slate-100 text-slate-500" : "border-violet-500 bg-white text-violet-700 hover:bg-violet-50"}`}
                 >{option}</button>
@@ -212,15 +221,17 @@ const noOneAnswered = () => {
           </div>
         ) : (
           <div className="flex w-full items-center justify-center gap-3">
-            <button disabled={!selectedPerson || locked} onClick={() => recordAnswer(true)} className="rounded-full bg-emerald-600 px-5 py-2 text-base font-bold text-white disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400">Correct</button>
-            <button disabled={!selectedPerson || locked} onClick={() => recordAnswer(false)} className="rounded-full bg-red-600 px-5 py-2 text-base font-bold text-white disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400">Wrong</button>
+            <button data-controller-action="result" data-controller-player={selectedPerson} data-controller-result="correct" disabled={!selectedPerson || locked} onClick={() => recordAnswer(true)} className="rounded-full bg-emerald-600 px-5 py-2 text-base font-bold text-white disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400">Correct</button>
+            <button data-controller-action="result" data-controller-player={selectedPerson} data-controller-result="wrong" disabled={!selectedPerson || locked} onClick={() => recordAnswer(false)} className="rounded-full bg-red-600 px-5 py-2 text-base font-bold text-white disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400">Wrong</button>
           </div>
         )}
 
-        <button onClick={noOneAnswered} className={`rounded-full px-5 py-2 text-base font-semibold shadow-md ${locked ? "bg-slate-800 text-white" : "bg-slate-200 text-slate-800"}`}>Next Question →</button>
+        {quizSettings?.allowNoOneAnswered !== false && (
+          <button data-controller-action="no-one-answered" onClick={noOneAnswered} className={`rounded-full px-5 py-2 text-base font-semibold shadow-md ${locked ? "bg-slate-800 text-white" : "bg-slate-200 text-slate-800"}`}>No One Answered</button>
+        )}
 
         <CorrectAnswerModal show={showCorrectModal} setShowCorrectModal={setShowCorrectModal} answer={currentQuestion.answer} modalCorrectPerson={modalCorrectPerson} onNext={() => { setShowCorrectModal(false); onNext(); }} />
-        <WrongAnswerModal show={showWrongModal} setLocked={setLocked} setShowWrongModal={setShowWrongModal} wrongPerson={modalWrongPerson} wrongTimer={wrongTimer} setWrongTimer={setWrongTimer} onClear={() => { setLocked(false); setShowWrongModal(false); }} onNoOneAnswered={noOneAnswered} />
+        <WrongAnswerModal show={showWrongModal} setLocked={setLocked} setShowWrongModal={setShowWrongModal} wrongPerson={modalWrongPerson} wrongTimer={wrongTimer} setWrongTimer={setWrongTimer} showNoOneAnswered={quizSettings?.allowNoOneAnswered !== false} onClear={() => { setLocked(false); setShowWrongModal(false); }} onNoOneAnswered={noOneAnswered} />
         <IncorrectAnswerModal show={incorrectAnswerModal} setIncorrectAnswerModal={setIncorrectAnswerModal} answer={currentQuestion.answer} onNext={() => { setIncorrectAnswerModal(false); onNext(); }} />
       </div>
     </div>

@@ -8,6 +8,7 @@ export default function NotesSection({
   noteDraft,
   setNoteDraft,
   addNote,
+  title = "Notes",
 }) {
   const hasNotes = notesHistory.length > 0;
 
@@ -17,7 +18,7 @@ export default function NotesSection({
       {/* Header */}
       <span className="text-sm font-medium text-gray-700 flex items-center gap-2">
         <StickyNote size={16} />
-        Notes
+        {title}
       </span>
 
       {/* Add Note */}
@@ -27,7 +28,7 @@ export default function NotesSection({
           rows={3}
           value={noteDraft}
           onChange={(e) => setNoteDraft(e.target.value)}
-          placeholder="Add a note about this person..."
+          placeholder={`Add ${title.toLowerCase()}...`}
         />
 
         <button
