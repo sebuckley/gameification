@@ -13,7 +13,7 @@ export function QuestionItem({
   quizSettings,
 }) {
 
-  console.log(q)
+
   const [open, setOpen] = useState(false);
   const [mediaPreviewError, setMediaPreviewError] = useState(q.mediaStatus === "failed");
   const [mediaPreviewLoaded, setMediaPreviewLoaded] = useState(q.mediaStatus === "loaded");
@@ -42,81 +42,78 @@ export function QuestionItem({
         ${snapshot.isDragging ? "scale-[1.03] shadow-lg" : ""}
       `}
     >
-{/* HEADER */}
-<div
-  {...provided.dragHandleProps}
-  className="flex flex-wrap md:flex-nowrap items-center justify-between p-3 bg-indigo-600 border-b rounded-t gap-3"
->
-  {/* Left side */}
-  <div className="flex items-center gap-3 min-w-0">
-    {/* Move icon */}
-    <div
-      {...provided.dragHandleProps}
-      className="text-indigo-200 hover:text-white cursor-grab select-none pr-1 transition-colors"
-      onClick={(e) => e.stopPropagation()}
-    >
-      ⋮⋮
-    </div>
-
-    {/* Number */}
-    <span className="font-semibold text-white">{index + 1}.</span>
-
-    {/* Responsive truncation */}
-    <span className="text-white font-medium truncate max-w-[150px] sm:max-w-[250px] md:max-w-[300px]">
-      {q.question || "Untitled Question"}
-    </span>
-
-    {isMediaItem && (
-      <span
-        className={`shrink-0 rounded-full px-2 py-1 text-[10px] font-bold uppercase tracking-wide ${
-          !q.mediaUrl
-            ? "bg-red-200 text-red-800"
-            : mediaPreviewError
-              ? "bg-red-200 text-red-800"
-              : mediaPreviewLoaded
-                ? "bg-emerald-200 text-emerald-800"
-                : "bg-amber-200 text-amber-800"
-        }`}
+      {/* HEADER */}
+      <div
+        {...provided.dragHandleProps}
+        className="flex flex-wrap md:flex-nowrap items-center justify-between p-3 bg-indigo-600 border-b rounded-t gap-3"
       >
-        {!q.mediaUrl
-          ? "Edit: media missing"
-          : mediaPreviewError
-            ? "Edit: media failed"
-            : mediaPreviewLoaded
-              ? "Media linked"
-              : "Edit to check media"}
-      </span>
-    )}
-  </div>
+        {/* Left side */}
+        <div className="flex items-center gap-3 min-w-0">
+          {/* Move icon */}
+          <div
+            {...provided.dragHandleProps}
+            className="text-indigo-200 hover:text-white cursor-grab select-none pr-1 transition-colors"
+            onClick={(e) => e.stopPropagation()}
+          >
+            ⋮⋮
+          </div>
 
-  {/* Right side buttons */}
-  <div className="flex items-center gap-2 flex-wrap">
-    <button
-      onClick={() => setOpen(!open)}
-      className="flex-1 md:flex-none px-3 py-2 bg-gray-200 text-gray-700 rounded text-xs hover:bg-gray-300"
-    >
-      {open ? "Close Edit" : "Edit"}
-    </button>
+          {/* Number */}
+          <span className="font-semibold text-white">{index + 1}.</span>
 
-    <button
-      onClick={() => moveQuestion(index, -1)}
-      className="flex-1 md:flex-none px-3 py-2 bg-gray-200 text-gray-700 rounded text-xs hover:bg-gray-300"
-    >
-      ↑
-    </button>
+          {/* Responsive truncation */}
+          <span className="text-white font-medium truncate max-w-[150px] sm:max-w-[250px] md:max-w-[300px]">
+            {q.question || "Untitled Question"}
+          </span>
 
-    <button
-      onClick={() => moveQuestion(index, 1)}
-      className="flex-1 md:flex-none px-3 py-2 bg-gray-200 text-gray-700 rounded text-xs hover:bg-gray-300"
-    >
-      ↓
-    </button>
-  </div>
-</div>
+          {isMediaItem && (
+            <span
+              className={`shrink-0 rounded-full px-2 py-1 text-[10px] font-bold uppercase tracking-wide ${
+                !q.mediaUrl
+                  ? "bg-red-200 text-red-800"
+                  : mediaPreviewError
+                    ? "bg-red-200 text-red-800"
+                    : mediaPreviewLoaded
+                      ? "bg-emerald-200 text-emerald-800"
+                      : "bg-amber-200 text-amber-800"
+              }`}
+            >
+              {!q.mediaUrl
+                ? "Edit: media missing"
+                : mediaPreviewError
+                  ? "Edit: media failed"
+                  : mediaPreviewLoaded
+                    ? "Media linked"
+                    : "Edit to check media"}
+            </span>
+          )}
+        </div>
 
+        {/* Right side buttons */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <button
+            onClick={() => setOpen(!open)}
+            className="flex-1 md:flex-none px-3 py-2 bg-gray-200 text-gray-700 rounded text-xs hover:bg-gray-300"
+          >
+            {open ? "Close Edit" : "Edit"}
+          </button>
 
+          <button
+            onClick={() => moveQuestion(index, -1)}
+            className="flex-1 md:flex-none px-3 py-2 bg-gray-200 text-gray-700 rounded text-xs hover:bg-gray-300"
+          >
+            ↑
+          </button>
 
-
+          <button
+            onClick={() => moveQuestion(index, 1)}
+            className="flex-1 md:flex-none px-3 py-2 bg-gray-200 text-gray-700 rounded text-xs hover:bg-gray-300"
+          >
+            ↓
+          </button>
+        </div>
+      </div>
+      
       {open && (
         <div className="p-4 space-y-4">
           {/* Question */}

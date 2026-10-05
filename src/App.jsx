@@ -18,6 +18,7 @@ import IceBreakerPage from "./components/pages/IceBreakerPage";
 import SpinnerPage from "./components/pages/SpinnerPage";
 import GroupsPage from "./components/pages/GroupsPage";
 import QuizPage from "./components/pages/QuizPage";
+import QuestionSetsPage from "./components/pages/QuestionSetsPage";
 import AgendaPage from "./components/pages/AgendaPage";
 import UserDetailsPage from "./components/pages/UserDetailsPage";
 import AgendaPlayer from "./components/pages/AgendaPlayer";
@@ -93,6 +94,7 @@ export default function App() {
         <NavItem to="/spinner" label="Spinner" icon={Shuffle} />
         <NavItem to="/groups" label="Groups" icon={Group} />
         <NavItem to="/quiz" label="Quiz" icon={ListChecks} />
+<NavItem to="/question-sets" label="Question sets" icon={ListChecks} />
         <NavItem to="/user-details" label="User Details" icon={UserCog} />
       </nav>
     )}
@@ -106,6 +108,7 @@ export default function App() {
       <NavItem to="/spinner" label="Spinner" icon={Shuffle} />
       <NavItem to="/groups" label="Groups" icon={Group} />
       <NavItem to="/quiz" label="Quiz" icon={ListChecks} />
+<NavItem to="/question-sets" label="Question sets" icon={ListChecks} />
       <NavItem to="/user-details" label="User Details" icon={UserCog} />
     </nav>
   </div>
@@ -124,6 +127,7 @@ export default function App() {
           <Route path="/agenda-player" element={<AgendaPlayer />} />
           <Route path="/spinner" element={<SpinnerPage />} />
           <Route path="/groups" element={<GroupsPage />} />
+          <Route path="/question-sets" element={<QuestionSetsPage />} />
           <Route path="/quiz" element={<QuizPage running={ running } setRunning={ setRunning } />} />
           <Route path="/remote" element={<RemoteControl />} />
         </Routes>

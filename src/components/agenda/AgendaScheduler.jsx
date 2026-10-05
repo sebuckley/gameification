@@ -155,6 +155,8 @@ const handleAddItem = (type) => {
     linkedQuestionSetId: null,
     linkedIceBreakerSetId: null,
     linkedPeopleSetId: null,
+    observerIds: [],
+    observedIds: [],
     enableGroupSetup: false,
     groupCount: 2,
     groupHistoryEntryId: null,

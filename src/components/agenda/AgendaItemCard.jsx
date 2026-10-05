@@ -1,5 +1,9 @@
 import { useState } from "react";
 import { FileText } from "lucide-react";
+import { Link } from "react-router-dom";
+import PersonMultiPicker from "./PersonMultiPicker";
+import useDiscoveryStore from "../store/useDiscoveryStore";
+import { createSessionFromSet } from "../discovery/createSessionFromSet";
 import {
   getAgendaColor,
   getAgendaTextColor,
@@ -54,6 +58,11 @@ export default function AgendaItemCard({
   const isOtherItem = String(item.type || "") === "other";
   const isQuizItem = String(item.type || "").startsWith("quiz");
   const isIceBreakerItem = String(item.type || "") === "ice-breaker";
+  const isObservationItem = String(item.type || "") === "observation";
+  const isInterviewItem = String(item.type || "") === "interview";
+  const isFieldworkItem = isObservationItem || isInterviewItem;
+  const observerIds = item.observerIds || [];
+  const observedIds = item.observedIds || [];
   const linkedQuestionSet = questionSets.find((setItem) => setItem.id === item.linkedQuestionSetId) || null;
   const linkedIceBreakerSet = iceBreakerSets.find((setItem) => setItem.id === item.linkedIceBreakerSetId) || null;
   const linkedPeopleSet = peopleSets.find((setItem) => setItem.id === item.linkedPeopleSetId) || null;
@@ -74,14 +83,32 @@ export default function AgendaItemCard({
   // Validation (NOTES REMOVED FROM VALIDATION)
   const isMissingLabel = !item.label?.trim();
   const isMissingMinutes = !item.minutes || item.minutes <= 0;
-  const isMissingPresenter = !item.presenterId && !item.guestPresenter;
+  const isMissingPresenter = !isFieldworkItem && !item.presenterId && !item.guestPresenter;
   const isMissingSetLink =
     (isQuizItem && !item.linkedQuestionSetId) ||
     (isIceBreakerItem && !item.linkedIceBreakerSetId);
+  const isMissingObservers = isFieldworkItem && observerIds.length === 0;
+  const isMissingObserved = isFieldworkItem && observedIds.length === 0;
+  const discoverySets = useDiscoveryStore((s) => s.discoveryQuestionSets);
+  const linkedDiscoverySet = discoverySets.find((s) => s.id === item.linkedDiscoverySetId) || null;
+  const personName = (person) => person.preferredName || person.fullName || "Unnamed";
+
+  // Each link creates a new response object for this item; the set itself is never copied.
+  const linkDiscoverySet = (setId) => {
+    if (!setId) {
+      updateAgendaItem(item.id, { linkedDiscoverySetId: null, linkedInterviewId: null });
+      return;
+    }
+    const stakeholder = people.filter((p) => observedIds.includes(p.id)).map(personName).join(", ");
+    const role = people.filter((p) => observerIds.includes(p.id)).map(personName).join(", ");
+    const interviewId = createSessionFromSet(setId, stakeholder, role);
+    updateAgendaItem(item.id, { linkedDiscoverySetId: setId, linkedInterviewId: interviewId });
+  };
   const isMissingGroupCount = !!item.enableGroupSetup && (!item.groupCount || Number(item.groupCount) < 1);
   const isMissingArtefact =
     !isQuizItem &&
     !isIceBreakerItem &&
+    !isFieldworkItem &&
     (!item.artefacts || item.artefacts.length === 0);
 
   const isIncomplete =
@@ -89,6 +116,8 @@ export default function AgendaItemCard({
     isMissingMinutes ||
     isMissingPresenter ||
     isMissingSetLink ||
+    isMissingObservers ||
+    isMissingObserved ||
     isMissingGroupCount ||
     isMissingArtefact;
 
@@ -239,9 +268,15 @@ const reusableArtefacts = allArtefacts.filter((a) => {
             </div>
 
             {/* PRESENTER */}
-            <div className="px-2 py-1 text-xs font-semibold rounded-md bg-gray-100 text-gray-700">
-              {presenterName}
-            </div>
+            {isFieldworkItem ? (
+              <div className="px-2 py-1 text-xs font-semibold rounded-md bg-gray-100 text-gray-700">
+                {observerIds.length} {isInterviewItem ? "interviewing" : "observing"} · {observedIds.length} {isInterviewItem ? "interviewed" : "observed"}
+              </div>
+            ) : (
+              <div className="px-2 py-1 text-xs font-semibold rounded-md bg-gray-100 text-gray-700">
+                {presenterName}
+              </div>
+            )}
 
             {linkedPeopleSet && (
               <div className="px-2 py-1 text-xs font-semibold rounded-md bg-indigo-50 text-indigo-800 border border-indigo-200">
@@ -427,7 +462,7 @@ const reusableArtefacts = allArtefacts.filter((a) => {
             />
 
             {/* Presenter Dropdown */}
-            <select
+            {!isFieldworkItem && <select
               className={`border rounded p-3 text-sm w-full md:w-auto ${
                 isMissingPresenter ? "border-red-500 bg-red-50" : ""
               }`}
@@ -457,10 +492,10 @@ const reusableArtefacts = allArtefacts.filter((a) => {
               ))}
 
               <option value="guest">Guest Presenter</option>
-            </select>
+            </select>}
 
             {/* Guest Presenter Input */}
-            {isGuestSelected && (
+            {!isFieldworkItem && isGuestSelected && (
               <input
                 className={`border rounded p-3 text-sm w-full ${
                   isMissingPresenter && !item.guestPresenter
@@ -478,8 +513,54 @@ const reusableArtefacts = allArtefacts.filter((a) => {
             )}
           </div>
 
-          {/* Group Setup */}
-          <div className="space-y-2">
+          {isFieldworkItem && (
+            <div className="grid gap-3 md:grid-cols-2">
+              <PersonMultiPicker
+                label={isInterviewItem ? "Interviewer(s)" : "Observer(s)"}
+                helper={isInterviewItem ? "Who is running the interview. One or more." : "Who is observing. One or more."}
+                people={people}
+                selectedIds={observerIds}
+                disabledIds={observedIds}
+                invalid={isMissingObservers}
+                onChange={(ids) => updateAgendaItem(item.id, { observerIds: ids })}
+              />
+              <PersonMultiPicker
+                label={isInterviewItem ? "Interviewee(s)" : "Person/people being observed"}
+                helper={isInterviewItem ? "Who is completing the interview. One or more." : "Who is completing the activity. One or more."}
+                people={people}
+                selectedIds={observedIds}
+                disabledIds={observerIds}
+                invalid={isMissingObserved}
+                onChange={(ids) => updateAgendaItem(item.id, { observedIds: ids })}
+              />
+            </div>
+          )}
+
+          {isFieldworkItem && (
+            <div className="space-y-2">
+              <label className="block text-sm font-semibold text-gray-700" htmlFor={`discovery-set-${item.id}`}>
+                Discovery question set
+              </label>
+              <select
+                id={`discovery-set-${item.id}`}
+                className="w-full rounded border p-3 text-sm"
+                value={item.linkedDiscoverySetId || ""}
+                onChange={(event) => linkDiscoverySet(event.target.value)}
+              >
+                <option value="">Select a discovery set</option>
+                {discoverySets.map((setItem) => (
+                  <option key={setItem.id} value={setItem.id}>{setItem.name}</option>
+                ))}
+              </select>
+              <p className="text-xs text-slate-500">
+                {linkedDiscoverySet ? `${linkedDiscoverySet.questions.length} questions · ` : ""}
+                <Link className="text-indigo-600 hover:underline" to="/question-sets">Manage discovery sets</Link>
+              </p>
+            </div>
+          )}
+
+          {/* Audience */}
+          {!isFieldworkItem && <div className="space-y-2">
             <label className="block text-sm font-semibold text-gray-700" htmlFor={`people-set-${item.id}`}>
               Audience list
             </label>
@@ -539,10 +620,10 @@ const reusableArtefacts = allArtefacts.filter((a) => {
                 </div>
               </div>
             )}
-          </div>
+          </div>}
 
           {/* Group Setup */}
-          <div className="space-y-2">
+          {!isFieldworkItem && <div className="space-y-2">
             <div className="text-sm font-semibold text-gray-700">Group setup</div>
 
             <div className="flex flex-wrap items-center gap-3">
@@ -588,6 +669,9 @@ const reusableArtefacts = allArtefacts.filter((a) => {
                         })
                       }
                     />
+                    <Link to="/groups" className="text-sm font-semibold text-indigo-600 underline hover:text-indigo-800">
+                      Edit groups
+                    </Link>
                   </>
                 ) : (
                   // Invisible placeholder to keep height stable
@@ -599,9 +683,9 @@ const reusableArtefacts = allArtefacts.filter((a) => {
 
               </div>
             </div>
-          </div>
+          </div>}
 
-{!isQuizItem && !isIceBreakerItem && <>{/* Artefacts Section */}
+{!isQuizItem && !isIceBreakerItem && !isFieldworkItem && <>{/* Artefacts Section */}
 <div className="space-y-6">
 
   {/* Header */}

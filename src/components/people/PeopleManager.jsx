@@ -102,77 +102,70 @@ export default function PeopleManager() {
   return (
     <div className="space-y-6">
 
-      {/* Add Person */}
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <label className="flex min-w-64 flex-1 flex-col gap-1 text-sm font-semibold text-slate-700">
-          People list
-          <select
-            value={activePeopleSetId}
-            onChange={(event) => setActivePeopleSetId(event.target.value)}
-            className="rounded border border-slate-300 bg-white px-3 py-2"
-          >
-            <option value="all">Full people list</option>
-            {peopleSets.map((setItem) => (
-              <option key={setItem.id} value={setItem.id}>
-                {setItem.type === "stakeholders" ? "Stakeholders" : setItem.type === "training-event" ? "Training / Event" : "Team"}: {setItem.name}
-              </option>
-            ))}
-          </select>
-        </label>
-        {activeSet && <div className="pb-2 text-sm text-slate-500">Showing {listPeople.length} people in {activeSet.name}</div>}
-      </div>
-
-      <AddPersonForm peopleSetId={activeSet?.id} purpose={activeSet?.type || "all"} />
-
-      {/* Stats */}
-      <div className={`grid grid-cols-2 gap-4 text-sm ${showRequirements ? "md:grid-cols-4" : "md:grid-cols-2"}`}>
-        <div className="p-3 bg-white border rounded-lg shadow-sm">
-          <div className="font-semibold text-gray-700">People Added</div>
-          <div className="text-xl font-bold">{totalPeople}</div>
-        </div>
-
-        {showRequirements && <div className="p-3 bg-white border rounded-lg shadow-sm">
-          <div className="font-semibold text-gray-700">Dietary Items</div>
-          <div className="text-xl font-bold">{totalDietary}</div>
-        </div>}
-
-        {showRequirements && <div className="p-3 bg-white border rounded-lg shadow-sm">
-          <div className="font-semibold text-gray-700">Accessibility Items</div>
-          <div className="text-xl font-bold">{totalAccessibility}</div>
-        </div>}
-
-        <div className="p-3 bg-white border rounded-lg shadow-sm">
-          <div className="font-semibold text-gray-700">Not Complete</div>
-          <div className="text-xl font-bold text-red-600">{totalIncomplete}</div>
-        </div>
-      </div>
-
+      {/* Which list to view */}
       <div className="space-y-2">
-        <div className="text-sm font-semibold text-slate-700">Filter by person type</div>
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3 text-sm">
-          {filterCards.map((card) => {
-            const isActive = activeTypeFilter === card.key;
+        <div className="flex flex-wrap gap-2" role="tablist" aria-label="People list">
+          {[{ id: "all", name: "Everyone" }, ...peopleSets].map((setItem) => {
+            const isActive = activePeopleSetId === setItem.id;
             return (
               <button
-                key={card.key}
+                key={setItem.id}
                 type="button"
-                onClick={() => setActiveTypeFilter(card.key)}
-                className={`p-3 border rounded-lg shadow-sm text-left transition-colors ${
+                role="tab"
+                aria-selected={isActive}
+                onClick={() => setActivePeopleSetId(setItem.id)}
+                className={`rounded-full border px-4 py-1.5 text-sm font-semibold transition-colors ${
                   isActive
-                    ? "bg-indigo-50 border-indigo-300"
-                    : "bg-white border-gray-200 hover:bg-gray-50"
+                    ? "border-indigo-600 bg-indigo-600 text-white"
+                    : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
                 }`}
               >
-                <div className="font-semibold text-gray-700">{card.label}</div>
-                <div className={`text-xl font-bold ${isActive ? "text-indigo-700" : "text-gray-900"}`}>
-                  {card.count}
-                </div>
+                {setItem.name}
               </button>
             );
           })}
         </div>
+        {activeSet && (
+          <p className="text-sm text-slate-500">
+            {activeSet.type === "stakeholders" ? "Stakeholders" : activeSet.type === "training-event" ? "Training / Event" : "Team"} set · {listPeople.length} {listPeople.length === 1 ? "person" : "people"}
+          </p>
+        )}
       </div>
 
+      <AddPersonForm peopleSetId={activeSet?.id} purpose={activeSet?.type || "all"} />
+
+      {/* Summary + type filter */}
+      <div className="space-y-3">
+        <div className="flex flex-wrap gap-x-5 gap-y-1 text-sm text-slate-600">
+          <span><strong className="text-slate-900">{totalPeople}</strong> {totalPeople === 1 ? "person" : "people"}</span>
+          {showRequirements && <span><strong className="text-slate-900">{totalDietary}</strong> dietary</span>}
+          {showRequirements && <span><strong className="text-slate-900">{totalAccessibility}</strong> accessibility</span>}
+          {totalIncomplete > 0 && <span className="font-semibold text-red-600">{totalIncomplete} incomplete</span>}
+        </div>
+
+        {filterCards.length > 2 && (
+          <div className="flex flex-wrap items-center gap-2 text-sm">
+            <span className="text-slate-500">Show:</span>
+            {filterCards.map((card) => {
+              const isActive = activeTypeFilter === card.key;
+              return (
+                <button
+                  key={card.key}
+                  type="button"
+                  onClick={() => setActiveTypeFilter(card.key)}
+                  className={`rounded-md border px-3 py-1 transition-colors ${
+                    isActive
+                      ? "border-indigo-300 bg-indigo-50 font-semibold text-indigo-800"
+                      : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+                  }`}
+                >
+                  {card.key === "all" ? "All" : card.label} · {card.count}
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
       {/* Draggable People List */}
       <DragDropContext onDragEnd={handleDragEnd}>
         <Droppable droppableId="people-list">

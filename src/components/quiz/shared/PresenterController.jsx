@@ -1,5 +1,3 @@
-import { useEffect, useState } from "react";
-
 export default function PresenterController({
   index,
   total,
@@ -16,36 +14,22 @@ export default function PresenterController({
   revealAnswer,
   canProgress,
   onNext,
-  onNoOneAnswered,
   allowNoOneAnswered = true,
-  onAction,
+  play,
   onClose,
   activeQuizType,
   embedded = false,
   hideFooter = false,
-  onQuestionResolved,
   hideQuestion = false,
-  alwaysShowAnswer = false,
-  onStateChange
+  alwaysShowAnswer = false
 }) {
-  const [selectedPersonId, setSelectedPersonId] = useState(null);
-  const [wrongPlayerIds, setWrongPlayerIds] = useState([]);
-  const [correctPlayerId, setCorrectPlayerId] = useState(null);
-  const [questionResolved, setQuestionResolved] = useState(false);
-
-  useEffect(() => {
-    onStateChange?.({ selectedPersonId, wrongPlayerIds, correctPlayerId, questionResolved });
-  }, [selectedPersonId, wrongPlayerIds, correctPlayerId, questionResolved]);
+  const {
+    selectedPersonId, wrongPlayerIds, correctPlayerId, questionResolved,
+    selectPlayer, submitResult, submitOption, handleNoOneAnswered,
+  } = play;
   const options = Array.isArray(currentQuestion?.options)
     ? currentQuestion.options.filter(Boolean)
     : [];
-
-  useEffect(() => {
-    setSelectedPersonId(null);
-    setWrongPlayerIds([]);
-    setCorrectPlayerId(null);
-    setQuestionResolved(false);
-  }, [index, currentQuestion]);
 
   if (!currentQuestion) return null;
 
@@ -76,49 +60,7 @@ export default function PresenterController({
   const isStandardPoints = mode === "standard-points";
   const isAnswerReveal = mode === "standard" && cycle === 2;
   const questionText = currentQuestion.question || currentQuestion.questionText || currentQuestion.text;
-  const normalizeAnswer = (value) => String(value ?? "").trim().toLowerCase();
 
-  const selectPlayer = (playerId) => {
-    if (questionResolved || wrongPlayerIds.includes(playerId)) return;
-    const selected = onAction({ type: "select-player", playerId });
-    setSelectedPersonId(selected ? playerId : null);
-  };
-
-  const submitResult = (playerId, result) => {
-    if (questionResolved || wrongPlayerIds.includes(playerId)) return;
-    const submitted = onAction({ type: "result", playerId, result });
-    if (!submitted) return;
-    if (result === "correct") {
-      setCorrectPlayerId(playerId);
-      setQuestionResolved(true);
-      setSelectedPersonId(null);
-      onQuestionResolved?.({ resolved: true, correctPlayerId: playerId });
-    } else {
-      setWrongPlayerIds((previous) => [...previous, playerId]);
-      setSelectedPersonId(null);
-    }
-  };
-
-  const submitOption = (option) => {
-    if (!selectedPersonId || questionResolved) return;
-    const playerId = selectedPersonId;
-    if (!onAction({ type: "option", option: String(option), playerId })) return;
-    setSelectedPersonId(null);
-    if (normalizeAnswer(option) === normalizeAnswer(currentQuestion.answer)) {
-      setCorrectPlayerId(playerId);
-      setQuestionResolved(true);
-      onQuestionResolved?.({ resolved: true, correctPlayerId: playerId });
-    } else {
-      setWrongPlayerIds((previous) => [...previous, playerId]);
-    }
-  };
-
-  const handleNoOneAnswered = () => {
-    if (questionResolved || onNoOneAnswered({ wrongPlayerIds, correctPlayerId }) === false) return;
-    setSelectedPersonId(null);
-    setQuestionResolved(true);
-    onQuestionResolved?.({ resolved: true, correctPlayerId: null });
-  };
 
   if (finished && mode !== "standard") {
     return (

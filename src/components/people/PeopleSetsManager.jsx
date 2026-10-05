@@ -171,10 +171,7 @@ export default function PeopleSetsManager() {
 
   return (
     <section className="space-y-4">
-      <div>
-        <h2 className="text-lg font-bold text-slate-900">People sets</h2>
-        <p className="text-sm text-slate-600">Create activity, stakeholder or training lists. A person can belong to multiple sets.</p>
-      </div>
+      <p className="text-sm text-slate-600">Create activity, stakeholder or training lists. A person can belong to multiple sets.</p>
 
       <form onSubmit={handleCreate} className="flex flex-wrap items-end gap-3 rounded-lg border border-slate-200 bg-slate-50 p-4">
         <label className="flex flex-col gap-1 text-sm font-semibold text-slate-700">

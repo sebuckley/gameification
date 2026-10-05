@@ -4,6 +4,7 @@ import { useIceBreakerEngine } from "../icebreaker/IceBreakerEngine";
 import PersonBadge from "../shared/PersonBadge";
 import PresenterController from "../quiz/shared/PresenterController";
 import PresenterPortal from "../quiz/shared/PresenterPortal";
+import useQuizPlay from "../quiz/shared/useQuizPlay";
 
 const normalizeAnswer = (value) => String(value ?? "").trim().toLowerCase();
 const formatClock = (totalSeconds) =>
@@ -31,11 +32,9 @@ const DIFFICULTY_STYLES = {
 export const QuizActivity = forwardRef(function QuizActivity({ questionSet, participants, onNavigationChange, speakerWindow, onSpeakerWindowClose, onLeave }, ref) {
   const applyQuizResult = usePeopleStore((state) => state.applyQuizResult);
   const [questionIndex, setQuestionIndex] = useState(0);
-  const [resolved, setResolved] = useState(false);
   const [showAnswer, setShowAnswer] = useState(false);
   const [finished, setFinished] = useState(false);
   const [standardRound, setStandardRound] = useState("questions");
-  const [playState, setPlayState] = useState(INITIAL_PLAY_STATE);
   const [quizSeconds, setQuizSeconds] = useState(0);
   const [questionSeconds, setQuestionSeconds] = useState(0);
   const questions = questionSet?.questions || [];
@@ -44,13 +43,52 @@ export const QuizActivity = forwardRef(function QuizActivity({ questionSet, part
   const currentQuestion = questions[questionIndex];
   const options = Array.isArray(currentQuestion?.options) ? currentQuestion.options : [];
   const settings = questionSet?.settings || {};
+  const quizSettings = usePeopleStore((state) => state.quizSettings);
+  const questionDifficulty = ["easy", "medium", "hard"].includes(currentQuestion?.difficulty) ? currentQuestion.difficulty : "easy";
+  const difficultyPoints = { ...(quizSettings || {}), ...settings }.useSamePoints === "no"
+    ? Number({ ...(quizSettings || {}), ...settings }[`${questionDifficulty}Points`])
+    : null;
+  const pointsLabel = Number.isFinite(difficultyPoints) ? `${difficultyPoints} ${difficultyPoints === 1 ? "pt" : "pts"}` : null;
 
   useEffect(() => {
-    setResolved(false);
     setShowAnswer(false);
-    setPlayState(INITIAL_PLAY_STATE);
     setQuestionSeconds(0);
   }, [questionIndex, standardRound]);
+
+  const handleControllerAction = (action) => {
+    if (action.type === "select-player") return true;
+
+    const isCorrect = action.type === "result"
+      ? action.result === "correct"
+      : action.type === "option"
+        ? normalizeAnswer(action.option) === normalizeAnswer(currentQuestion.answer)
+        : null;
+    if (isCorrect === null || !action.playerId) return false;
+
+    applyQuizResult(action.playerId, isCorrect, settings, currentQuestion);
+    return true;
+  };
+
+  const handleNoOneAnswered = ({ wrongPlayerIds = [], correctPlayerId = null } = {}) => {
+    if (isStandardMode || settings.allowNoOneAnswered === false) return false;
+    if (settings.noOneAnsweredPenalty === "remove") {
+      participants.forEach((person) => {
+        if (!wrongPlayerIds.includes(person.id) && person.id !== correctPlayerId) {
+          applyQuizResult(person.id, false, settings, currentQuestion, settings.noOneAnsweredPoints);
+        }
+      });
+    }
+    return true;
+  };
+
+  const play = useQuizPlay({
+    question: currentQuestion,
+    resetKey: `${questionIndex}-${standardRound}`,
+    onAction: handleControllerAction,
+    onNoOneAnswered: handleNoOneAnswered,
+  });
+  const resolved = play.questionResolved;
+  const playState = play;
 
   useEffect(() => {
     if (finished) return undefined;
@@ -132,35 +170,6 @@ export const QuizActivity = forwardRef(function QuizActivity({ questionSet, part
     onNavigationChange?.({ nextLabel, step: finished ? "finished" : "question" });
   }, [nextLabel, finished, onNavigationChange]);
 
-  const handleControllerAction = (action) => {
-    if (action.type === "select-player") return true;
-
-    const isCorrect = action.type === "result"
-      ? action.result === "correct"
-      : action.type === "option"
-        ? normalizeAnswer(action.option) === normalizeAnswer(currentQuestion.answer)
-        : null;
-    if (isCorrect === null || !action.playerId) return false;
-
-    applyQuizResult(action.playerId, isCorrect, settings, currentQuestion);
-    return true;
-  };
-
-  const handleNoOneAnswered = ({ wrongPlayerIds = [], correctPlayerId = null } = {}) => {
-    if (isStandardMode || settings.allowNoOneAnswered === false || resolved) return false;
-    if (settings.noOneAnsweredPenalty === "remove") {
-      participants.forEach((person) => {
-        if (!wrongPlayerIds.includes(person.id) && person.id !== correctPlayerId) {
-          applyQuizResult(person.id, false, settings, currentQuestion, settings.noOneAnsweredPoints);
-        }
-      });
-    }
-    setResolved(true);
-    return true;
-  };
-
-  const handleQuestionResolved = ({ resolved: isResolved }) => setResolved(Boolean(isResolved));
-
   if (!questionSet) return <ActivityMessage message="The linked quiz set could not be found." />;
   if (!questions.length) return <ActivityMessage message={`“${questionSet.name}” has no questions yet.`} />;
 
@@ -196,11 +205,8 @@ export const QuizActivity = forwardRef(function QuizActivity({ questionSet, part
       revealAnswer={() => setShowAnswer(true)}
       canProgress={!isStandardMode || cycle !== 2 || showAnswer}
       onNext={() => {}}
-      onNoOneAnswered={handleNoOneAnswered}
       allowNoOneAnswered={settings.allowNoOneAnswered !== false}
-      onAction={handleControllerAction}
-      onQuestionResolved={handleQuestionResolved}
-      onStateChange={setPlayState}
+      play={play}
       onClose={() => {}}
     />
   );
@@ -210,7 +216,7 @@ export const QuizActivity = forwardRef(function QuizActivity({ questionSet, part
         <div className="flex shrink-0 items-center gap-3">
           <span className="text-sm font-semibold text-slate-600">{finished ? "Quiz complete" : `${questionSet.name} · ${questionIndex + 1}/${questions.length}`}</span>
           {!finished && currentQuestion?.difficulty && (
-            <span className={`rounded-full px-3 py-1 text-xs font-bold uppercase ${DIFFICULTY_STYLES[currentQuestion.difficulty] || "bg-slate-100 text-slate-700"}`}>{currentQuestion.difficulty}</span>
+            <span className={`rounded-full px-3 py-1 text-xs font-bold uppercase ${DIFFICULTY_STYLES[currentQuestion.difficulty] || "bg-slate-100 text-slate-700"}`}>            {currentQuestion.difficulty}{pointsLabel ? ` · ${pointsLabel}` : ""}</span>
           )}
         </div>
         {navButtons}
@@ -220,6 +226,7 @@ export const QuizActivity = forwardRef(function QuizActivity({ questionSet, part
   );
 
   const hasPlayers = !isStandardMode && participants.length > 0;
+  const hasOptions = options.filter(Boolean).length > 0;
   const sortedParticipants = [...participants].sort((a, b) => (b.quizScore || 0) - (a.quizScore || 0));
 
   return (
@@ -235,24 +242,46 @@ export const QuizActivity = forwardRef(function QuizActivity({ questionSet, part
           </div>
         ) : (
           <div className="flex w-full flex-wrap items-start gap-4">
-            <div className="min-w-[16rem] flex-[2_1_20rem]">
+            <div className="flex min-w-[16rem] flex-[2_1_20rem] flex-col gap-2">
+              {pointsLabel && currentQuestion?.difficulty && (
+                <div className="flex">
+                  <span className={`rounded-full px-3 py-1 text-xs font-bold uppercase ${DIFFICULTY_STYLES[currentQuestion.difficulty] || "bg-slate-100 text-slate-700"}`}>{currentQuestion.difficulty} · {pointsLabel}</span>
+                </div>
+              )}
               <QuizQuestionDisplay
                 question={currentQuestion}
                 mode={mode}
                 showAnswer={showAnswer}
                 resolved={resolved}
                 showChoices={mode !== "standard" || cycle === 1}
+                onOption={hasPlayers ? play.submitOption : null}
+                canAnswer={Boolean(play.selectedPersonId) && !resolved}
               />
+              {hasPlayers && !resolved && !hasOptions && !play.selectedPersonId && (
+                <p className="text-sm text-slate-400">Select a player to mark their answer.</p>
+              )}
+              {hasPlayers && !resolved && hasOptions && !play.selectedPersonId && (
+                <p className="text-sm text-slate-400">Select a player, then choose their answer.</p>
+              )}
+              {hasPlayers && !resolved && settings.allowNoOneAnswered !== false && (
+                <div className="flex">
+                  <button type="button" onClick={play.handleNoOneAnswered} className="rounded bg-red-800 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700">No one answered</button>
+                </div>
+              )}
             </div>
             {hasPlayers && (
               <div className="min-w-[11rem] flex-[1_1_11rem]">
-                <Scoreboard players={participants} playState={playState} resolved={resolved} />
+                <Scoreboard
+                  players={sortedParticipants}
+                  playState={playState}
+                  resolved={resolved}
+                  hasOptions={hasOptions}
+                  onSelect={play.selectPlayer}
+                  onResult={play.submitResult}
+                />
               </div>
             )}
           </div>
-        )}
-        {!isStandardMode && !speakerWindow && !finished && (
-          <p className="text-sm text-slate-400">Open Speaker Mode to run the quiz controls.</p>
         )}
       </ActivityFrame>
       {speakerWindow && (
@@ -296,7 +325,12 @@ function SelectionReel({ people, winner }) {
 
   return (
     <div className="flex flex-col items-center gap-3">
-      <div className="text-xs font-semibold uppercase tracking-widest text-slate-500">{landed ? "Up next" : "Choosing…"}</div>
+     <div
+  className="text-xs font-semibold uppercase tracking-widest text-slate-500 transition-transform duration-300 ease-out"
+  style={{ transform: landed ? "translateY(-20px)" : "translateY(0px)" }}
+>
+  {landed ? "Up next" : "Choosing…"}
+</div>
       <div className={`transition-transform duration-300 ${landed ? "scale-125" : "scale-100 opacity-80"}`}>
         <PersonBadge person={shown} size="xl" />
       </div>
@@ -458,7 +492,7 @@ export default forwardRef(function AgendaLinkedActivity(props, ref) {
   return <ActivityMessage message="The linked activity set could not be found." />;
 });
 
-function QuizQuestionDisplay({ question, mode, showAnswer, resolved, showChoices }) {
+function QuizQuestionDisplay({ question, mode, showAnswer, resolved, showChoices, onOption = null, canAnswer = false }) {
   const questionText = question.question || question.questionText || question.text;
   const shouldShowAnswer = mode === "standard" ? showAnswer : resolved;
   const glam = mode === "gameshow";
@@ -497,8 +531,17 @@ function QuizQuestionDisplay({ question, mode, showAnswer, resolved, showChoices
               : isDimmed
                 ? glam ? "border-slate-500 bg-slate-700/60 opacity-50" : "border-slate-200 bg-slate-50 text-slate-400"
                 : glam ? "border-amber-300 bg-indigo-800" : "border-slate-300 bg-white text-slate-700";
+            const clickable = Boolean(onOption) && canAnswer && !shouldShowAnswer;
             return (
-              <div key={`${option}-${index}`} className={base + tone}>
+              <div
+                key={`${option}-${index}`}
+                role={onOption ? "button" : undefined}
+                tabIndex={clickable ? 0 : undefined}
+                aria-disabled={onOption ? !clickable : undefined}
+                onClick={clickable ? () => onOption(option) : undefined}
+                onKeyDown={clickable ? (event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); onOption(option); } } : undefined}
+                className={base + tone + (clickable ? " cursor-pointer hover:brightness-95" : "")}
+              >
                 {glam && <span className="flex h-[1.6em] w-[1.6em] shrink-0 items-center justify-center rounded-full bg-amber-300 text-sm font-black text-indigo-900">{String.fromCharCode(65 + index)}</span>}
                 <span>{option}</span>
               </div>
@@ -542,7 +585,7 @@ function ActivityMessage({ message }) {
   return <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-amber-900">{message}</div>;
 }
 
-function Scoreboard({ players, playState = INITIAL_PLAY_STATE, resolved = false, title = "Players" }) {
+function Scoreboard({ players, playState = INITIAL_PLAY_STATE, resolved = false, title = "Players", hasOptions = false, onSelect = null, onResult = null }) {
   const { selectedPersonId, wrongPlayerIds, correctPlayerId } = playState;
   const selected = players.find((person) => person.id === selectedPersonId);
   const personName = (person) => person.preferredName || person.fullName || "Player";
@@ -567,10 +610,30 @@ function Scoreboard({ players, playState = INITIAL_PLAY_STATE, resolved = false,
               : isSelected
                 ? "border-amber-500 bg-amber-50 text-amber-900 ring-2 ring-amber-400"
                 : "border-slate-200 bg-white text-slate-800";
+          const rowClass = `flex items-center justify-between gap-3 rounded-lg border px-3 py-2 font-semibold shadow-sm ${tone}`;
+          const label = <span className="truncate">{isCorrect ? "✓ " : isWrong ? "✗ " : ""}{personName(person)}</span>;
+          const score = <span className="tabular-nums">{person.quizScore ?? 0} pts</span>;
+          const interactive = Boolean(onSelect) && !resolved && !isWrong;
+
+          if (!interactive) {
+            return <li key={person.id} className={rowClass}>{label}{score}</li>;
+          }
+
           return (
-            <li key={person.id} className={`flex items-center justify-between gap-3 rounded-lg border px-3 py-2 font-semibold shadow-sm ${tone}`}>
-              <span className="truncate">{isCorrect ? "✓ " : isWrong ? "✗ " : ""}{personName(person)}</span>
-              <span className="tabular-nums">{person.quizScore ?? 0} pts</span>
+            <li key={person.id} className="flex flex-col gap-1">
+              <button
+                type="button"
+                onClick={() => onSelect(person.id)}
+                className={`${rowClass} w-full text-left hover:brightness-95`}
+              >
+                {label}{score}
+              </button>
+              {isSelected && !hasOptions && onResult && (
+                <div className="flex gap-2">
+                  <button type="button" onClick={() => onResult(person.id, "correct")} className="flex-1 rounded bg-emerald-600 px-3 py-2 text-sm font-bold text-white hover:bg-emerald-700">Correct</button>
+                  <button type="button" onClick={() => onResult(person.id, "wrong")} className="flex-1 rounded bg-rose-600 px-3 py-2 text-sm font-bold text-white hover:bg-rose-700">Wrong</button>
+                </div>
+              )}
             </li>
           );
         })}

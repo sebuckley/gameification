@@ -24,6 +24,7 @@ const DEFAULT_STATE = {
   groupsHistory: [],
   questions: [],
   questionSets: [],
+  questionTemplates: [],
   activeQuestionSetId: null,
   iceBreakerSets: [],
   activeIceBreakerSetId: null,
@@ -1493,6 +1494,78 @@ const usePeople = create((set, get) => ({
       save(get);
       return updated;
     }),
+
+  createQuestionTemplate: (name = "") =>
+    set((state) => {
+      const list = state.questionTemplates || [];
+      const template = {
+        id: uuidv4(),
+        name: (name || `Template ${list.length + 1}`).trim(),
+        questions: []
+      };
+      const updated = { ...state, questionTemplates: [...list, template] };
+      save(get);
+      return updated;
+    }),
+
+  updateQuestionTemplate: (templateId, patch) =>
+    set((state) => {
+      const updated = {
+        ...state,
+        questionTemplates: (state.questionTemplates || []).map((t) =>
+          t.id === templateId ? { ...t, ...patch } : t
+        )
+      };
+      save(get);
+      return updated;
+    }),
+
+  deleteQuestionTemplate: (templateId) =>
+    set((state) => {
+      const updated = {
+        ...state,
+        questionTemplates: (state.questionTemplates || []).filter((t) => t.id !== templateId)
+      };
+      save(get);
+      return updated;
+    }),
+
+  addTemplateQuestion: (templateId, question) =>
+    set((state) => {
+      const [q] = normalizeImportedQuestions([question]);
+      const updated = {
+        ...state,
+        questionTemplates: (state.questionTemplates || []).map((t) =>
+          t.id === templateId ? { ...t, questions: [...(t.questions || []), q] } : t
+        )
+      };
+      save(get);
+      return updated;
+    }),
+
+  removeTemplateQuestion: (templateId, questionId) =>
+    set((state) => {
+      const updated = {
+        ...state,
+        questionTemplates: (state.questionTemplates || []).map((t) =>
+          t.id === templateId
+            ? { ...t, questions: (t.questions || []).filter((q) => q.id !== questionId) }
+            : t
+        )
+      };
+      save(get);
+      return updated;
+    }),
+
+  // Copies the template's core questions into a new set that can then be extended.
+  createQuestionSetFromTemplate: (templateId, name = "") => {
+    const template = (get().questionTemplates || []).find((t) => t.id === templateId);
+    if (!template) return;
+    get().createQuestionSet(name || template.name);
+    get().importQuestions(
+      (template.questions || []).map((q) => ({ ...q, id: nanoid() }))
+    );
+  },
 
   createQuestionSet: (name = "") =>
     set((state) => {
